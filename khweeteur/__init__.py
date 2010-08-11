@@ -15,6 +15,7 @@ import sys
 import os.path
 from urllib import urlretrieve
 import pickle
+import re
 
 __version__ = '0.0.1'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
@@ -264,23 +265,30 @@ class KhweeteurWin(QMainWindow):
         self.connect(self.tb_open, SIGNAL('triggered()'), self.open_url)
         self.toolbar.addAction(self.tb_open)
 
-        self.tb_text = QLineEdit()
+        self.tb_text = QLineEdit()        
+        self.tb_text.enabledChange(True)        
         self.toolbar.addWidget(self.tb_text)
 
         self.tb_charCounter = QLabel('140')
         self.toolbar.addWidget(self.tb_charCounter)
-        self.connect(self.tb_text, SIGNAL('textChanged()'), self.count)
+        self.connect(self.tb_text, SIGNAL('textChanged(const QString&)'), self.countChar)
 
         self.tb_tweet = QAction('Tweet', self)
         self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
         self.toolbar.addAction(self.tb_tweet)
 
     def open_url(self):
-        pass
+        for index in self.tweetsView.selectedIndexes():
+            status = self.tweetsModel._items[index.row()][1].text
+            try:
+                url = re.search("(?P<url>https?://[^\s]+)", status).group("url")
+                QDesktopServices.openUrl(QUrl(url))
+            except StandardError,e:
+                print e
+                
         
-    def count(self):
-        print 'text changed'
-        self.tb_charCounter.setLabel(str(140-self.tb_text.text().count()))
+    def countChar(self,text):
+        self.tb_charCounter.setText(str(140-text.count()))
         
     def reply(self,index):        
         self.tb_text.setText('@'+self.tweetsModel._items[index.row()][1].user.screen_name)
