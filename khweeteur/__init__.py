@@ -23,9 +23,6 @@ CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
 class KhweeteurWorker(QThread):
 
-    #New style signal
-    #newStatus = pyqtSignal((int, twitter.Status), name='newStatus')
-
     def __init__(self, parent = None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
@@ -51,19 +48,13 @@ class KhweeteurWorker(QThread):
         for status in api.GetDirectMessages():
             mlist.append((status.created_at_in_seconds,status))
         mlist.sort()
-#        mlist.reverse()
 
         #DOwnload avatar & add tweet to the model
         for _,status in mlist:
             self.downloadProfileImage(status)
             #We are now in a thread
-            #self.tweetsModel.addStatus((_,status))
             self.emit(SIGNAL("newStatus(PyQt_PyObject)"),(_,status))
-            #self.newStatus.emit((_,status))
-            
-        #Serialize
-        #self.tweetsModel.serialize()
-        
+                    
         print 'Refresh ended'
 
 class KhweetsModel(QAbstractListModel):
@@ -128,10 +119,7 @@ class KhweetsView(QListView):
         QListView.__init__(self,parent)
         self.setIconSize(QSize(128, 128))
         self.setWordWrap(True)
-#        self.setMaximumWidth(736)
-#        self.setWrapping(True)
         self.setResizeMode(QListView.Adjust)
-#        self.setFlow(QListView.LeftToRight)
         self.setViewMode(QListView.ListMode)
         self.setUniformItemSizes(True)
         
@@ -303,17 +291,17 @@ class KhweeteurWin(QMainWindow):
         except StandardError,e:            
             print e
     
-    # def downloadProfileImage(self,status):
-        # if type(status)!=twitter.DirectMessage:
-            # cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
-            # if not(os.path.exists(cache)):
-                # urlretrieve(status.user.profile_image_url, cache)
+    def refreshEnded(self):
+        self.tweetsModel.serialize()
+        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+
     def refresh(self):
-            self.worker = KhweeteurWorker()
-            self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
-            self.connect(self.worker, SIGNAL("finished()"), self.tweetsModel.serialize)
-            self.worker.start()
-            
+        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+        self.worker = KhweeteurWorker()
+        self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
+        self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
+        self.worker.start()
+        
     def timer_refresh(self):
         print 'Timer refresh'
         self.refresh_timeline()
@@ -326,32 +314,7 @@ class KhweeteurWin(QMainWindow):
             self.refresh()      
         else:
             print 'isFinished()', self.worker.isFinished()
-#        print 'isTerminated()', self.worker.isTerminated()
-        
-    # def refresh_timeline(self):
-        # print 'Try to refresh'
-        # mlist = []
-        # avatars_url={}
-        # api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
-        # for status in api.GetFriendsTimeline(count=100):
-            # mlist.append((status.created_at_in_seconds,status))
-        # for status in api.GetReplies():
-            # mlist.append((status.created_at_in_seconds,status))
-        # for status in api.GetDirectMessages():
-            # mlist.append((status.created_at_in_seconds,status))
-        # mlist.sort()
-        # mlist.reverse()
-
-        #DOwnload avatar & add tweet to the model
-        # for _,status in mlist:
-            # self.downloadProfileImage(status)
-            # self.tweetsModel.addStatus((_,status))
-            
-        #Serialize
-        # self.tweetsModel.serialize()
-            
-#        self.tweetsModel.setData(mlist)
-                                                                
+                                                                            
     def restartTimer(self):
         self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         print 'restart timer'
