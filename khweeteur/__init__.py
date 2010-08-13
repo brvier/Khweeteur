@@ -393,7 +393,6 @@ class KhweeteurWin(QMainWindow):
                                                                             
     def restartTimer(self):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool() 
-        print self.tweetsView.display_screenname
         QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel._items)))
         self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         print 'restart timer'
