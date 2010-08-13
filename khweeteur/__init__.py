@@ -96,6 +96,9 @@ class KhweetsModel(QAbstractListModel):
         # Cache the passed data list as a class member.
         self._items = mlist
         self._new_counter = 0
+        
+        self.display_screenname = False
+        
   
     def rowCount(self, parent = QModelIndex()):
         return len(self._items)
@@ -136,7 +139,13 @@ class KhweetsModel(QAbstractListModel):
 
     def data(self, index, role = Qt.DisplayRole):        
         if role == Qt.DisplayRole:
-            return QVariant(self._items[index.row()][1].text)
+            if self.display_screenname:
+                if type(self._items[index.row()][1])==twitter.DirectMessage:
+                    return QVariant(self._items[index.row()][1].sender_screen_name+' : '+self._items[index.row()][1].text)                                    
+                else:
+                    return QVariant(self._items[index.row()][1].user.screen_name+' : '+self._items[index.row()][1].text)                
+            else:
+                return QVariant(self._items[index.row()][1].text)
         elif role == Qt.DecorationRole:
                 try:
                     # return an icon, if the decoration role is used
@@ -229,11 +238,13 @@ class KhweeteurPref(QMainWindow):
         self.login_value.setText(self.settings.value("login").toString())
         self.password_value.setText(self.settings.value("password").toString())
         self.refresh_value.setValue(self.settings.value("refreshInterval").toInt()[0])
+        self.displayUser_value.setCheckState(self.settings.value("displayUser").toInt()[0])
 
     def savePrefs(self):
         self.settings.setValue('login',self.login_value.text())
         self.settings.setValue('password',self.password_value.text())
         self.settings.setValue('refreshInterval',self.refresh_value.value())
+        self.settings.setValue('displayUser',self.displayUser_value.checkState())
         self.emit(SIGNAL("save()"))
         
     def closeEvent(self,widget,*args):
@@ -255,7 +266,10 @@ class KhweeteurPref(QMainWindow):
         self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),2,0)
         self.refresh_value = QSpinBox()
         self._main_layout.addWidget(self.refresh_value,2,1)
-
+        
+        self.displayUser_value = QCheckBox('Display username')
+        self._main_layout.addWidget(self.displayUser_value,3,1)
+        
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.aWidget)
                 
@@ -275,6 +289,8 @@ class KhweeteurWin(QMainWindow):
         self.setupMain()
 
         self.settings = QSettings()
+        
+        self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool() 
         self.refresh()
         self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timer_refresh)
@@ -325,7 +341,11 @@ class KhweeteurWin(QMainWindow):
         self.tb_charCounter.setText(str(140-text.count()))
         
     def reply(self,index):        
-        self.tb_text.setText('@'+self.tweetsModel._items[index.row()][1].user.screen_name)
+        if type(self.tweetsModel._items[index.row()][1])==twitter.DirectMessage:
+            user = self.tweetsModel._items[index.row()][1].sender_screen_name
+        else:
+            user = self.tweetsModel._items[index.row()][1].user.screen_name
+        self.tb_text.setText('@'+user)
                
     def tweet(self):
         print 'try to tweet'
@@ -367,6 +387,9 @@ class KhweeteurWin(QMainWindow):
             print 'isFinished()', self.worker.isFinished()
                                                                             
     def restartTimer(self):
+        self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool() 
+        print self.tweetsView.display_screenname
+        QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel._items)))
         self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         print 'restart timer'
         
