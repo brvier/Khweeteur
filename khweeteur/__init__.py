@@ -10,17 +10,40 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.QtMaemo5 import *
 
+import khweeteur
 import twitter
 import sys
 import os.path
 from urllib import urlretrieve
 import pickle
 import re
+import dbus
+import dbus.mainloop.qt
 
 __version__ = '0.0.1'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
+class KhweeteurNotification(QObject):
+    def __init__(self):
+        QObject.__init__(self)
+        self.m_bus = dbus.SystemBus()
+        self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
+                                              '/org/freedesktop/Notifications')
+
+    def send(self,title,message,category='message',icon='khweeteur',count=1):
+        self.m_notify.Notify(title,
+                             0,
+                             icon,
+                             title,
+                             message,
+                             [],
+                             {'category':category,
+                             'count':count},
+                             -1,
+                             dbus_interface='org.freedesktop.Notifications'
+                             )
+        
 class KhweeteurWorker(QThread):
 
     def __init__(self, parent = None):
@@ -38,23 +61,28 @@ class KhweeteurWorker(QThread):
     
     def refresh_timeline(self):
         print 'Try to refresh'
-        mlist = []
-        avatars_url={}
-        api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
-        for status in api.GetFriendsTimeline(count=100):
-            mlist.append((status.created_at_in_seconds,status))
-        for status in api.GetReplies():
-            mlist.append((status.created_at_in_seconds,status))
-        for status in api.GetDirectMessages():
-            mlist.append((status.created_at_in_seconds,status))
-        mlist.sort()
-
-        #DOwnload avatar & add tweet to the model
-        for _,status in mlist:
-            self.downloadProfileImage(status)
-            #We are now in a thread
-            self.emit(SIGNAL("newStatus(PyQt_PyObject)"),(_,status))
-                    
+        try:
+            mlist = []
+            avatars_url={}
+            api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
+            for status in api.GetFriendsTimeline(count=100):
+                mlist.append((status.created_at_in_seconds,status))
+            for status in api.GetReplies():
+                mlist.append((status.created_at_in_seconds,status))
+            for status in api.GetDirectMessages():
+                mlist.append((status.created_at_in_seconds,status))
+            mlist.sort()
+    
+            #DOwnload avatar & add tweet to the model
+            for _,status in mlist:
+                self.downloadProfileImage(status)
+                #We are now in a thread
+                self.emit(SIGNAL("newStatus(PyQt_PyObject)"),(_,status))
+                        
+        except StandardError,e:
+            print e
+#            KhweeteurNotification().send('Error','Errors occurs during the update :' + str(e))
+            
         print 'Refresh ended'
 
 class KhweetsModel(QAbstractListModel):
@@ -64,6 +92,7 @@ class KhweetsModel(QAbstractListModel):
 
         # Cache the passed data list as a class member.
         self._items = mlist
+        self._new_counter = 0
   
     def rowCount(self, parent = QModelIndex()):
         return len(self._items)
@@ -72,8 +101,14 @@ class KhweetsModel(QAbstractListModel):
         status_with_secondstamp = variant
         if status_with_secondstamp not in self._items:
             self._items.insert(0,status_with_secondstamp)
+            self._new_counter = self._new_counter + 1
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-        
+
+    def getNewAndReset(self):
+        counter = self._new_counter
+        self._new_counter = 0
+        return counter
+                
     def setData(self,mlist):
         self._items = mlist
 
@@ -121,7 +156,13 @@ class KhweetsView(QListView):
         self.setWordWrap(True)
         self.setResizeMode(QListView.Adjust)
         self.setViewMode(QListView.ListMode)
-        self.setUniformItemSizes(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+#        self.setAlternatingRowColors(True)
+#        self.setUniformItemSizes(True)
+#        self.setWrapping(True)
+#        self.setFlow(QListView.TopToBottom)
+#        self.setGridSize(QSize(-1,200))
+        
         
 class KhweeteurAbout(QMainWindow):
     def __init__(self, parent=None):
@@ -144,14 +185,15 @@ class KhweeteurAbout(QMainWindow):
         aboutLayout = QVBoxLayout(awidget)
         
         aboutIcon = QLabel()
-        aboutIcon.setPixmap(QPixmap(os.path.join(khweeteur.__path__[0],'icons','khweeteur.png')).scaledToHeight(128))
+        aboutIcon.setPixmap(QPixmap(os.path.join(khweeteur.__path__[0],'icons','khweeteur.jpg')).scaledToHeight(128))
         aboutIcon.setAlignment( Qt.AlignCenter or Qt.AlignHCenter )
         aboutIcon.resize(140,140)
         aboutLayout.addWidget(aboutIcon)
         
         aboutLabel = QLabel('''<center><b>Khweeteur</b> %s
-                                   <br><br>A Simple twitter client with follower status, reply, and direct message in a unified view
-                                   <br>Licenced under GPLv3
+                                   <br><br>A Simple twitter client with follower status, reply,
+                                   <br>and direct message in a unified view
+                                   <br><br>Licenced under GPLv3
                                    <br>By Beno&icirc;t HERVIER (Khertan) 
                                    <br><br><br><b>Site Web : </b>http://khertan.net/khweeteur
                                    <br><br><b>Thanks to :</b>
@@ -163,7 +205,7 @@ class KhweeteurAbout(QMainWindow):
         aboutScrollArea.setWidget(awidget)
 
         self.setCentralWidget(aboutScrollArea)
-        aboutWin.show()
+        self.show()
             
 class KhweeteurPref(QMainWindow):
     def __init__(self, parent=None):
@@ -236,7 +278,7 @@ class KhweeteurWin(QMainWindow):
         
     def setupMain(self):
         
-        self.tweetsView = KhweetsView()
+        self.tweetsView = KhweetsView(self)
         self.connect(self.tweetsView,SIGNAL('doubleClicked(const QModelIndex&)'),self.reply)
         self.tweetsModel = KhweetsModel([])
         self.tweetsView.setModel(self.tweetsModel)        
@@ -245,11 +287,11 @@ class KhweeteurWin(QMainWindow):
         
         self.toolbar = self.addToolBar('Toolbar')
 
-        self.tb_refresh = QAction('Refresh', self)
-        self.connect(self.tb_refresh, SIGNAL('triggered()'), self.refresh_timeline)
-        self.toolbar.addAction(self.tb_refresh)
+#        self.tb_refresh = QAction(QIcon.fromTheme("general_backup"),'Refresh', self)
+#        self.connect(self.tb_refresh, SIGNAL('triggered()'), self.refresh_timeline)
+#        self.toolbar.addAction(self.tb_refresh)
 
-        self.tb_open = QAction('Open', self)
+        self.tb_open = QAction(QIcon.fromTheme("general_web"),'Open', self)
         self.connect(self.tb_open, SIGNAL('triggered()'), self.open_url)
         self.toolbar.addAction(self.tb_open)
 
@@ -261,7 +303,7 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addWidget(self.tb_charCounter)
         self.connect(self.tb_text, SIGNAL('textChanged(const QString&)'), self.countChar)
 
-        self.tb_tweet = QAction('Tweet', self)
+        self.tb_tweet = QAction(QIcon.fromTheme("general_add"),'Tweet', self)
         self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
         self.toolbar.addAction(self.tb_tweet)
 
@@ -290,9 +332,14 @@ class KhweeteurWin(QMainWindow):
             self.tb_text.setText('')
         except StandardError,e:            
             print e
+#            KhweeteurNotification().send('Error','Errors occurs during the publication of your tweet :' + str(e))
+
     
-    def refreshEnded(self):
+    def refreshEnded(self):        
         self.tweetsModel.serialize()
+        counter=self.tweetsModel.getNewAndReset()
+        if counter>0:
+            KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def refresh(self):
@@ -325,6 +372,8 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr("&Preferences"), self.do_show_pref,
                 QKeySequence(self.tr("Ctrl+P", "Preferences")))
+        fileMenu.addAction(self.tr("&Update"), self.refresh_timeline,
+                QKeySequence(self.tr("Ctrl+R", "Update")))
         fileMenu.addAction(self.tr("&About"), self.do_about)
         
     def do_show_pref(self):
@@ -333,7 +382,7 @@ class KhweeteurWin(QMainWindow):
         self.pref_win.show()        
         
     def do_about(self):
-        KhweeteurAbout()
+        self.aboutWin = KhweeteurAbout(self)
                
 class Khweeteur(QApplication):
     def __init__(self):
