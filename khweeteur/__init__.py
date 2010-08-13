@@ -57,7 +57,10 @@ class KhweeteurWorker(QThread):
         if type(status)!=twitter.DirectMessage:
             cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
             if not(os.path.exists(cache)):
-                urlretrieve(status.user.profile_image_url, cache)
+                try:
+                    urlretrieve(status.user.profile_image_url, cache)
+                except StandardError,e:
+                    print e,status.user.profile_image_url,status.user.screen_name
     
     def refresh_timeline(self):
         print 'Try to refresh'
@@ -197,7 +200,8 @@ class KhweeteurAbout(QMainWindow):
                                    <br>By Beno&icirc;t HERVIER (Khertan) 
                                    <br><br><br><b>Site Web : </b>http://khertan.net/khweeteur
                                    <br><br><b>Thanks to :</b>
-                                   <br>ddoodie on #pyqt                                   
+                                   <br>ddoodie on #pyqt      
+                                   <br>xnt14 on #maemo                         
                                    </center>''' % __version__)
         aboutLayout.addWidget(aboutLabel)
 
