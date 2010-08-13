@@ -60,8 +60,8 @@ class KhweeteurWorker(QThread):
                 try:
                     urlretrieve(status.user.profile_image_url, cache)
                 except StandardError,e:
-                    print e,status.user.profile_image_url,status.user.screen_name
-    
+                    print e
+                    
     def refresh_timeline(self):
         print 'Try to refresh'
         try:
@@ -239,12 +239,14 @@ class KhweeteurPref(QMainWindow):
         self.password_value.setText(self.settings.value("password").toString())
         self.refresh_value.setValue(self.settings.value("refreshInterval").toInt()[0])
         self.displayUser_value.setCheckState(self.settings.value("displayUser").toInt()[0])
+        self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
 
     def savePrefs(self):
         self.settings.setValue('login',self.login_value.text())
         self.settings.setValue('password',self.password_value.text())
         self.settings.setValue('refreshInterval',self.refresh_value.value())
         self.settings.setValue('displayUser',self.displayUser_value.checkState())
+        self.settings.setValue('useNotification',self.useNotification_value.checkState())
         self.emit(SIGNAL("save()"))
         
     def closeEvent(self,widget,*args):
@@ -269,6 +271,9 @@ class KhweeteurPref(QMainWindow):
         
         self.displayUser_value = QCheckBox('Display username')
         self._main_layout.addWidget(self.displayUser_value,3,1)
+        
+        self.useNotification_value = QCheckBox('Use Notification')
+        self._main_layout.addWidget(self.useNotification_value,4,1)
         
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.aWidget)
@@ -362,7 +367,7 @@ class KhweeteurWin(QMainWindow):
     def refreshEnded(self):        
         self.tweetsModel.serialize()
         counter=self.tweetsModel.getNewAndReset()
-        if counter>0:
+        if (counter>0) and (self.settings.value('useNotification').toBool) and (not(self.isVisible)):
             KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
