@@ -23,7 +23,7 @@ if __name__ == "__main__":
     p.buildversion='1'
     p.display_name='Khweeteur'
     p.description="Khweeteur is a small twitter client for Maemo and Meego."
-    p.author="Benoît HERVIER"
+    p.author="Benoit HERVIER"
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
     p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-twitter"
