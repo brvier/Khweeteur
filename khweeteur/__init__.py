@@ -23,7 +23,7 @@ import datetime
 import time
 from nwmanager import *
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
@@ -72,13 +72,13 @@ class KhweeteurWorker(QThread):
                 except StandardError,e:
                     print e
 
-    def refresh(self):
-        self.nw = NetworkManager(self.refresh_timeline)
-        self.nw.request_connection()
+#    def refresh(self):
+#        self.nw = NetworkManager(self.refresh_timeline)
+#        self.nw.request_connection()
         
-    def refresh_timeline(self):
+    def refresh(self):
         print 'Try to refresh'
-        self.nw.stop_monitoring()
+#        self.nw.stop_monitoring()
         
         #print 'Ask connection'
         #dbusmanager.DBusMonitor().request_connection()
@@ -129,14 +129,17 @@ class KhweetsModel(QAbstractListModel):
         return len(self._items)
 
     def addStatus(self,variant):
-        if len([True for item in self._items if item[1]==variant.id])==0:
-            if type(variant) != twitter.DirectMessage:
-                self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.user.screen_name, variant.text, variant.user.profile_image_url))
-            else:
-                self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.sender_screen_name, variant.text, None))
-            self._new_counter = self._new_counter + 1
-            QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-
+        try:
+            if len([True for item in self._items if item[1]==variant.id])==0:
+                if type(variant) != twitter.DirectMessage:
+                    self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.user.screen_name, variant.text, variant.user.profile_image_url))
+                else:
+                    self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.sender_screen_name, variant.text, None))
+                self._new_counter = self._new_counter + 1
+                QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+        except StandardError, e:
+            print "We shouldn't got this error here :",e
+            
     def getNewAndReset(self):
         counter = self._new_counter
         self._new_counter = 0
@@ -411,12 +414,16 @@ class KhweeteurWin(QMainWindow):
             KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
-    def refresh(self):
+    def refresh_if_connected(self):
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.worker = KhweeteurWorker()
         self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
         self.worker.start()
+        
+    def refresh(self):
+        self.nw = NetworkManager(self.refresh_if_connected)
+        self.nw.request_connection()
 
     def timer_refresh(self):
         print 'Timer refresh'
@@ -438,7 +445,6 @@ class KhweeteurWin(QMainWindow):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         else:
             self.timer.stop()
-        print 'restart timer'
 
     def setupMenu(self):
         fileMenu = QMenu(self.tr("&Menu"), self)
