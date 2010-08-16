@@ -54,8 +54,15 @@ class KhweeteurWorker(QThread):
         self.settings = QSettings()
 
     def run(self):
+        self.testCacheFolders()
         self.refresh()
 
+    def testCacheFolders(self):
+        if not os.path.isdir(os.path.dirname(CACHE_PATH)):
+            os.mkdir(os.path.dirname(CACHE_PATH))
+        if not os.path.isdir(AVATAR_CACHE_FOLDER):
+            os.mkdir(AVATAR_CACHE_FOLDER)
+        
     def downloadProfileImage(self,status):
         if type(status)!=twitter.DirectMessage:
             cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
