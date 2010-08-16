@@ -11,6 +11,7 @@
 ##
 import pypackager
 import os
+import khweeteur
 
 if __name__ == "__main__":
     try:
@@ -19,7 +20,7 @@ if __name__ == "__main__":
         pass
 
     p=pypackager.PyPackager("khweeteur")
-    p.version='0.0.2'
+    p.version=khweeteur.__version__
     p.buildversion='1'
     p.display_name='Khweeteur'
     p.description="Khweeteur is a small twitter client for Maemo and Meego."

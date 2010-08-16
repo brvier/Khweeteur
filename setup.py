@@ -4,9 +4,10 @@
 #Khweeteur Setup File
 
 from distutils.core import setup
+import khweeteur
 
 setup(name='Khweeteur',
-      version='0.0.1',
+      version=khweeteur.__version__,
       license='GNU GPLv3',
       description='A simple twitter client designed for Maemo and Meego devices, with an unified view',
       author='Benoît HERVIER',

@@ -23,7 +23,7 @@ import datetime
 import time
 from nwmanager import *
 
-__version__ = '0.0.1'
+__version__ = '0.0.3'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
@@ -155,10 +155,10 @@ class KhweetsModel(QAbstractListModel):
             pkl_file = open(CACHE_PATH, 'rb')
             items = pickle.load(pkl_file)
             self.setData(items)
-        except StandardError,e:
-            print e
-        finally:
             pkl_file.close()
+        except StandardError,e:
+            print e            
+        finally:
             #14 Day limitations
             current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
             for index, item in enumerate(self._items):
