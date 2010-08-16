@@ -21,6 +21,7 @@ import dbus
 import dbus.mainloop.qt
 import datetime
 import time
+from nwmanager import *
 
 __version__ = '0.0.1'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
@@ -53,7 +54,7 @@ class KhweeteurWorker(QThread):
         self.settings = QSettings()
 
     def run(self):
-        self.refresh_timeline()
+        self.refresh()
 
     def downloadProfileImage(self,status):
         if type(status)!=twitter.DirectMessage:
@@ -64,9 +65,18 @@ class KhweeteurWorker(QThread):
                 except StandardError,e:
                     print e
 
+    def refresh(self):
+        self.nw = NetworkManager(self.refresh_timeline)
+        self.nw.request_connection()
+        
     def refresh_timeline(self):
         print 'Try to refresh'
-	current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+        self.nw.stop_monitoring()
+        
+        #print 'Ask connection'
+        #dbusmanager.DBusMonitor().request_connection()
+        
+        current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         try:
             mlist = []
             avatars_url={}
@@ -153,7 +163,7 @@ class KhweetsModel(QAbstractListModel):
             current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
             for index, item in enumerate(self._items):
                 if item[0] < current_dt:
-		    self._items = self._items[:index]
+                    self._items = self._items[:index]
                     break
             self._items.sort()
             self._items.reverse()
