@@ -111,7 +111,6 @@ class KhweetsModel(QAbstractListModel):
         return len(self._items)
 
     def addStatus(self,variant):
-
         if len([True for item in self._items if item[1]==variant.id])==0:
             if type(variant) != twitter.DirectMessage:
                 self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.user.screen_name, variant.text, variant.user.profile_image_url))
@@ -127,10 +126,11 @@ class KhweetsModel(QAbstractListModel):
 
     def setData(self,mlist):
         try:
-            if len(mlist>0):
+            if len(mlist)>0:
                 if type(mlist[0])==tuple:
                     if len(mlist[0])==5:
                         self._items = mlist
+                        self._new_counter = 0
                         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
         except:
             print 'Wrong cache format'
@@ -386,11 +386,10 @@ class KhweeteurWin(QMainWindow):
             print e
 #            KhweeteurNotification().send('Error','Errors occurs during the publication of your tweet :' + str(e))
 
-
     def refreshEnded(self):
         self.tweetsModel.serialize()
         counter=self.tweetsModel.getNewAndReset()
-        if (counter>0) and (self.settings.value('useNotification').toBool) and (not(self.isVisible)):
+        if (counter>0) and (self.settings.value('useNotification').toBool()):
             KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
