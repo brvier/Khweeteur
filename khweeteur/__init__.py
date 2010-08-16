@@ -23,7 +23,7 @@ import datetime
 import time
 from nwmanager import *
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
@@ -87,23 +87,24 @@ class KhweeteurWorker(QThread):
         try:
             mlist = []
             avatars_url={}
-            api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
-            for status in api.GetFriendsTimeline(count=100):
-                if status.created_at_in_seconds > current_dt:
-                    mlist.append((status.created_at_in_seconds,status))
-            for status in api.GetReplies():
-                if status.created_at_in_seconds > current_dt:
-                    mlist.append((status.created_at_in_seconds,status))
-            for status in api.GetDirectMessages():
-                if status.created_at_in_seconds > current_dt:
-                    mlist.append((status.created_at_in_seconds,status))
-            mlist.sort()
+            if (self.settings.value("login").toString()!=''): 
+                api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
+                for status in api.GetFriendsTimeline(count=100):
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetReplies():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetDirectMessages():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                mlist.sort()
 
-            #DOwnload avatar & add tweet to the model
-            for _,status in mlist:
-                self.downloadProfileImage(status)
-                #We are now in a thread
-                self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
+                #DOwnload avatar & add tweet to the model
+                for _,status in mlist:
+                    self.downloadProfileImage(status)
+                    #We are now in a thread
+                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
 
         except StandardError,e:
             print e
@@ -249,8 +250,9 @@ class KhweeteurAbout(QMainWindow):
                                    <br>By Beno&icirc;t HERVIER (Khertan)
                                    <br><br><br><b>Site Web : </b>http://khertan.net/khweeteur
                                    <br><br><b>Thanks to :</b>
-                                   <br>ddoodie on #pyqt
+                                   <br>ddoodie on #pyqt                                   
                                    <br>xnt14 on #maemo
+                                   <br>trebormints on twitter
                                    </center>''' % __version__)
         aboutLayout.addWidget(aboutLabel)
 
@@ -334,12 +336,13 @@ class KhweeteurWin(QMainWindow):
         self.setupMain()
 
         self.settings = QSettings()
-
+        self.worker = None
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
-        self.refresh()
+        self.refresh_timeline()
         self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timer_refresh)
-        self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
+        if (self.settings.value("refreshInterval").toInt()[0]>0):
+            self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
 
     def setupMain(self):
 
@@ -392,10 +395,11 @@ class KhweeteurWin(QMainWindow):
     def tweet(self):
         print 'try to tweet'
         try:
-            api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
-            api.SetSource('Khweeteur')
-            status = api.PostUpdate(self.tb_text.text())
-            self.tb_text.setText('')
+            if self.settings.value("login").toString()!='':         
+                api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
+                api.SetSource('Khweeteur')
+                status = api.PostUpdate(self.tb_text.text())
+                self.tb_text.setText('')
         except StandardError,e:
             print e
 #            KhweeteurNotification().send('Error','Errors occurs during the publication of your tweet :' + str(e))
@@ -430,7 +434,10 @@ class KhweeteurWin(QMainWindow):
     def restartTimer(self):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
         QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel._items)))
-        self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
+        if (self.settings.value("refreshInterval").toInt()[0]>0):
+            self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
+        else:
+            self.timer.stop()
         print 'restart timer'
 
     def setupMenu(self):
