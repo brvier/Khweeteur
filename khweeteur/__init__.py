@@ -367,7 +367,7 @@ class KhweeteurWin(QMainWindow):
 
     def open_url(self):
         for index in self.tweetsView.selectedIndexes():
-            status = self.tweetsModel._items[index.row()][1].text
+            status = self.tweetsModel._items[index.row()][3]
             try:
                 url = re.search("(?P<url>https?://[^\s]+)", status).group("url")
                 QDesktopServices.openUrl(QUrl(url))
@@ -379,10 +379,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_charCounter.setText(str(140-text.count()))
 
     def reply(self,index):
-        if type(self.tweetsModel._items[index.row()][1])==twitter.DirectMessage:
-            user = self.tweetsModel._items[index.row()][1].sender_screen_name
-        else:
-            user = self.tweetsModel._items[index.row()][1].user.screen_name
+        user = self.tweetsModel._items[index.row()][2]
         self.tb_text.setText('@'+user)
 
     def tweet(self):

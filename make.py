@@ -19,7 +19,7 @@ if __name__ == "__main__":
         pass
 
     p=pypackager.PyPackager("khweeteur")
-    p.version='0.0.1'
+    p.version='0.0.2'
     p.buildversion='1'
     p.display_name='Khweeteur'
     p.description="Khweeteur is a small twitter client for Maemo and Meego."
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khteditor_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khteditor"""
 
-    p.changelog="""First Release
+    p.changelog="""Fix open and reply feature
 """
 
 print p.generate(build_binary=False,build_src=True)
