@@ -19,14 +19,13 @@ import pickle
 import re
 import dbus
 import dbus.mainloop.qt
-#PYLINT:C:Comma not followed by a space
 import datetime
 import time
 from nwmanager import NetworkManager
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
-CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
+CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 
 class KhweeteurNotification(QObject):
     def __init__(self):
@@ -34,19 +33,37 @@ class KhweeteurNotification(QObject):
         self.m_bus = dbus.SystemBus()
         self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
                                               '/org/freedesktop/Notifications')
+        self.iface = dbus.Interface(self.m_notify,'org.freedesktop.Notifications')
 
+    def warn(self,message):
+        self.iface.SystemNoteDialog(message,0,'Nothing')
+        
+    def info(self,message):
+        self.iface.SystemNoteInfoprint('Khweeteur : '+message)
+        
     def send(self,title,message,category='message',icon='khweeteur',count=1):
-        self.m_notify.Notify(title,
-                             0,
-                             icon,
-                             title,
-                             message,
-                             [],
-                             {'category':category,
-                             'count':count},
-                             -1,
-                             dbus_interface='org.freedesktop.Notifications'
-                             )
+        self.iface.Notify('Khweeteur',
+                          0,
+                          icon,
+                          title,
+                          message,
+                          [],
+                          {'category':category,
+                          'count':count},
+                          -1
+                          )
+#        self.m_notify.Notify(title,
+#                             0,
+#                             icon,
+#                             title,
+#                             message,
+#                             [],
+#                             {'category':category,
+#                             'count':count},
+#                             -1,
+#                             dbus_interface='org.freedesktop.Notifications'
+#                             )
+
 
 class KhweeteurWorker(QThread):
 
@@ -66,7 +83,6 @@ class KhweeteurWorker(QThread):
         
     def downloadProfileImage(self,status):
         if type(status)!=twitter.DirectMessage:
-#PYLINT:C:Line too long 
             cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
             if not(os.path.exists(cache)):
                 try:
@@ -76,8 +92,7 @@ class KhweeteurWorker(QThread):
         
     def refresh(self):
         print 'Try to refresh'
-        
-        
+        KhweeteurNotification().send('Try to tweet','Body',count=200)
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         try:
             mlist = []
@@ -103,6 +118,8 @@ class KhweeteurWorker(QThread):
 
         except StandardError,e:
             print e
+            KhweeteurNotification().info('Error occurs during refresh.')
+
 
         print 'Refresh ended'
 
@@ -148,6 +165,7 @@ class KhweetsModel(QAbstractListModel):
                         self._new_counter = 0
                         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
         except:
+            KhweeteurNotification().info('Wrong cache format. Reinit cache.')
             print 'Wrong cache format'
 
     def serialize(self):
@@ -376,7 +394,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_text.setText('@'+user)
 
     def tweet(self):
-        print 'try to tweet'
         try:
             if self.settings.value("login").toString()!='':         
                 api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
@@ -384,8 +401,8 @@ class KhweeteurWin(QMainWindow):
                 status = api.PostUpdate(self.tb_text.text())
                 self.tb_text.setText('')
         except StandardError,e:
-            #FIXME : Display error to user instead of silent fail
-            printe
+            KhweeteurNotification().warn('Send tweet failed')
+            print e
 
     def refreshEnded(self):
         self.tweetsModel.serialize()
