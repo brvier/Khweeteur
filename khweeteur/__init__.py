@@ -41,14 +41,15 @@ class KhweeteurNotification(QObject):
     def info(self,message):
         self.iface.SystemNoteInfoprint('Khweeteur : '+message)
         
-    def send(self,title,message,category='message',icon='khweeteur',count=1):
+    def send(self,title,message,category='im.received',icon='khweeteur',count=1):
         self.iface.Notify('Khweeteur',
                           0,
-                          icon,
+                          '',
                           title,
                           message,
-                          [],
+                          ['default','test'],
                           {'category':category,
+                          'desktop-entry':'khweeteur',
                           'count':count},
                           -1
                           )
@@ -92,7 +93,7 @@ class KhweeteurWorker(QThread):
         
     def refresh(self):
         print 'Try to refresh'
-        KhweeteurNotification().send('Try to tweet','Body',count=200)
+#        KhweeteurNotification().send('Try to tweet','Body',count=200)
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         try:
             mlist = []
