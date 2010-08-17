@@ -19,11 +19,12 @@ import pickle
 import re
 import dbus
 import dbus.mainloop.qt
+#PYLINT:C:Comma not followed by a space
 import datetime
 import time
-from nwmanager import *
+from nwmanager import NetworkManager
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"),'.khweeteur','tweets.cache')
 
@@ -65,23 +66,17 @@ class KhweeteurWorker(QThread):
         
     def downloadProfileImage(self,status):
         if type(status)!=twitter.DirectMessage:
+#PYLINT:C:Line too long 
             cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
             if not(os.path.exists(cache)):
                 try:
                     urlretrieve(status.user.profile_image_url, cache)
                 except StandardError,e:
                     print e
-
-#    def refresh(self):
-#        self.nw = NetworkManager(self.refresh_timeline)
-#        self.nw.request_connection()
         
     def refresh(self):
         print 'Try to refresh'
-#        self.nw.stop_monitoring()
         
-        #print 'Ask connection'
-        #dbusmanager.DBusMonitor().request_connection()
         
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         try:
@@ -108,7 +103,6 @@ class KhweeteurWorker(QThread):
 
         except StandardError,e:
             print e
-#            KhweeteurNotification().send('Error','Errors occurs during the update :' + str(e))
 
         print 'Refresh ended'
 
@@ -186,10 +180,6 @@ class KhweetsModel(QAbstractListModel):
                 return QVariant(self._items[index.row()][2]+ ' : ' + self._items[index.row()][3])
             else:
                 return QVariant(self._items[index.row()][3])
-#                if type(self._items[index.row()][1])==twitter.DirectMessage:
-#                    return QVariant(self._items[index.row()][1].sender_screen_name+' : '+self._items[index.row()][1].text)
-#                else:
-#                    return QVariant(self._items[index.row()][1].user.screen_name+' : '+self._items[index.row()][1].text)
         elif role == Qt.DecorationRole:
                 try:
                     # return an icon, if the decoration role is used
@@ -213,11 +203,6 @@ class KhweetsView(QListView):
         self.setResizeMode(QListView.Adjust)
         self.setViewMode(QListView.ListMode)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#        self.setAlternatingRowColors(True)
-#        self.setUniformItemSizes(True)
-#        self.setWrapping(True)
-#        self.setFlow(QListView.TopToBottom)
-#        self.setGridSize(QSize(-1,200))
 
 
 class KhweeteurAbout(QMainWindow):
@@ -261,7 +246,6 @@ class KhweeteurAbout(QMainWindow):
 
         awidget.setLayout(aboutLayout)
         aboutScrollArea.setWidget(awidget)
-
         self.setCentralWidget(aboutScrollArea)
         self.show()
 
@@ -323,7 +307,6 @@ class KhweeteurPref(QMainWindow):
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.aWidget)
 
-
 class KhweeteurWin(QMainWindow):
 
     newStatus = pyqtSignal((int, twitter.Status), name='newStatus')
@@ -341,9 +324,10 @@ class KhweeteurWin(QMainWindow):
         self.settings = QSettings()
         self.worker = None
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
+        self.nw = NetworkManager(self.refresh_timeline)
         self.refresh_timeline()
         self.timer = QTimer()
-        self.connect(self.timer, SIGNAL("timeout()"), self.timer_refresh)
+        self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
         if (self.settings.value("refreshInterval").toInt()[0]>0):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
 
@@ -357,10 +341,6 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel.unSerialize()
 
         self.toolbar = self.addToolBar('Toolbar')
-
-#        self.tb_refresh = QAction(QIcon.fromTheme("general_backup"),'Refresh', self)
-#        self.connect(self.tb_refresh, SIGNAL('triggered()'), self.refresh_timeline)
-#        self.toolbar.addAction(self.tb_refresh)
 
         self.tb_open = QAction(QIcon.fromTheme("general_web"),'Open', self)
         self.connect(self.tb_open, SIGNAL('triggered()'), self.open_url)
@@ -404,8 +384,8 @@ class KhweeteurWin(QMainWindow):
                 status = api.PostUpdate(self.tb_text.text())
                 self.tb_text.setText('')
         except StandardError,e:
-            print e
-#            KhweeteurNotification().send('Error','Errors occurs during the publication of your tweet :' + str(e))
+            #FIXME : Display error to user instead of silent fail
+            printe
 
     def refreshEnded(self):
         self.tweetsModel.serialize()
@@ -414,27 +394,29 @@ class KhweeteurWin(QMainWindow):
             KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
-    def refresh_if_connected(self):
+    def do_refresh_now(self):
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.worker = KhweeteurWorker()
         self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
         self.worker.start()
         
-    def refresh(self):
-        self.nw = NetworkManager(self.refresh_if_connected)
-        self.nw.request_connection()
+    def request_refresh(self):
+        if not self.nw.device_has_networking:
+            self.nw.request_connection()
+        else:
+            self.refresh_timeline()
 
-    def timer_refresh(self):
+    def timed_refresh(self):
         print 'Timer refresh'
-        self.refresh_timeline()
+        self.request_refresh()
 
     def refresh_timeline(self):
         if self.worker == None:
-            self.refresh()
+            self.do_refresh_now()
         elif self.worker.isFinished() == True:
             print 'isFinished()', True, self.worker.isFinished()
-            self.refresh()
+            self.do_refresh_now()
         else:
             print 'isFinished()', self.worker.isFinished()
 
@@ -453,7 +435,7 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr("&Preferences"), self.do_show_pref,
                 QKeySequence(self.tr("Ctrl+P", "Preferences")))
-        fileMenu.addAction(self.tr("&Update"), self.refresh_timeline,
+        fileMenu.addAction(self.tr("&Update"), self.request_refresh,
                 QKeySequence(self.tr("Ctrl+R", "Update")))
         fileMenu.addAction(self.tr("&About"), self.do_about)
 

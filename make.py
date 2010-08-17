@@ -59,7 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khteditor_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khteditor"""
 
-    p.changelog="""Fix timer when preferences isn't set yet.
+    p.changelog=""" Change in networkManager and qthread. Should fix silent crash.
 """
 
 print p.generate(build_binary=False,build_src=True)
