@@ -85,13 +85,17 @@ class KhweeteurNotification(QObject):
 
 class KhweeteurWorker(QThread):
 
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, search_keyword=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
-
+        self.search_keyword = search_keyword
+        
     def run(self):
         self.testCacheFolders()
-        self.refresh()
+        if self.search_keyword==None:
+            self.refresh()
+        else:
+            self.refresh_search()
 
     def testCacheFolders(self):
         if not os.path.isdir(os.path.dirname(CACHE_PATH)):
@@ -107,6 +111,50 @@ class KhweeteurWorker(QThread):
                     urlretrieve(status.user.profile_image_url, cache)
                 except StandardError,e:
                     print e
+        
+    def refresh_search(self):
+        print 'Try to refresh search :'+str(self.search_keyword)
+        current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+        try:
+            mlist = []
+            avatars_url={}
+            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                for status in api.GetSearch(str(self.search_keyword),per_page=50):
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                mlist.sort()
+
+                #DOwnload avatar & add tweet to the model
+                for _,status in mlist:
+                    self.downloadProfileImage(status)
+                    #We are now in a thread
+                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
+
+            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                for status in api.GetSearch(str(self.search_keyword),per_page=50):
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+
+            if ((self.settings.value("twitter_access_token_key").toString()!='')) or ((self.settings.value("identica_access_token_key").toString()!='')): 
+
+                mlist.sort()
+
+                #DOwnload avatar & add tweet to the model
+                for _,status in mlist:
+                    self.downloadProfileImage(status)
+                    #We are now in a thread
+                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
+
+        except twitter.TwitterError,e:
+            print 'Error during refresh : ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+
+#            KhweeteurNotification().info('Error occurs during refresh.')
+
+
+        print 'Refresh search :'+str(self.search_keyword)
         
     def refresh(self):
         print 'Try to refresh'
@@ -128,15 +176,8 @@ class KhweeteurWorker(QThread):
                 for status in api.GetMentions():
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))                        
-                mlist.sort()
 
-                #DOwnload avatar & add tweet to the model
-                for _,status in mlist:
-                    self.downloadProfileImage(status)
-                    #We are now in a thread
-                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
-
-            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+            if (self.settings.value("identica_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 for status in api.GetFriendsTimeline(count=100):
                     if status.created_at_in_seconds > current_dt:
@@ -150,6 +191,9 @@ class KhweeteurWorker(QThread):
                 for status in api.GetMentions():
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))                        
+
+            if ((self.settings.value("twitter_access_token_key").toString()!='')) or ((self.settings.value("identica_access_token_key").toString()!='')): 
+
                 mlist.sort()
 
                 #DOwnload avatar & add tweet to the model
@@ -375,7 +419,7 @@ class KhweeteurPref(QMainWindow):
 
                 QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
                 
-                pincode, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter the pincode :')
+                pincode, ok = QInputDialog.getText(self, 'Twitter Authentification', 'Enter the pincode :')
 
                 if ok:
                     self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
@@ -434,7 +478,7 @@ class KhweeteurPref(QMainWindow):
 
                 QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
                 
-                pincode, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter the pincode :')
+                pincode, ok = QInputDialog.getText(self, 'Identi.ca Authentification', 'Enter the token :')
 
                 if ok:
                     self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
@@ -497,27 +541,37 @@ class KhweeteurPref(QMainWindow):
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.aWidget)
 
-class KhweeteurSearchWin(QMainWindow):
-    def __init__(self, parent=None):
-        QMainWindow.__init__(self,None)
-        self.parent = parent
-
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
-        self.setupMenu()
-        self.setupMain()        
+#class KhweeteurSearchWin(QMainWindow):
+#    def __init__(self, parent=None):
+#        QMainWindow.__init__(self,None)
+#        self.parent = parent
+#
+#        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+#        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+#        self.setupMenu()
+#        self.setupMain()
         
 class KhweeteurWin(QMainWindow):
 
     newStatus = pyqtSignal((int, twitter.Status), name='newStatus')
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, search_keyword=None):
         QMainWindow.__init__(self,None)
         self.parent = parent
 
+#        if (self.parent!=None) and (search_keyword!=None):
+        self.search_keyword = search_keyword
+        #crappy trick to avoid search win to be garbage collected
+        self.search_win = []
+            
         self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+#        if self.search_keyword == None:
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
-        self.setWindowTitle("Khweeteur")
+
+        if self.search_keyword != None:
+            self.setWindowTitle("Khweeteur:"+str(self.search_keyword))      
+        else:           
+            self.setWindowTitle("Khweeteur")
         self.setupMenu()
         self.setupMain()
 
@@ -526,7 +580,7 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
         self.nw = NetworkManager(self.refresh_timeline)
         self.notifications = KhweeteurNotification()
-        self.refresh_timeline()
+#        self.refresh_timeline()
         self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
         if (self.settings.value("refreshInterval").toInt()[0]>0):
@@ -539,7 +593,8 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel = KhweetsModel([])
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
-        self.tweetsModel.unSerialize()
+        if self.search_keyword == None:
+            self.tweetsModel.unSerialize()
 
         self.toolbar = self.addToolBar('Toolbar')
 
@@ -600,12 +655,17 @@ class KhweeteurWin(QMainWindow):
                 self.tb_text.setText('')
                 self.tb_text_replyid = 0
                 self.tb_text_replytext = ''
-        except twitter.TwitterError,e:
-            self.notifications.warn('Send tweet failed : '+(e.message))
-            print e.message
+        except (twitter.TwitterError,StandardError),e:
+            if type(e)==twitterError:
+                self.notifications.warn('Send tweet failed : '+(e.message))
+                print e.message
+            else:
+                self.notifications.warn('Send tweet failed : '+str(e))
+                print e 
 
     def refreshEnded(self):
-        self.tweetsModel.serialize()
+        if self.search_keyword == None:
+            self.tweetsModel.serialize()
         counter=self.tweetsModel.getNewAndReset()
         if (counter>0) and (self.settings.value('useNotification').toBool()) and not (self.isActiveWindow()):
             self.notifications.notify('Khweeteur',str(counter)+' new tweet(s)',count=counter)
@@ -614,7 +674,7 @@ class KhweeteurWin(QMainWindow):
     def do_refresh_now(self):
         print type(self.settings.value('useNotification').toString()),self.settings.value('useNotification').toString()
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-        self.worker = KhweeteurWorker()
+        self.worker = KhweeteurWorker(search_keyword=self.search_keyword)
         self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
 #        self.notifications.connect(self.worker, SIGNAL('notify(const QString&,const QString&, const int&'), self.notifications.notify)
@@ -657,8 +717,17 @@ class KhweeteurWin(QMainWindow):
                 QKeySequence(self.tr("Ctrl+P", "Preferences")))
         fileMenu.addAction(self.tr("&Update"), self.request_refresh,
                 QKeySequence(self.tr("Ctrl+R", "Update")))
+        fileMenu.addAction(self.tr("&Search"), self.do_search,
+                QKeySequence(self.tr("Ctrl+S", "Search")))                
         fileMenu.addAction(self.tr("&About"), self.do_about)
 
+    def do_search(self):
+        search_keyword, ok = QInputDialog.getText(self, 'Search', 'Enter the search keyword(s) :')
+        if ok==1:
+            swin = KhweeteurWin(search_keyword=search_keyword)
+            self.search_win.append(swin)
+            swin.show()
+        
     def do_show_pref(self):
         self.pref_win = KhweeteurPref(self)
         self.connect(self.pref_win, SIGNAL("save()"), self.restartTimer)
