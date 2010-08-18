@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -119,21 +119,21 @@ class KhweeteurWorker(QThread):
             mlist = []
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                for status in api.GetSearch(str(self.search_keyword),per_page=50):
+                api = twitter.Api(input_encoding='utf-8',username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                for status in api.GetSearch(self.search_keyword,per_page=50):
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))
-                mlist.sort()
-
-                #DOwnload avatar & add tweet to the model
-                for _,status in mlist:
-                    self.downloadProfileImage(status)
-                    #We are now in a thread
-                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
+#                mlist.sort()
+#
+#                #DOwnload avatar & add tweet to the model
+#                for _,status in mlist:
+#                    self.downloadProfileImage(status)
+#                    #We are now in a thread
+#                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
 
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                for status in api.GetSearch(str(self.search_keyword),per_page=50):
+                for status in api.GetSearch(self.search_keyword,per_page=50):
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))
 
@@ -724,7 +724,7 @@ class KhweeteurWin(QMainWindow):
     def do_search(self):
         search_keyword, ok = QInputDialog.getText(self, 'Search', 'Enter the search keyword(s) :')
         if ok==1:
-            swin = KhweeteurWin(search_keyword=search_keyword)
+            swin = KhweeteurWin(search_keyword=unicode(search_keyword))
             self.search_win.append(swin)
             swin.show()
         

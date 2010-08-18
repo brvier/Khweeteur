@@ -27,7 +27,7 @@ if __name__ == "__main__":
     p.author="Benoit HERVIER"
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
-    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-json"
+    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson"
 #    p.suggests = ""
     p.section="user/network"
     p.arch="armel"
@@ -59,7 +59,8 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khteditor_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khteditor"""
 
-    p.changelog=""" Improve and fix notification.
+    p.changelog=""" Fix dependancy error 
+ Fix search feature in twitter api
 """
 
 print p.generate(build_binary=False,build_src=True)

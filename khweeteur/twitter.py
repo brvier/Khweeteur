@@ -1543,7 +1543,7 @@ class Api(object):
     if not term:
       return []
 
-    parameters['q'] = urllib.quote_plus(term)
+    parameters['q'] = term #urllib.quote_plus(term)
     parameters['show_user'] = show_user
     parameters['lang'] = lang
     parameters['rpp'] = per_page
