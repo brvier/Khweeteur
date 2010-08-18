@@ -22,11 +22,22 @@ import dbus.mainloop.qt
 import datetime
 import time
 from nwmanager import NetworkManager
-
+import dbus.service
+import dbus.mainloop.qt
 __version__ = '0.0.7'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 
+class KhweeteurDBus(dbus.service.Object):
+    @dbus.service.method("net.khertan.khweeteur",
+                         in_signature='', out_signature='')
+    def show(self):
+        print 'Show'
+        self.win.activateWindow()
+        
+    def attach_win(self,win):
+        self.win = win
+        
 class KhweeteurNotification(QObject):
     def __init__(self):
         QObject.__init__(self)
@@ -41,15 +52,16 @@ class KhweeteurNotification(QObject):
     def info(self,message):
         self.iface.SystemNoteInfoprint('Khweeteur : '+message)
         
-    def send(self,title,message,category='im.received',icon='khweeteur',count=1):
+    def notify(self,title,message,category='im.received',icon='khweeteur_32',count=1):
         self.iface.Notify('Khweeteur',
                           0,
-                          '',
+                          icon,
                           title,
                           message,
                           ['default','test'],
                           {'category':category,
                           'desktop-entry':'khweeteur',
+                          'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
                           'count':count},
                           -1
                           )
@@ -93,7 +105,6 @@ class KhweeteurWorker(QThread):
         
     def refresh(self):
         print 'Try to refresh'
-#        KhweeteurNotification().send('Try to tweet','Body',count=200)
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         try:
             mlist = []
@@ -119,7 +130,9 @@ class KhweeteurWorker(QThread):
 
         except StandardError,e:
             print e
-            KhweeteurNotification().info('Error occurs during refresh.')
+            self.emit(SIGNAL("info(const QString&)"),status)
+
+#            KhweeteurNotification().info('Error occurs during refresh.')
 
 
         print 'Refresh ended'
@@ -344,6 +357,7 @@ class KhweeteurWin(QMainWindow):
         self.worker = None
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
         self.nw = NetworkManager(self.refresh_timeline)
+        self.notifications = KhweeteurNotification()
         self.refresh_timeline()
         self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
@@ -402,14 +416,14 @@ class KhweeteurWin(QMainWindow):
                 status = api.PostUpdate(self.tb_text.text())
                 self.tb_text.setText('')
         except StandardError,e:
-            KhweeteurNotification().warn('Send tweet failed')
+            self.notifications.warn('Send tweet failed')
             print e
 
     def refreshEnded(self):
         self.tweetsModel.serialize()
         counter=self.tweetsModel.getNewAndReset()
-        if (counter>0) and (self.settings.value('useNotification').toBool()):
-            KhweeteurNotification().send('Khweeteur',str(counter)+' new tweet(s)',count=counter)
+        if (counter>0) and (self.settings.value('useNotification').toBool()) and not (self.isActiveWindow()):
+            self.notifications.notify('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
@@ -417,6 +431,8 @@ class KhweeteurWin(QMainWindow):
         self.worker = KhweeteurWorker()
         self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
+#        self.notifications.connect(self.worker, SIGNAL('notify(const QString&,const QString&, const int&'), self.notifications.notify)
+        self.notifications.connect(self.worker, SIGNAL('info(const QString&)'), self.notifications.info)
         self.worker.start()
         
     def request_refresh(self):
@@ -467,15 +483,23 @@ class KhweeteurWin(QMainWindow):
 
 class Khweeteur(QApplication):
     def __init__(self):
+        
         QApplication.__init__(self,sys.argv)
         self.setOrganizationName("Khertan Software")
         self.setOrganizationDomain("khertan.net")
         self.setApplicationName("Khweeteur")
         self.version = __version__
-        self.run()
 
+        dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
+
+        session_bus = dbus.SessionBus()
+        name = dbus.service.BusName("net.khertan.khweeteur", session_bus)
+        self.dbus_object = KhweeteurDBus(session_bus, '/net/khertan/khweeteur')
+        self.run()
+        
     def run(self):
         self.win = KhweeteurWin()
+        self.dbus_object.attach_win(self.win)
         self.win.show()
         sys.exit(self.exec_())
 

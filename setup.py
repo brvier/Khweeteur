@@ -17,7 +17,7 @@ setup(name='Khweeteur',
       package_data = {'khweeteur': ['icons/*.png']},
       data_files=[('/usr/share/dbus-1/services', ['khweeteur.service']),
                   ('/usr/share/applications/hildon/', ['khweeteur.desktop']),
-                  ('/usr/share/pixmaps', ['khweeteur.png'])],
+                  ('/usr/share/pixmaps', ['khweeteur.png','khweeteur_64.png','khweeteur_32.png'])],
       scripts=['khweeteur_launch.py'],
 
      )

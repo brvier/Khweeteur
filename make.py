@@ -38,7 +38,7 @@ if __name__ == "__main__":
     p.icon='khweeteur.png'
     p["/usr/bin"] = ["khweeteur_launch.py",]
     p["/usr/share/dbus-1/services"] = ["khweeteur.service",]
-    p["/usr/share/pixmaps"] = ["khweeteur.png",]
+    p["/usr/share/pixmaps"] = ["khweeteur.png","khweeteur_64.png","khweeteur_32.png"]
     p["/usr/share/applications/hildon"] = ["khweeteur.desktop",]
     files = []
     
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khteditor_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khteditor"""
 
-    p.changelog=""" Change in networkManager and qthread. Should fix silent crash.
+    p.changelog=""" Improve and fix notification.
 """
 
 print p.generate(build_binary=False,build_src=True)
