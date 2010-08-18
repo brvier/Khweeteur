@@ -24,9 +24,14 @@ import time
 from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
-__version__ = '0.0.7'
+
+__version__ = '0.0.8'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
+KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
+KHWEETEUR_TWITTER_CONSUMER_SECRET = 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU'
+KHWEETEUR_IDENTICA_CONSUMER_KEY = 'c7e86efd4cb951871200440ad1774413'
+KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
 
 class KhweeteurDBus(dbus.service.Object):
     @dbus.service.method("net.khertan.khweeteur",
@@ -109,8 +114,8 @@ class KhweeteurWorker(QThread):
         try:
             mlist = []
             avatars_url={}
-            if (self.settings.value("login").toString()!=''): 
-                api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
+            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 for status in api.GetFriendsTimeline(count=100):
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))
@@ -120,6 +125,9 @@ class KhweeteurWorker(QThread):
                 for status in api.GetDirectMessages():
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetMentions():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))                        
                 mlist.sort()
 
                 #DOwnload avatar & add tweet to the model
@@ -128,9 +136,31 @@ class KhweeteurWorker(QThread):
                     #We are now in a thread
                     self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
 
-        except StandardError,e:
-            print e
-            self.emit(SIGNAL("info(const QString&)"),status)
+            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                for status in api.GetFriendsTimeline(count=100):
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetReplies():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetDirectMessages():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetMentions():
+                    if status.created_at_in_seconds > current_dt:
+                        mlist.append((status.created_at_in_seconds,status))                        
+                mlist.sort()
+
+                #DOwnload avatar & add tweet to the model
+                for _,status in mlist:
+                    self.downloadProfileImage(status)
+                    #We are now in a thread
+                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
+
+        except twitter.TwitterError,e:
+            print 'Error during refresh : ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
 #            KhweeteurNotification().info('Error occurs during refresh.')
 
@@ -280,7 +310,7 @@ class KhweeteurAbout(QMainWindow):
         aboutScrollArea.setWidget(awidget)
         self.setCentralWidget(aboutScrollArea)
         self.show()
-
+            
 class KhweeteurPref(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self,parent)
@@ -296,15 +326,15 @@ class KhweeteurPref(QMainWindow):
         self.loadPrefs()
 
     def loadPrefs(self):
-        self.login_value.setText(self.settings.value("login").toString())
-        self.password_value.setText(self.settings.value("password").toString())
+        #self.login_value.setText(self.settings.value("login").toString())
+        #self.password_value.setText(self.settings.value("password").toString())
         self.refresh_value.setValue(self.settings.value("refreshInterval").toInt()[0])
         self.displayUser_value.setCheckState(self.settings.value("displayUser").toInt()[0])
         self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
 
     def savePrefs(self):
-        self.settings.setValue('login',self.login_value.text())
-        self.settings.setValue('password',self.password_value.text())
+        #self.settings.setValue('login',self.login_value.text())
+        #self.settings.setValue('password',self.password_value.text())
         self.settings.setValue('refreshInterval',self.refresh_value.value())
         self.settings.setValue('displayUser',self.displayUser_value.checkState())
         self.settings.setValue('useNotification',self.useNotification_value.checkState())
@@ -313,18 +343,146 @@ class KhweeteurPref(QMainWindow):
     def closeEvent(self,widget,*args):
         self.savePrefs()
 
+    def request_twitter_access_or_clear(self):
+        if self.settings.value('twitter_access_token').toBool():
+            self.settings.setValue('twitter_access_token_key',QString())
+            self.settings.setValue('twitter_access_token_secret',QString())
+            self.settings.setValue('twitter_access_token',False)
+            self.twitter_value.setText('Auth on Twitter')
+        else:
+            import os
+            import sys
+            try:
+                from urlparse import parse_qsl
+            except:
+                from cgi import parse_qsl
+            import oauth2 as oauth
+            
+            REQUEST_TOKEN_URL = 'https://api.twitter.com/oauth/request_token'
+            ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
+            AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
+
+            signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+            oauth_consumer             = oauth.Consumer(key=KHWEETEUR_TWITTER_CONSUMER_KEY, secret=KHWEETEUR_TWITTER_CONSUMER_SECRET)
+            oauth_client               = oauth.Client(oauth_consumer)
+            
+            resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+            
+            if resp['status'] != '200':
+                KhweeteurNotification().warn('Invalid respond from Twitter requesting temp token: %s' % resp['status'])
+            else:
+                request_token = dict(parse_qsl(content))
+
+                QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                
+                pincode, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter the pincode :')
+
+                if ok:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                    token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+                    token.set_verifier(str(pincode))
+
+                    oauth_client  = oauth.Client(oauth_consumer, token)
+                    resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                    access_token  = dict(parse_qsl(content))
+
+                    if resp['status'] != '200':
+                        KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                        self.settings.setValue('twitter_access_token_key',QString())
+                        self.settings.setValue('twitter_access_token_secret',QString())
+                        self.settings.setValue('twitter_access_token',False)
+                    else:
+                        print access_token['oauth_token']
+                        print access_token['oauth_token_secret']
+                        self.settings.setValue('twitter_access_token_key',QString(access_token['oauth_token']))
+                        self.settings.setValue('twitter_access_token_secret',QString(access_token['oauth_token_secret']))
+                        self.settings.setValue('twitter_access_token',True)
+                        self.twitter_value.setText('Clear Twitter Auth')
+                        KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                
+    def request_identica_access_or_clear(self):
+
+        if self.settings.value('identica_access_token').toBool():
+            self.settings.setValue('identica_access_token_key',QString())
+            self.settings.setValue('identica_access_token_secret',QString())
+            self.settings.setValue('identica_access_token',False)
+            self.identica_value.setText('Auth on Identi.ca')
+        else:
+            import os
+            import sys
+            try:
+                from urlparse import parse_qsl
+            except:
+                from cgi import parse_qsl
+            import oauth2 as oauth
+            
+            REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token'
+            ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
+            AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
+
+            signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+            oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
+            oauth_client               = oauth.Client(oauth_consumer)
+            
+            resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+            
+            if resp['status'] != '200':
+                KhweeteurNotification().warn('Invalid respond from Identi.ca requesting temp token: %s' % resp['status'])
+            else:
+                request_token = dict(parse_qsl(content))
+
+                QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                
+                pincode, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter the pincode :')
+
+                if ok:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                    token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+                    token.set_verifier(str(pincode))
+
+                    oauth_client  = oauth.Client(oauth_consumer, token)
+                    resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                    access_token  = dict(parse_qsl(content))
+
+                    if resp['status'] != '200':
+                        KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                        self.settings.setValue('identica_access_token_key',QString())
+                        self.settings.setValue('identica_access_token_secret',QString())
+                        self.settings.setValue('identica_access_token',False)
+                    else:
+                        print access_token['oauth_token']
+                        print access_token['oauth_token_secret']
+                        self.settings.setValue('identica_access_token_key',QString(access_token['oauth_token']))
+                        self.settings.setValue('identica_access_token_secret',QString(access_token['oauth_token_secret']))
+                        self.settings.setValue('identica_access_token',True)
+                        self.identica_value.setText('Clear Identi.ca Auth')
+                        KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                    
     def setupGUI(self):
         self.aWidget = QWidget()
         self._main_layout = QGridLayout(self.aWidget)
 
-        self._main_layout.addWidget(QLabel('Login :'),0,0)
-        self.login_value = QLineEdit()
-        self._main_layout.addWidget(self.login_value,0,1)
+        self._main_layout.addWidget(QLabel('Autorizations :'),0,0)
+        if self.settings.value('twitter_access_token').toBool():
+            self.twitter_value = QPushButton('Clear Twitter Auth')
+        else:
+            self.twitter_value = QPushButton('Auth on Twitter')
+        self._main_layout.addWidget(self.twitter_value,0,1)
+        self.connect(self.twitter_value,SIGNAL('clicked()'),self.request_twitter_access_or_clear)
 
-        self._main_layout.addWidget(QLabel('Password :'),1,0)
-        self.password_value = QLineEdit()
-        self.password_value.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        self._main_layout.addWidget(self.password_value,1,1)
+        if self.settings.value('identica_access_token').toBool():
+            self.identica_value = QPushButton('Clear Identi.ca Auth')
+        else:
+            self.identica_value = QPushButton('Auth on Identi.ca')
+        self._main_layout.addWidget(self.identica_value,1,1)
+        self.connect(self.identica_value,SIGNAL('clicked()'),self.request_identica_access_or_clear)
+        
+        # self._main_layout.addWidget(QLabel('Password :'),1,0)
+        # self.password_value = QLineEdit()
+        # self.password_value.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        # self._main_layout.addWidget(self.password_value,1,1)
 
         self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),2,0)
         self.refresh_value = QSpinBox()
@@ -339,6 +497,16 @@ class KhweeteurPref(QMainWindow):
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.aWidget)
 
+class KhweeteurSearchWin(QMainWindow):
+    def __init__(self, parent=None):
+        QMainWindow.__init__(self,None)
+        self.parent = parent
+
+        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        self.setupMenu()
+        self.setupMain()        
+        
 class KhweeteurWin(QMainWindow):
 
     newStatus = pyqtSignal((int, twitter.Status), name='newStatus')
@@ -380,6 +548,8 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_open)
 
         self.tb_text = QLineEdit()
+        self.tb_text_replyid = 0
+        self.tb_text_replytext = ''
         self.tb_text.enabledChange(True)
         self.toolbar.addWidget(self.tb_text)
 
@@ -395,8 +565,9 @@ class KhweeteurWin(QMainWindow):
         for index in self.tweetsView.selectedIndexes():
             status = self.tweetsModel._items[index.row()][3]
             try:
-                url = re.search("(?P<url>https?://[^\s]+)", status).group("url")
-                QDesktopServices.openUrl(QUrl(url))
+                urls = re.findall("(?P<url>https?://[^\s]+)", status)
+                for url in urls:
+                    QDesktopServices.openUrl(QUrl(url))
             except StandardError,e:
                 print e
 
@@ -406,18 +577,32 @@ class KhweeteurWin(QMainWindow):
 
     def reply(self,index):
         user = self.tweetsModel._items[index.row()][2]
-        self.tb_text.setText('@'+user)
+        self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
+        self.tb_text_replytext = '@'+user+' '
+        self.tb_text.setText('@'+user+' ')
 
     def tweet(self):
         try:
-            if self.settings.value("login").toString()!='':         
-                api = twitter.Api(username=self.settings.value("login").toString(), password=self.settings.value("password").toString())
-                api.SetSource('Khweeteur')
-                status = api.PostUpdate(self.tb_text.text())
+                status_text = str(self.tb_text.text())
+                if status_text.startswith(self.tb_text_replytext):
+                    self.tb_text_replyid = 0
+                    
+                if self.settings.value("twitter_access_token_key").toString()!='':     
+                    api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    self.notifications.info('Tweet send to Twitter')
+
+                if self.settings.value("identica_access_token_key").toString()!='':     
+                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                    status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)                    
+                    self.notifications.info('Tweet send to Identica')
+                    
                 self.tb_text.setText('')
-        except StandardError,e:
-            self.notifications.warn('Send tweet failed')
-            print e
+                self.tb_text_replyid = 0
+                self.tb_text_replytext = ''
+        except twitter.TwitterError,e:
+            self.notifications.warn('Send tweet failed : '+(e.message))
+            print e.message
 
     def refreshEnded(self):
         self.tweetsModel.serialize()
@@ -427,12 +612,13 @@ class KhweeteurWin(QMainWindow):
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
+        print type(self.settings.value('useNotification').toString()),self.settings.value('useNotification').toString()
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.worker = KhweeteurWorker()
         self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
 #        self.notifications.connect(self.worker, SIGNAL('notify(const QString&,const QString&, const int&'), self.notifications.notify)
-        self.notifications.connect(self.worker, SIGNAL('info(const QString&)'), self.notifications.info)
+        self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
         self.worker.start()
         
     def request_refresh(self):

@@ -27,7 +27,7 @@ if __name__ == "__main__":
     p.author="Benoit HERVIER"
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
-    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-twitter"
+    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-json"
 #    p.suggests = ""
     p.section="user/network"
     p.arch="armel"
