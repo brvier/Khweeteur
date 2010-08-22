@@ -715,7 +715,7 @@ class KhweeteurWin(QMainWindow):
                     api.PostRetweet(tweetid)
                     self.notifications.info('Retweet send to Twitter')
             except (twitter.TwitterError,StandardError),e:
-                if type(e)==twitter.TwitterError:cd 
+                if type(e)==twitter.TwitterError:
                     self.notifications.warn('Retweet to twitter failed : '+(e.message))
                     print e.message
                 else:
