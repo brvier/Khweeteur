@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.9'
+__version__ = '0.0.10'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -120,7 +120,7 @@ class KhweeteurWorker(QThread):
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(input_encoding='utf-8',username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                for status in api.GetSearch(self.search_keyword,per_page=50):
+                for status in api.GetSearch(self.search_keyword):
                     if status.created_at_in_seconds > current_dt:
                         mlist.append((status.created_at_in_seconds,status))
 #                mlist.sort()
@@ -220,10 +220,38 @@ class KhweetsModel(QAbstractListModel):
         # Cache the passed data list as a class member.
         self._items = mlist
         self._new_counter = 0
+        self.now = time.time()
 
         self.display_screenname = False
+        self.display_timestamp = False
+        self.display_avatar = True
 
+    def GetRelativeCreatedAt(self,timestamp):
+        '''Get a human redable string representing the posting time
 
+        Returns:
+          A human readable string representing the posting time
+        '''
+        fudge = 1.25
+        delta  = long(self.now) - long(timestamp)
+    
+        if delta < (1 * fudge):
+          return 'about a second ago'
+        elif delta < (60 * (1/fudge)):
+          return 'about %d seconds ago' % (delta)
+        elif delta < (60 * fudge):
+          return 'about a minute ago'
+        elif delta < (60 * 60 * (1/fudge)):
+          return 'about %d minutes ago' % (delta / 60)
+        elif delta < (60 * 60 * fudge) or delta / (60 * 60) == 1:
+          return 'about an hour ago'
+        elif delta < (60 * 60 * 24 * (1/fudge)):
+          return 'about %d hours ago' % (delta / (60 * 60))
+        elif delta < (60 * 60 * 24 * fudge) or delta / (60 * 60 * 24) == 1:
+          return 'about a day ago'
+        else:
+          return 'about %d days ago' % (delta / (60 * 60 * 24))
+          
     def rowCount(self, parent = QModelIndex()):
         return len(self._items)
 
@@ -235,6 +263,7 @@ class KhweetsModel(QAbstractListModel):
                 else:
                     self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.sender_screen_name, variant.text, None))
                 self._new_counter = self._new_counter + 1
+                self.now = time.time()
                 QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
         except StandardError, e:
             print "We shouldn't got this error here :",e
@@ -282,17 +311,22 @@ class KhweetsModel(QAbstractListModel):
 
     def data(self, index, role = Qt.DisplayRole):
         if role == Qt.DisplayRole:
+            status = self._items[index.row()][3]
+            if self.display_timestamp:
+                status = status +'\n'+ self.GetRelativeCreatedAt(self._items[index.row()][0])            
             if self.display_screenname:
-                return QVariant(self._items[index.row()][2]+ ' : ' + self._items[index.row()][3])
-            else:
-                return QVariant(self._items[index.row()][3])
-        elif role == Qt.DecorationRole:
+                status = self._items[index.row()][2]+ ' : ' + status            
+            return QVariant(status)
+        elif role == Qt.DecorationRole:            
+            if self.display_avatar:
                 try:
                     # return an icon, if the decoration role is used
                     icon = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(self._items[index.row()][4]))
                     return QVariant(QIcon(icon))
                 except:
                     return QVariant()
+            else:
+                return QVariant()
         elif role == Qt.BackgroundRole:
             if index.row() % 2 == 0:
                 return QVariant(QColor(Qt.gray))
@@ -374,7 +408,10 @@ class KhweeteurPref(QMainWindow):
         #self.password_value.setText(self.settings.value("password").toString())
         self.refresh_value.setValue(self.settings.value("refreshInterval").toInt()[0])
         self.displayUser_value.setCheckState(self.settings.value("displayUser").toInt()[0])
+        self.displayAvatar_value.setCheckState(self.settings.value("displayAvatar").toInt()[0])
+        self.displayTimestamp_value.setCheckState(self.settings.value("displayTimestamp").toInt()[0])
         self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
+        self.useSerialization_value.setCheckState(self.settings.value("useSerialization").toInt()[0])
 
     def savePrefs(self):
         #self.settings.setValue('login',self.login_value.text())
@@ -382,6 +419,9 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('refreshInterval',self.refresh_value.value())
         self.settings.setValue('displayUser',self.displayUser_value.checkState())
         self.settings.setValue('useNotification',self.useNotification_value.checkState())
+        self.settings.setValue('useSerialization',self.useSerialization_value.checkState())
+        self.settings.setValue('displayAvatar',self.displayAvatar_value.checkState())
+        self.settings.setValue('displayTimestamp',self.displayTimestamp_value.checkState())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -505,10 +545,19 @@ class KhweeteurPref(QMainWindow):
                     self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
                     
     def setupGUI(self):
-        self.aWidget = QWidget()
+#        self.aWidget = QWidget()
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.aWidget = QWidget(self.scrollArea)
+        self.aWidget.setMinimumSize(480,1000)
+        self.aWidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scrollArea.setWidget(self.aWidget)
+        scroller = self.scrollArea.property("kineticScroller").toPyObject()
+        scroller.setEnabled(True)
         self._main_layout = QGridLayout(self.aWidget)
 
-        self._main_layout.addWidget(QLabel('Autorizations :'),0,0)
+        self._main_layout.addWidget(QLabel('Authorizations :'),0,0)
         if self.settings.value('twitter_access_token').toBool():
             self.twitter_value = QPushButton('Clear Twitter Auth')
         else:
@@ -532,14 +581,26 @@ class KhweeteurPref(QMainWindow):
         self.refresh_value = QSpinBox()
         self._main_layout.addWidget(self.refresh_value,2,1)
 
+        self._main_layout.addWidget(QLabel('Display preferences :'),3,0)
         self.displayUser_value = QCheckBox('Display username')
         self._main_layout.addWidget(self.displayUser_value,3,1)
 
+        self.displayAvatar_value = QCheckBox('Display avatar')
+        self._main_layout.addWidget(self.displayAvatar_value,4,1)
+
+        self.displayTimestamp_value = QCheckBox('Display timestamp')
+        self._main_layout.addWidget(self.displayTimestamp_value,5,1)
+
+        self._main_layout.addWidget(QLabel('Other preferences :'),6,0)
         self.useNotification_value = QCheckBox('Use Notification')
-        self._main_layout.addWidget(self.useNotification_value,4,1)
+        self._main_layout.addWidget(self.useNotification_value,6,1)
+
+        self.useSerialization_value = QCheckBox('Use Serialization')
+        self._main_layout.addWidget(self.useSerialization_value,7,1)
 
         self.aWidget.setLayout(self._main_layout)
-        self.setCentralWidget(self.aWidget)
+#        self.setCentralWidget(self.aWidget)
+        self.setCentralWidget(self.scrollArea)
 
 #class KhweeteurSearchWin(QMainWindow):
 #    def __init__(self, parent=None):
@@ -578,6 +639,8 @@ class KhweeteurWin(QMainWindow):
         self.settings = QSettings()
         self.worker = None
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
+        self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp").toBool()
+        self.tweetsModel.display_avatar = self.settings.value("displayAvatar").toBool()
         self.nw = NetworkManager(self.refresh_timeline)
         self.notifications = KhweeteurNotification()
 #        self.refresh_timeline()
@@ -644,19 +707,25 @@ class KhweeteurWin(QMainWindow):
                     
                 if self.settings.value("twitter_access_token_key").toString()!='':     
                     api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                    status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     self.notifications.info('Tweet send to Twitter')
 
                 if self.settings.value("identica_access_token_key").toString()!='':     
                     api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                    status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)                    
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     self.notifications.info('Tweet send to Identica')
                     
                 self.tb_text.setText('')
                 self.tb_text_replyid = 0
                 self.tb_text_replytext = ''
         except (twitter.TwitterError,StandardError),e:
-            if type(e)==twitterError:
+            if type(e)==twitter.TwitterError:
                 self.notifications.warn('Send tweet failed : '+(e.message))
                 print e.message
             else:
@@ -702,6 +771,8 @@ class KhweeteurWin(QMainWindow):
 
     def restartTimer(self):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
+        self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp").toBool()
+        self.tweetsModel.display_avatar = self.settings.value("displayAvatar").toBool()
         QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel._items)))
         if (self.settings.value("refreshInterval").toInt()[0]>0):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
@@ -728,7 +799,7 @@ class KhweeteurWin(QMainWindow):
             self.search_win.append(swin)
             swin.show()
         
-    def do_show_pref(self):
+    def do_show_pref(self):        
         self.pref_win = KhweeteurPref(self)
         self.connect(self.pref_win, SIGNAL("save()"), self.restartTimer)
         self.pref_win.show()

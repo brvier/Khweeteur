@@ -1,6 +1,7 @@
 #!/usr/bin/python2.4
 #
 # Copyright 2007 The Python-Twitter Developers
+# This version is a fork made by Khertan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +18,7 @@
 '''A library that provides a Python interface to the Twitter API'''
 
 __author__ = 'python-twitter@googlegroups.com'
-__version__ = '0.8-devel'
+__version__ = '0.8-khtfork'
 
 
 import base64
@@ -1503,7 +1504,7 @@ class Api(object):
                 since_id=None,
                 per_page=15,
                 page=1,
-                lang="en",
+                lang=None,
                 show_user="true",
                 query_users=False):
     '''Return twitter search results for a given term.
@@ -1545,7 +1546,8 @@ class Api(object):
 
     parameters['q'] = term #urllib.quote_plus(term)
     parameters['show_user'] = show_user
-    parameters['lang'] = lang
+    if lang:
+        parameters['lang'] = lang
     parameters['rpp'] = per_page
     parameters['page'] = page
 
@@ -1794,6 +1796,42 @@ class Api(object):
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
+  def PostSerializedUpdates(self, status, continuation=None, **kwargs):
+    '''Post one or more twitter status messages from the authenticated user.
+
+    Unlike api.PostUpdate, this method will post multiple status updates
+    if the message is longer than 140 characters.
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      status:
+        The message text to be posted.  May be longer than 140 characters.
+      continuation:
+        The character string, if any, to be appended to all but the
+        last message.  Note that Twitter strips trailing '...' strings
+        from messages.  Consider using the unicode \u2026 character
+        (horizontal ellipsis) instead. [Defaults to None]
+      **kwargs:
+        See api.PostUpdate for a list of accepted parameters.
+    Returns:
+      A of list twitter.Status instance representing the messages posted.
+    '''
+    results = list()
+    line_length = CHARACTER_LIMIT - 4
+    lines = textwrap.wrap(status, line_length)
+    if len(lines) > 9:
+        line_length = CHARACTER_LIMIT - 6
+        lines = textwrap.wrap(status, line_length)        
+    counter = 1
+    if len(lines)==1:
+          results.append(self.PostUpdate(lines[0], **kwargs))        
+    else: 
+        for line in lines:
+          results.append(self.PostUpdate(line + ' ' + str(counter)+'/'+str(len(lines)), **kwargs))
+          counter = counter + 1
+    return results
+    
   def PostUpdates(self, status, continuation=None, **kwargs):
     '''Post one or more twitter status messages from the authenticated user.
 
@@ -2537,7 +2575,7 @@ class Api(object):
           response = opener.open(url, encoded_post_data)
           url_data = self._DecompressGzippedResponse(response)
         except urllib2.HTTPError, e:
-          print e
+          print 'Errors ',e
         opener.close()
         self._cache.Set(key, url_data)
       else:

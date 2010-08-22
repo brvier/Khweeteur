@@ -59,8 +59,11 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khteditor_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khteditor"""
 
-    p.changelog=""" Fix dependancy error 
+    p.changelog=""" Add preferences for avatar 
+ Add preferences for timestamp
+ Add serialized tweets option
  Fix search feature in twitter api
+ Fix post udpdate warning display
 """
 
 print p.generate(build_binary=False,build_src=True)
