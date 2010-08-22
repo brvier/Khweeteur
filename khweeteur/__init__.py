@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.11'
+__version__ = '0.0.12'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -740,12 +740,13 @@ class KhweeteurWin(QMainWindow):
                                               
     def tweet(self):
         try:
-                status_text = str(self.tb_text.text())
+                status_text = unicode(self.tb_text.text()).encode('UTF-8')
                 if status_text.startswith(self.tb_text_replytext):
                     self.tb_text_replyid = 0
                     
                 if self.settings.value("twitter_access_token_key").toString()!='':     
-                    api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                    api = twitter.Api(
+                                      username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
                                       access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
                                       access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                     if self.settings.value('useSerialization').toBool():
@@ -769,6 +770,9 @@ class KhweeteurWin(QMainWindow):
                 self.tb_text_replyid = 0
                 self.tb_text_replytext = ''
         except (twitter.TwitterError,StandardError),e:
+            import traceback
+            print traceback.print_exc()
+            print traceback.print_stack()
             if type(e)==twitter.TwitterError:
                 self.notifications.warn('Send tweet failed : '+(e.message))
                 print e.message

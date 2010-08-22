@@ -1828,7 +1828,7 @@ class Api(object):
           results.append(self.PostUpdate(lines[0], **kwargs))        
     else: 
         for line in lines:
-          results.append(self.PostUpdate(line + ' ' + str(counter)+'/'+str(len(lines)), **kwargs))
+          results.append(self.PostUpdate(line + u' ' + unicode(counter)+u'/'+unicode(len(lines)), **kwargs))
           counter = counter + 1
     return results
     
