@@ -59,8 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Add retweet 
- Fix package post script
+    p.changelog=""" Fix tweet post with accent 
 """
 
 print p.generate(build_binary=False,build_src=True)
