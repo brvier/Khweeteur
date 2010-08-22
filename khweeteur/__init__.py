@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.10'
+__version__ = '0.0.11'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur','tweets.cache')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -327,11 +327,11 @@ class KhweetsModel(QAbstractListModel):
                     return QVariant()
             else:
                 return QVariant()
-        elif role == Qt.BackgroundRole:
-            if index.row() % 2 == 0:
-                return QVariant(QColor(Qt.gray))
-            else:
-                return QVariant(QColor(Qt.lightGray))
+#        elif role == Qt.BackgroundRole:
+#            if index.row() % 2 == 0:
+#                return QVariant(QColor(Qt.gray))
+#            else:
+#                return QVariant(QColor(Qt.lightGray))
         else:
            return QVariant()
 
@@ -664,7 +664,11 @@ class KhweeteurWin(QMainWindow):
         self.tb_open = QAction(QIcon.fromTheme("general_web"),'Open', self)
         self.connect(self.tb_open, SIGNAL('triggered()'), self.open_url)
         self.toolbar.addAction(self.tb_open)
-
+        
+        self.tb_retweet = QAction(QIcon.fromTheme("general_refresh"),'Retweet', self)
+        self.connect(self.tb_retweet, SIGNAL('triggered()'), self.retweet)
+        self.toolbar.addAction(self.tb_retweet)
+        
         self.tb_text = QLineEdit()
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
@@ -699,6 +703,41 @@ class KhweeteurWin(QMainWindow):
         self.tb_text_replytext = '@'+user+' '
         self.tb_text.setText('@'+user+' ')
 
+    def retweet(self):
+        for index in self.tweetsView.selectedIndexes():
+            tweetid = self.tweetsModel._items[index.row()][1]
+            print 'DEBUG Retweet:',tweetid
+            try:
+                if self.settings.value("twitter_access_token_key").toString()!='':     
+                    api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    api.PostRetweet(tweetid)
+                    self.notifications.info('Retweet send to Twitter')
+            except (twitter.TwitterError,StandardError),e:
+                if type(e)==twitter.TwitterError:
+                    self.notifications.warn('Retweet to twitter failed : '+(e.message))
+                    print e.message
+                else:
+                    self.notifications.warn('Retweet to twitter failed : '+str(e))
+                    print e                     
+            try:
+                if self.settings.value("identica_access_token_key").toString()!='': 
+                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
+                    api.PostRetweet(tweetid)
+                    self.notifications.info('Retweet send to Identi.ca')
+            except (twitter.TwitterError,StandardError),e:
+                if type(e)==twitter.TwitterError:
+                    self.notifications.warn('Retweet to identi.ca failed : '+(e.message))
+                    print e.message
+                else:
+                    self.notifications.warn('Retweet to identi.ca failed : '+str(e))
+                    print e                 
+
+                                              
     def tweet(self):
         try:
                 status_text = str(self.tb_text.text())
@@ -706,7 +745,9 @@ class KhweeteurWin(QMainWindow):
                     self.tb_text_replyid = 0
                     
                 if self.settings.value("twitter_access_token_key").toString()!='':     
-                    api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                     if self.settings.value('useSerialization').toBool():
                         status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     else:
@@ -714,7 +755,10 @@ class KhweeteurWin(QMainWindow):
                     self.notifications.info('Tweet send to Twitter')
 
                 if self.settings.value("identica_access_token_key").toString()!='':     
-                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                     if self.settings.value('useSerialization').toBool():
                         status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     else:
