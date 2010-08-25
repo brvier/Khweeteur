@@ -255,13 +255,67 @@ class KhweetsModel(QAbstractListModel):
     def rowCount(self, parent = QModelIndex()):
         return len(self._items)
 
+    def refreshTimestamp(self):
+        print 'Refreshing timestamp'
+        for index,item in enumerate(self._items):
+            try:
+                self._items[index] = (item[0],
+                                      item[1],
+                                      item[2],
+                                      item[3],
+                                      item[4],
+                                      self.GetRelativeCreatedAt(item[0]))
+            except StandardError,e:
+                print e,':',item            
+
+        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+        
+    def addStatuses(self,listVariant):
+        for variant in listVariant:
+            try:
+                if len([True for item in self._items if item[1]==variant.id])==0:
+                    if type(variant) != twitter.DirectMessage:
+                        self._items.insert(0,
+                            (variant.created_at_in_seconds,
+                             variant.id,
+                             variant.user.screen_name,
+                             variant.text,
+                             variant.user.profile_image_url,
+                             self.GetRelativeCreatedAt(variant.created_at_in_seconds)))
+                    else:
+                        self._items.insert(0,
+                             (variant.created_at_in_seconds,
+                              variant.id,
+                              variant.sender_screen_name,
+                              variant.text,
+                              None,
+                              self.GetRelativeCreatedAt(variant.created_at_in_seconds)))
+                    self._new_counter = self._new_counter + 1
+                    self.now = time.time()
+            except StandardError, e:
+                print "We shouldn't got this error here :",e
+        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+
+            
     def addStatus(self,variant):
         try:
             if len([True for item in self._items if item[1]==variant.id])==0:
                 if type(variant) != twitter.DirectMessage:
-                    self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.user.screen_name, variant.text, variant.user.profile_image_url))
+                    self._items.insert(0,
+                        (variant.created_at_in_seconds,
+                         variant.id,
+                         variant.user.screen_name,
+                         variant.text,
+                         variant.user.profile_image_url,
+                         self.GetRelativeCreatedAt(variant.created_at_in_seconds)))
                 else:
-                    self._items.insert(0,(variant.created_at_in_seconds, variant.id, variant.sender_screen_name, variant.text, None))
+                    self._items.insert(0,
+                         (variant.created_at_in_seconds,
+                          variant.id,
+                          variant.sender_screen_name,
+                          variant.text,
+                          None,
+                          self.GetRelativeCreatedAt(variant.created_at_in_seconds)))
                 self._new_counter = self._new_counter + 1
                 self.now = time.time()
                 QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
@@ -277,10 +331,12 @@ class KhweetsModel(QAbstractListModel):
         try:
             if len(mlist)>0:
                 if type(mlist[0])==tuple:
-                    if len(mlist[0])==5:
+                    if len(mlist[0])==6:
                         self._items = mlist
                         self._new_counter = 0
                         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+                    else:
+                        print 'Wrong cache format'
         except:
             KhweeteurNotification().info('Wrong cache format. Reinit cache.')
             print 'Wrong cache format'
@@ -313,7 +369,7 @@ class KhweetsModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             status = self._items[index.row()][3]
             if self.display_timestamp:
-                status = status +'\n'+ self.GetRelativeCreatedAt(self._items[index.row()][0])            
+                status = status +'\n'+ self._items[index.row()][5]     
             if self.display_screenname:
                 status = self._items[index.row()][2]+ ' : ' + status            
             return QVariant(status)
@@ -357,7 +413,7 @@ class KhweeteurAbout(QMainWindow):
         aboutScrollArea = QScrollArea(self)
         aboutScrollArea.setWidgetResizable(True)
         awidget = QWidget(aboutScrollArea)
-        awidget.setMinimumSize(480,600)
+        awidget.setMinimumSize(480,700)
         awidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         aboutScrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         scroller = aboutScrollArea.property("kineticScroller").toPyObject()
@@ -648,6 +704,12 @@ class KhweeteurWin(QMainWindow):
         self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
         if (self.settings.value("refreshInterval").toInt()[0]>0):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
+
+    def enterEvent(self,event):
+        """
+            Redefine the enter event to refresh timestamp
+        """        
+        self.tweetsModel.refreshTimestamp()
 
     def setupMain(self):
 
