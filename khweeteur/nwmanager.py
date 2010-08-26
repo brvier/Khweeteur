@@ -3,7 +3,7 @@ import dbus
 import dbus.glib
 import gobject
 
-from PyQt4.QtCore import QObject
+from PySide.QtCore import QObject
 
 """ DBus connection monitor. Monitors device internet connection and can requests one if needed.
     most code taken from PyMaemo conic examples http://pymaemo.garage.maemo.org/conic.html """

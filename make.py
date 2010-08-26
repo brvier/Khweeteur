@@ -59,7 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Cache search, fix icon size, Serialization fix
+    p.changelog=""" Switch to pyside, fix some bugs
 """
 
 print p.generate(build_binary=False,build_src=True)

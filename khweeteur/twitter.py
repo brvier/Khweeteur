@@ -18,7 +18,7 @@
 '''A library that provides a Python interface to the Twitter API'''
 
 __author__ = 'python-twitter@googlegroups.com'
-__version__ = '0.8-khtfork'
+__version__ = '0.8-khtfork.2'
 
 
 import base64
@@ -1556,7 +1556,7 @@ class Api(object):
 
     # Make and send requests
     url  = 'http://search.twitter.com/search.json'
-    json = self._FetchUrl(url, parameters=parameters)
+    json = self._FetchUrl(url, post_data=parameters)
     data = simplejson.loads(json)
 
     self._CheckForTwitterError(data)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.5
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010 Benoî HERVIER
+# Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 
 """A simple Twitter client made with pyqt4"""
@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.14'
+__version__ = '0.0.16'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -98,14 +98,14 @@ class KhweeteurWorker(QThread):
             self.refresh_search()
 
     def testCacheFolders(self):
-        if not os.path.isdir(os.path.dirname(CACHE_PATH)):
-            os.mkdir(os.path.dirname(CACHE_PATH))
+        if not os.path.isdir(CACHE_PATH):
+            os.mkdir(CACHE_PATH)
         if not os.path.isdir(AVATAR_CACHE_FOLDER):
             os.mkdir(AVATAR_CACHE_FOLDER)
         
     def downloadProfileImage(self,status):
         if type(status)!=twitter.DirectMessage:
-            cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))
+            cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url.replace('/','_')))
             if not(os.path.exists(cache)):
                 try:
                     urlretrieve(status.user.profile_image_url, cache)
@@ -114,68 +114,56 @@ class KhweeteurWorker(QThread):
                     print e
         
     def refresh_search(self):
-        print 'Try to refresh search :'+str(self.search_keyword)
+        print 'Try to refresh search : ',unicode(self.search_keyword).encode('UTF-8')
         downloadProfileImage = self.downloadProfileImage
                         
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+        mlist = []
         try:
-            mlist = []
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(input_encoding='utf-8',username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                for status in api.GetSearch(self.search_keyword):
+                for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8')):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
                         mlist.append((status.created_at_in_seconds,status))
-#                mlist.sort()
-#
-#                #DOwnload avatar & add tweet to the model
-#                for _,status in mlist:
-#                    self.downloadProfileImage(status)
-#                    #We are now in a thread
-#                    self.emit(SIGNAL("newStatus(PyQt_PyObject)"),status)
-
-            if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                for status in api.GetSearch(self.search_keyword,per_page=50):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
-
-            if ((self.settings.value("twitter_access_token_key").toString()!='')) or ((self.settings.value("identica_access_token_key").toString()!='')): 
-
-                mlist.sort()
-
-                #DOwnload avatar & add tweet to the model
-#                for _,status in mlist:
-#                    self.downloadProfileImage(status)
-                    #We are now in a thread
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
-
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
-        print 'Refresh search :'+str(self.search_keyword)
+        try:
+            if (self.settings.value("twitter_access_token_key").toString()!=''): 
+                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8'),per_page=50):
+                    if status.created_at_in_seconds > current_dt:
+                        downloadProfileImage(status)
+                        mlist.append((status.created_at_in_seconds,status))
+        except twitter.TwitterError,e:
+            print 'Error during refresh : ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+
+        if len(mlist)>0:
+            mlist.sort()
+            self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
+
         
     def refresh(self):
         print 'Try to refresh'
         downloadProfileImage = self.downloadProfileImage
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+        mlist = []
+
         try:
-            mlist = []
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 for status in api.GetFriendsTimeline(count=100):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
-#                        status.qicon = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))))
                         mlist.append((status.created_at_in_seconds,status))
                 for status in api.GetReplies():
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
-#                        status.qicon = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))))
                         mlist.append((status.created_at_in_seconds,status))
                 for status in api.GetDirectMessages():
                     if status.created_at_in_seconds > current_dt:
@@ -183,9 +171,15 @@ class KhweeteurWorker(QThread):
                 for status in api.GetMentions():
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
-#                        status.qicon = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))))
                         mlist.append((status.created_at_in_seconds,status))                        
+        except twitter.TwitterError,e:
+            print 'Error during refresh : ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+        except StandardError,e:
+            print 'Error during refresh : ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
+        try:
             if (self.settings.value("identica_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 for status in api.GetFriendsTimeline(count=100):
@@ -206,17 +200,6 @@ class KhweeteurWorker(QThread):
                         downloadProfileImage(status)
 #                        status.qicon = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url))))
                         mlist.append((status.created_at_in_seconds,status))                        
-
-            if ((self.settings.value("twitter_access_token_key").toString()!='')) or ((self.settings.value("identica_access_token_key").toString()!='')): 
-
-                mlist.sort()
-
-                #DOwnload avatar & add tweet to the model
-#                for _,status in mlist:
-#                    self.downloadProfileImage(status)
-                    #We are now in a thread
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
-
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -224,11 +207,10 @@ class KhweeteurWorker(QThread):
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
-#            KhweeteurNotification().info('Error occurs during refresh.')
-
-
-        print 'Refresh ended'
-
+        if len(mlist)>0:
+            mlist.sort()
+            self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
+            
 class KhweetsModel(QAbstractListModel):
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
 
@@ -301,8 +283,10 @@ class KhweetsModel(QAbstractListModel):
                              variant.text,
                              variant.user.profile_image_url,
                              self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
-                        self._avatars[variant.user.profile_image_url] = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url))))
-#                             QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url))))))
+                    if variant.user.screen_name!=None:
+                        self._avatars[variant.user.profile_image_url] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))))
+
+                    #                             QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url))))))
                     else:
                         self._items.insert(0,
                              (variant.created_at_in_seconds,
@@ -330,7 +314,9 @@ class KhweetsModel(QAbstractListModel):
                          variant.text,
                          variant.user.profile_image_url,
                          self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
-                    self._avatars[variant.user.profile_image_url] = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url))))
+                    if variant.user.screen_name!=None:
+                        self._avatars[variant.user.profile_image_url] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))))
+                                                                    
                 else:
                     self._items.insert(0,
                          (variant.created_at_in_seconds,
@@ -370,7 +356,7 @@ class KhweetsModel(QAbstractListModel):
             if keyword==None:
                 filename = os.path.join(CACHE_PATH,'tweets.cache')
             else:
-                filename = os.path.join(CACHE_PATH,keyword+'.cache')                
+                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH),unicode(keyword.replace('/','_'))+u'.cache'))).encode('UTF-8')               
             output = open(filename, 'wb')
             pickle.dump(self._items, output)
             output.close()
@@ -382,13 +368,16 @@ class KhweetsModel(QAbstractListModel):
             if keyword==None:
                 filename = os.path.join(CACHE_PATH,'tweets.cache')
             else:
-                filename = os.path.join(CACHE_PATH,keyword+'.cache')                
+                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH),unicode(keyword.replace('/','_'))+u'.cache'))).encode('UTF-8')          
             pkl_file = open(filename, 'rb')
             items = pickle.load(pkl_file)
             self.setData(items)
             pkl_file.close()
         except StandardError,e:
-            print e
+            print 'unSerialize : ',e
+            # import traceback
+            # print traceback.print_exc()
+            # print traceback.print_stack()
         finally:
             #14 Day limitations
             current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
@@ -397,7 +386,10 @@ class KhweetsModel(QAbstractListModel):
                     self._items = self._items[:index]
                     break
             for item in self._items:
-                self._avatars[item[4]] = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4]))))
+                #self._avatars[item[4]] = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4]))))
+                if item[4]!=None:
+                    self._avatars[item[4]] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/','_')))))
+ 
             self._items.sort()
             self._items.reverse()
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
@@ -700,7 +692,7 @@ class KhweeteurWin(QMainWindow):
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
         if self.search_keyword != None:
-            self.setWindowTitle("Khweeteur:"+str(self.search_keyword))      
+            self.setWindowTitle("Khweeteur:"+unicode(self.search_keyword))      
         else:           
             self.setWindowTitle("Khweeteur")
 
@@ -746,9 +738,9 @@ class KhweeteurWin(QMainWindow):
         self.connect(self.tb_open, SIGNAL('triggered()'), self.open_url)
         self.toolbar.addAction(self.tb_open)
         
-        self.tb_retweet = QAction(QIcon.fromTheme("general_refresh"),'Retweet', self)
-        self.connect(self.tb_retweet, SIGNAL('triggered()'), self.retweet)
-        self.toolbar.addAction(self.tb_retweet)
+        # self.tb_retweet = QAction(QIcon.fromTheme("general_refresh"),'Retweet', self)
+        # self.connect(self.tb_retweet, SIGNAL('triggered()'), self.retweet)
+        # self.toolbar.addAction(self.tb_retweet)
         
         self.tb_text = QLineEdit()
         self.tb_text_replyid = 0
@@ -776,7 +768,7 @@ class KhweeteurWin(QMainWindow):
 
 
     def countChar(self,text):
-        self.tb_charCounter.setText(str(140-text.count()))
+        self.tb_charCounter.setText(unicode(140-len(text)))
 
     def reply(self,index):
         user = self.tweetsModel._items[index.row()][2]
@@ -923,9 +915,12 @@ class KhweeteurWin(QMainWindow):
                 QKeySequence(self.tr("Ctrl+R", "Update")))
         fileMenu.addAction(self.tr("&Search"), self.open_search,
                 QKeySequence(self.tr("Ctrl+S", "Search")))
+        fileMenu.addAction(self.tr("&Retweet"), self.retweet,
+                QKeySequence(self.tr("Ctrl+T", "Retweet")))
+                
         if self.search_keyword != None:
             keywords = self.settings.value('savedSearch').toPyObject()
-            if keywords != None:
+            if (keywords != None):
                 if self.search_keyword in keywords:
                     fileMenu.addAction(self.tr("&Remove Search"), self.del_search)
                 else:
@@ -937,21 +932,37 @@ class KhweeteurWin(QMainWindow):
 
     def del_search(self):
         keywords = self.settings.value('savedSearch').toPyObject()
-        if keywords == None:
+        if (keywords == None):
             keywords = []
-        keywords.remove(self.search_keyword)
+        elif (type(keywords)==QString):
+            if (self.search_keyword==keywords):
+                keywords = []
+        else:
+            index = keywords.indexOf(self.search_keyword)
+            if index>=0:
+                keywords.removeAt(index)
         self.settings.setValue('savedSearch',QVariant(keywords))
+        self.close()
                                 
     def save_search(self):
         keywords = self.settings.value('savedSearch').toPyObject()
-        if keywords == None:
+        print 'save_search:',keywords
+        if (keywords == None):
             keywords = []
+        elif (type(keywords)==QString):
+            keywords = [keywords,]
+        print 'save_search2:',keywords,type(keywords)
         keywords.append(self.search_keyword)
+        print 'save_search3:',keywords,type(keywords)
         self.settings.setValue('savedSearch',QVariant(keywords))
                                 
     def open_saved_search(self):
         keywords = self.settings.value('savedSearch').toPyObject()
-        if keywords != None:
+        print 'open_saved_search:',keywords
+        if (type(keywords)==QString):
+            keywords = [keywords,]
+
+        if (keywords != None):
             for keyword in keywords:
                 self.do_search(keyword)
     
