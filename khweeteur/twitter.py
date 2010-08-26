@@ -1817,11 +1817,14 @@ class Api(object):
     Returns:
       A of list twitter.Status instance representing the messages posted.
     '''
-    results = list()
-    line_length = CHARACTER_LIMIT - 4
-    lines = textwrap.wrap(status, line_length)
+    results = list()    
+    line_length = CHARACTER_LIMIT
+    lines = textwrap.wrap(status, line_length)    
     if len(lines) > 9:
         line_length = CHARACTER_LIMIT - 6
+        lines = textwrap.wrap(status, line_length)                
+    elif len(lines) > 1:
+        line_length = CHARACTER_LIMIT - 4
         lines = textwrap.wrap(status, line_length)        
     counter = 1
     if len(lines)==1:

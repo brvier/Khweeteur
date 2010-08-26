@@ -59,7 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Fix tweet post with accent 
+    p.changelog=""" Cache search, fix icon size, Serialization fix
 """
 
 print p.generate(build_binary=False,build_src=True)
