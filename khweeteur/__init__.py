@@ -109,7 +109,7 @@ class KhweeteurWorker(QThread):
             if not(os.path.exists(cache)):
                 try:
                     urlretrieve(status.user.profile_image_url, cache)
-                    QPixmap(cache).scaled(70,70,Qt.KeepAspectRatio).save(cache)
+#                    QPixmap(cache).scaled(70,70,Qt.KeepAspectRatio).save(cache)
                 except StandardError,e:
                     print e
         
@@ -454,7 +454,7 @@ class KhweeteurAbout(QMainWindow):
         aboutIcon = QLabel()
         aboutIcon.setPixmap(QPixmap(os.path.join(khweeteur.__path__[0],'icons','khweeteur.png')).scaledToHeight(128))
         aboutIcon.setAlignment( Qt.AlignCenter or Qt.AlignHCenter )
-        aboutIcon.resize(140,140)
+        aboutIcon.resize(128,128)
         aboutLayout.addWidget(aboutIcon)
 
         aboutLabel = QLabel('''<center><b>Khweeteur</b> %s
