@@ -59,7 +59,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Switch to pyside, fix some bugs
+    p.changelog=""" Revert to PyQt4, fix notification bug
 """
 
 print p.generate(build_binary=False,build_src=True)

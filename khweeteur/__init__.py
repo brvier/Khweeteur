@@ -25,7 +25,7 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.16'
+__version__ = '0.0.17'
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -37,9 +37,17 @@ class KhweeteurDBus(dbus.service.Object):
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='', out_signature='')
     def show(self):
-        print 'Show'
         self.win.activateWindow()
-        
+        self.win.tweetsModel.getNewAndReset()
+
+    @dbus.service.method("net.khertan.khweeteur",
+                         in_signature='s', out_signature='')
+    def show_search(self,keyword):
+        for win in self.search_win:
+            if win.search_keyword == keyword:
+                win.activateWindow()
+                win.tweetsModel.getNewAndReset()
+                
     def attach_win(self,win):
         self.win = win
         
@@ -50,7 +58,8 @@ class KhweeteurNotification(QObject):
         self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
                                               '/org/freedesktop/Notifications')
         self.iface = dbus.Interface(self.m_notify,'org.freedesktop.Notifications')
-
+        self.m_id = 0
+        
     def warn(self,message):
         self.iface.SystemNoteDialog(message,0,'Nothing')
         
@@ -58,8 +67,8 @@ class KhweeteurNotification(QObject):
         self.iface.SystemNoteInfoprint('Khweeteur : '+message)
         
     def notify(self,title,message,category='im.received',icon='khweeteur_32',count=1):
-        self.iface.Notify('Khweeteur',
-                          0,
+        self.m_id = self.iface.Notify('Khweeteur',
+                          self.m_id,
                           icon,
                           title,
                           message,
@@ -70,6 +79,20 @@ class KhweeteurNotification(QObject):
                           'count':count},
                           -1
                           )
+    def notify_search(self,keyword,title,message,category='im.received',icon='khweeteur_32',count=1):
+        self.m_id = self.iface.Notify('Khweeteur',
+                          self.m_id,
+                          icon,
+                          title,
+                          message,
+                          ['default','test'],
+                          {'category':category,
+                          'desktop-entry':'khweeteur',
+                          'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_search(%s)' % (keyword,),
+                          'count':count},
+                          -1
+                          )
+                                                    
 #        self.m_notify.Notify(title,
 #                             0,
 #                             icon,
@@ -336,6 +359,9 @@ class KhweetsModel(QAbstractListModel):
         self._new_counter = 0
         return counter
 
+    def getNew(self):
+        return self._new_counter
+        
     def setData(self,mlist):
         try:
             if len(mlist)>0:
@@ -860,9 +886,13 @@ class KhweeteurWin(QMainWindow):
     def refreshEnded(self):
 #        if self.search_keyword == None:
         self.tweetsModel.serialize(self.search_keyword)
-        counter=self.tweetsModel.getNewAndReset()
+        counter=self.tweetsModel.getNew()
+        
         if (counter>0) and (self.settings.value('useNotification').toBool()) and not (self.isActiveWindow()):
-            self.notifications.notify('Khweeteur',str(counter)+' new tweet(s)',count=counter)
+            if self.search_keyword:
+                self.notifications.notify_search(self.search_keyword,'Khweeteur',self.search_keyword+': '+str(counter)+' new tweet(s)',count=counter)
+            else:
+                self.notifications.notify('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
