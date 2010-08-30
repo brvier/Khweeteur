@@ -38,7 +38,8 @@ if __name__ == "__main__":
     p.icon='khweeteur.png'
     p["/usr/bin"] = ["khweeteur_launch.py",]
     p["/usr/share/dbus-1/services"] = ["khweeteur.service",]
-    p["/usr/share/pixmaps"] = ["khweeteur.png","khweeteur_64.png","khweeteur_32.png"]
+    p["/usr/share/pixmaps"] = ["khweeteur.png"]
+    p["/usr/share"] = ["icons/hicolor/32x32/apps/khweeteur.png","icons/hicolor/64x64/apps/khweeteur.png","icons/hicolor/128x128/apps/khweeteur.png"]
     p["/usr/share/applications/hildon"] = ["khweeteur.desktop",]
     files = []
     
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Add crash reporter and avatar resize.
+    p.changelog=""" Fix for crash report feature.
 """
 
 print p.generate(build_binary=False,build_src=True)

@@ -2125,7 +2125,7 @@ class Api(object):
       A twitter.User instance representing the befriended user.
     '''
     url = '%s/friendships/create/%s.json' % (self.base_url, user)
-    json = self._FetchUrl(url, post_data={})
+    json = self._FetchUrl(url, post_data={'user':user})
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return User.NewFromJsonDict(data)
@@ -2141,7 +2141,7 @@ class Api(object):
       A twitter.User instance representing the discontinued friend.
     '''
     url = '%s/friendships/destroy/%s.json' % (self.base_url, user)
-    json = self._FetchUrl(url, post_data={})
+    json = self._FetchUrl(url, post_data={'user':user})
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return User.NewFromJsonDict(data)
