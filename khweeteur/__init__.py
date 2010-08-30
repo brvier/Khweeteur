@@ -25,7 +25,70 @@ from nwmanager import NetworkManager
 import dbus.service
 import dbus.mainloop.qt
 
-__version__ = '0.0.17'
+__version__ = '0.0.19'
+
+#Here is the installation of the hook. Each time a untrapped/unmanaged exception will
+#happen my_excepthook will be called.
+def install_excepthook(app_name,app_version):
+
+    APP_NAME = 'Khweeteur'
+    APP_VERSION = __version__
+
+    def do_report(error):
+        import urllib2
+        import urllib
+        app = QApplication(sys.argv)
+        app.setOrganizationName("Khertan Software")
+        app.setOrganizationDomain("khertan.net")
+        app.setApplicationName("Khweeteur")
+ 
+        if ((QMessageBox.question(None,
+            "Khweeteur Crash Report",
+            "Report this bug on bug tracker ?",
+            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+            url = 'http://khertan.net/report.php' # write ur URL here
+            values = {
+                  'project' : APP_NAME.lower(),
+                  'version':APP_VERSION,
+                  'description':error,
+                  }    
+            try:
+                data = urllib.urlencode(values)
+                req = urllib2.Request(url, data)
+                response = urllib2.urlopen(req)
+                the_page = response.read()
+            except Exception, detail:
+                QMessageBox.question(None,
+                "Khweeteur Crash Report",
+                "An error occur during the report : %s" % detail,
+                QMessageBox.Close)
+                return False
+    
+            if 'Your report have been successfully stored' in the_page:
+                QMessageBox.question(None,
+                "Khweeteur Crash Report",
+                "%s" % the_page,
+                QMessageBox.Close)
+                return True
+            else:
+                QMessageBox.question(None,
+                "Khweeteur Crash Report",
+                "%s" % the_page,
+                QMessageBox.Close)
+                return False
+        sys.exit()
+        
+    def my_excepthook(exctype, value, tb):
+        #traceback give us all the errors information message like the method, file line ... everything like
+        #we have in the python interpreter
+        import traceback
+        s = ''.join(traceback.format_exception(exctype, value, tb))
+        print 'Except hook called : %s' % (s)
+        formatted_text = "%s Version %s\nTrace : %s\nComments : " % (APP_NAME, APP_VERSION, s)
+        do_report(formatted_text)
+        
+    sys.excepthook = my_excepthook
+        
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),'.khweeteur','cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur')
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
@@ -79,6 +142,7 @@ class KhweeteurNotification(QObject):
                           'count':count},
                           -1
                           )
+                          
     def notify_search(self,keyword,title,message,category='im.received',icon='khweeteur_32',count=1):
         self.m_id = self.iface.Notify('Khweeteur',
                           self.m_id,
@@ -132,7 +196,7 @@ class KhweeteurWorker(QThread):
             if not(os.path.exists(cache)):
                 try:
                     urlretrieve(status.user.profile_image_url, cache)
-#                    QPixmap(cache).scaled(70,70,Qt.KeepAspectRatio).save(cache)
+#                    QPixmap(cache).scaled(,Qt.KeepAspectRatio).save(cache)
                 except StandardError,e:
                     print e
         
@@ -146,6 +210,7 @@ class KhweeteurWorker(QThread):
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(input_encoding='utf-8',username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8')):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
@@ -157,6 +222,7 @@ class KhweeteurWorker(QThread):
         try:
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8'),per_page=50):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
@@ -180,6 +246,7 @@ class KhweeteurWorker(QThread):
             avatars_url={}
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetFriendsTimeline(count=100):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
@@ -205,6 +272,7 @@ class KhweeteurWorker(QThread):
         try:
             if (self.settings.value("identica_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetFriendsTimeline(count=100):
                     if status.created_at_in_seconds > current_dt:
                         downloadProfileImage(status)
@@ -239,13 +307,12 @@ class KhweetsModel(QAbstractListModel):
 
     def __init__(self, mlist=[]):
         QAbstractListModel.__init__(self)
-
         # Cache the passed data list as a class member.
         self._items = mlist
         self._avatars = {}
         self._new_counter = 0
         self.now = time.time()
-
+        
         self.display_screenname = False
         self.display_timestamp = False
         self.display_avatar = True
@@ -307,7 +374,13 @@ class KhweetsModel(QAbstractListModel):
                              variant.user.profile_image_url,
                              self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
                     if variant.user.screen_name!=None:
-                        self._avatars[variant.user.profile_image_url] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))))
+#                        self._avatars[variant.user.profile_image_url] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))))
+                        try:
+                            if item[4]!=None:
+                                pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
+                                self._avatars[variant.user.profile_image_url] = QIcon(pix)
+                        except StandardError, err:
+                            print 'error on loading avatar :',err
 
                     #                             QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url))))))
                     else:
@@ -338,8 +411,12 @@ class KhweetsModel(QAbstractListModel):
                          variant.user.profile_image_url,
                          self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
                     if variant.user.screen_name!=None:
-                        self._avatars[variant.user.profile_image_url] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))))
-                                                                    
+                        try:
+                            if item[4]!=None:
+                                pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
+                                self._avatars[variant.user.profile_image_url] = QIcon(pix)
+                        except StandardError, err:
+                            print 'error on loading avatar :',err                                                                    
                 else:
                     self._items.insert(0,
                          (variant.created_at_in_seconds,
@@ -413,8 +490,12 @@ class KhweetsModel(QAbstractListModel):
                     break
             for item in self._items:
                 #self._avatars[item[4]] = QVariant(QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4]))))
-                if item[4]!=None:
-                    self._avatars[item[4]] = (QIcon(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/','_')))))
+                try:
+                    if item[4]!=None:
+                        pix = (QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/','_'))))).scaled(50,50)
+                        self._avatars[item[4]] = QIcon(pix)
+                except StandardError, err:
+                    print 'error on loading avatar :',err
  
             self._items.sort()
             self._items.reverse()
@@ -815,6 +896,7 @@ class KhweeteurWin(QMainWindow):
                         api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
                                           access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
                                           access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                        api.SetUserAgent('Khweeteur/%s' % (__version__))
                         api.PostRetweet(tweetid)
                         self.notifications.info('Retweet send to Twitter')
                 except (twitter.TwitterError,StandardError),e:
@@ -830,6 +912,7 @@ class KhweeteurWin(QMainWindow):
                                           password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                           access_token_key=str(self.settings.value("identica_access_token_key").toString()),
                                           access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
+                        api.SetUserAgent('Khweeteur/%s' % (__version__))    
                         api.PostRetweet(tweetid)
                         self.notifications.info('Retweet send to Identi.ca')
                 except (twitter.TwitterError,StandardError),e:
@@ -852,6 +935,7 @@ class KhweeteurWin(QMainWindow):
                                       username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
                                       access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
                                       access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if self.settings.value('useSerialization').toBool():
                         status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     else:
@@ -863,6 +947,7 @@ class KhweeteurWin(QMainWindow):
                                       password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                       access_token_key=str(self.settings.value("identica_access_token_key").toString()),
                                       access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if self.settings.value('useSerialization').toBool():
                         status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
                     else:
@@ -1023,11 +1108,13 @@ class Khweeteur(QApplication):
         self.setApplicationName("Khweeteur")
         self.version = __version__
 
+        install_excepthook(self.applicationName(),self.version)
+
         dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
 
         session_bus = dbus.SessionBus()
         name = dbus.service.BusName("net.khertan.khweeteur", session_bus)
-        self.dbus_object = KhweeteurDBus(session_bus, '/net/khertan/khweeteur')
+        self.dbus_object = KhweeteurDBus(session_bus, '/net/khertan/khweeteur')        
         self.run()
         
     def run(self):

@@ -2437,8 +2437,8 @@ class Api(object):
       self._request_headers = {}
 
   def _InitializeUserAgent(self):
-    user_agent = 'Python-urllib/%s (python-twitter/%s)' % \
-                 (self._urllib.__version__, __version__)
+    user_agent = 'Khweeteur-python-twitter/%s)' % \
+                 ( __version__)
     self.SetUserAgent(user_agent)
 
   def _InitializeDefaultParameters(self):
