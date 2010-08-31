@@ -60,7 +60,7 @@ if __name__ == "__main__":
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 
-    p.changelog=""" Fix for crash report feature.
+    p.changelog=""" Fix for crash report feature, Incremental update, remove dependancy to PySide, implement follow/unfollow feature
 """
 
 print p.generate(build_binary=False,build_src=True)

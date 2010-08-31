@@ -65,7 +65,7 @@ class KhweeteurDBus(dbus.service.Object):
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='s', out_signature='')
     def show_search(self,keyword):
-        for win in self.search_win:
+        for win in self.win.search_win:
             if win.search_keyword == keyword:
                 win.activateWindow()
                 win.tweetsModel.getNewAndReset()
@@ -146,68 +146,87 @@ class KhweeteurWorker(QThread):
                     print e
         
     def refresh_search(self):
-        print 'Try to refresh search : ',unicode(self.search_keyword).encode('UTF-8')
         downloadProfileImage = self.downloadProfileImage
-                        
+        search_keyword = self.search_keyword                       
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         mlist = []
         try:
-            avatars_url={}
+            twitter_last_id = None        
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(input_encoding='utf-8',username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                api = twitter.Api(input_encoding='utf-8', \
+                    username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
+                    password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
+                    access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
+                    access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8')):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetSearch(unicode(search_keyword).encode('UTF-8'),since_id=self.settings.value("twitter_last_id_"+search_keyword).toString()):
+                    #if status.created_at_in_seconds > current_dt:
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > twitter_last_id:
+                        twitter_last_id = status.GetId()
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
         try:
+            identica_last_id = None
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetSearch(unicode(self.search_keyword).encode('UTF-8'),per_page=50):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+                for status in api.GetSearch(unicode(search_keyword).encode('UTF-8'),since_id=self.settings.value("identica_last_id_"+search_keyword).toString()):
+                    #if status.created_at_in_seconds > current_dt:
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > identica_last_id:
+                        identica_last_id = status.GetId()
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
-        if len(mlist)>0:
-            mlist.sort()
-            self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
 
+        if len(mlist)>0:
+            if (twitter_last_id != None):
+                self.settings.setValue('twitter_last_id_'+search_keyword,twitter_last_id)
+                print 'DEBUG SAVED SEARCH Last twiter id : ',twitter_last_id
+            if (identica_last_id != None):
+                self.settings.setValue('identica_last_id_'+search_keyword,identica_last_id)
+            mlist.sort()            
+            self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
         
     def refresh(self):
-        print 'Try to refresh'
         downloadProfileImage = self.downloadProfileImage
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
         mlist = []
-        print 'Debug Load Last Twitter id:',self.settings.value("twitter_last_id").toString()
         try:
-            avatars_url={}
+            #avatars_url={}
+            twitter_last_id = None
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, access_token_key=str(self.settings.value("twitter_access_token_key").toString()),access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
+                        password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
+                        access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
+                        access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-#                print 'DEBUG lastid :',self.settings.value("twitter_last_id").toString()
                 for status in api.GetFriendsTimeline(since_id=self.settings.value("twitter_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > twitter_last_id:
+                        twitter_last_id = status.GetId()
                 for status in api.GetReplies(since_id=self.settings.value("twitter_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > twitter_last_id:
+                        twitter_last_id = status.GetId()
                 for status in api.GetDirectMessages(since_id=self.settings.value("twitter_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        mlist.append((status.created_at_in_seconds,status))
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > twitter_last_id:
+                        twitter_last_id = status.GetId()
                 for status in api.GetMentions(since_id=self.settings.value("twitter_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))                        
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))                        
+                    if status.GetId() > twitter_last_id:
+                            twitter_last_id = status.GetId()
+
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -216,24 +235,37 @@ class KhweeteurWorker(QThread):
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
         try:
+            identica_last_id = None
             if (self.settings.value("identica_access_token_key").toString()!=''): 
-                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()),access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                api = twitter.Api(base_url='http://identi.ca/api/', \
+                        username=KHWEETEUR_IDENTICA_CONSUMER_KEY, \
+                        password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, \
+                        access_token_key=str(self.settings.value("identica_access_token_key").toString()), \
+                        access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetFriendsTimeline(count=100,since_id=self.settings.value("identica_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+#                    if status.created_at_in_seconds > current_dt:
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > identica_last_id:
+                        identica_last_id = status.GetId()
                 for status in api.GetReplies(since_id=self.settings.value("identica_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))
+#                    if status.created_at_in_seconds > current_dt:
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > identica_last_id:
+                        identica_last_id = status.GetId()                        
                 for status in api.GetDirectMessages(since_id=self.settings.value("identica_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        mlist.append((status.created_at_in_seconds,status))
+#                    if status.created_at_in_seconds > current_dt:
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > identica_last_id:
+                        identica_last_id = status.GetId()
                 for status in api.GetMentions(since_id=self.settings.value("identica_last_id").toString()):
-                    if status.created_at_in_seconds > current_dt:
-                        downloadProfileImage(status)
-                        mlist.append((status.created_at_in_seconds,status))                        
+#                    if status.created_at_in_seconds > current_dt:
+                    if status.GetId() > identica_last_id:
+                        identica_last_id = status.GetId()
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))                        
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -241,23 +273,15 @@ class KhweeteurWorker(QThread):
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
                 
+
         if len(mlist)>0:
+            if (twitter_last_id != None):
+                self.settings.setValue('twitter_last_id',twitter_last_id)
+            if (identica_last_id != None):
+                self.settings.setValue('identica_last_id',identica_last_id)
             mlist.sort()            
-            twitter_last_id = None
-            identica_last_id = None
-            
-            for _,item in mlist:
-                if (twitter_last_id == None) and ('indenti.ca' not in item.GetSource()):
-                    twitter_last_id = item.GetId()
-                    self.settings.setValue('twitter_last_id',twitter_last_id)
-                    print 'Debug Save Last Twitter id:',twitter_last_id
-                if (identica_last_id == None) and ('identi.ca' in item.GetSource()):
-                    identica_last_id = item.GetId()
-                    self.settings.setValue('identica_last_id',identica_last_id)
-                if (identica_last_id != None) and (twitter_last_id != None):
-                    break
             self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
-            
+                        
 class KhweetsModel(QAbstractListModel):
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
 
@@ -305,7 +329,6 @@ class KhweetsModel(QAbstractListModel):
         return len(self._items)
 
     def refreshTimestamp(self):
-        print 'Refreshing timestamp'
         for index,item in enumerate(self._items):
             try:
                 self._items[index] = (item[0],
@@ -321,10 +344,9 @@ class KhweetsModel(QAbstractListModel):
         
     def addStatuses(self,listVariant):
         GetRelativeCreatedAt = self.GetRelativeCreatedAt
-        print 'Debug add statuses : ',len(listVariant)
         for _,variant in listVariant:
             try:
-                if len([True for item in self._items if item[1]==variant.id])==0:
+                if all(item[1]!=variant.id for item in self._items):
                     if type(variant) != twitter.DirectMessage:
                         self._items.insert(0,
                             (variant.created_at_in_seconds,
@@ -358,38 +380,6 @@ class KhweetsModel(QAbstractListModel):
         if len(listVariant):
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             self.serialize()
-            
-#    def addStatus(self,variant):
-#        try:
-#            if len([True for item in self._items if item[1]==variant.id])==0:
-#                if type(variant) != twitter.DirectMessage:
-#                    self._items.insert(0,
-#                        (variant.created_at_in_seconds,
-#                         variant.id,
-#                         variant.user.screen_name,
-#                         variant.text,
-#                         variant.user.profile_image_url,
-#                         self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
-#                    if variant.user.screen_name!=None:
-#                        try:
-#                            if item[4]!=None:
-#                                pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
-#                                self._avatars[variant.user.profile_image_url] = QIcon(pix)
-#                        except StandardError, err:
-#                            print 'error on loading avatar :',err                                                                    
-#                else:
-#                    self._items.insert(0,
-#                         (variant.created_at_in_seconds,
-#                          variant.id,
-#                          variant.sender_screen_name,
-#                          variant.text,
-#                          None,
-#                          self.GetRelativeCreatedAt(variant.created_at_in_seconds),))
-#                self._new_counter = self._new_counter + 1
-#                self.now = time.time()
-#                QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-#        except StandardError, e:
-#            print "We shouldn't got this error here :",e
             
     def getNewAndReset(self):
         counter = self._new_counter
@@ -439,6 +429,14 @@ class KhweetsModel(QAbstractListModel):
             pkl_file.close()
         except StandardError,e:
             print 'unSerialize : ',e
+            self.settings = QSettings()
+            if self.keyword == None:
+                self.settings.setValue('twitter_last_id','')
+                self.settings.setValue('identica_last_id','')
+            else:
+                self.settings.setValue('twitter_last_id_'+self.keyword,'')
+                self.settings.setValue('identica_last_id_'+self.keyword,'')
+                
         finally:
             #14 Day limitations
             current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
@@ -1072,7 +1070,6 @@ class KhweeteurWin(QMainWindow):
         print type(self.settings.value('useNotification').toString()),self.settings.value('useNotification').toString()
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.worker = KhweeteurWorker(search_keyword=self.search_keyword)
-#        self.connect(self.worker, SIGNAL("newStatus(PyQt_PyObject)"), self.tweetsModel.addStatus)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
         self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
@@ -1085,18 +1082,14 @@ class KhweeteurWin(QMainWindow):
             self.refresh_timeline()
 
     def timed_refresh(self):
-        print 'Timer refresh'
         self.request_refresh()
 
     def refresh_timeline(self):
         if self.worker == None:
             self.do_refresh_now()
         elif self.worker.isFinished() == True:
-            print 'isFinished()', True, self.worker.isFinished()
             self.do_refresh_now()
-        else:
-            print 'isFinished()', self.worker.isFinished()
-
+ 
     def restartTimer(self):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
         self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp").toBool()
@@ -1149,19 +1142,15 @@ class KhweeteurWin(QMainWindow):
                                 
     def save_search(self):
         keywords = self.settings.value('savedSearch').toPyObject()
-        print 'save_search:',keywords
         if (keywords == None):
             keywords = []
         elif (type(keywords)==QString):
             keywords = [keywords,]
-        print 'save_search2:',keywords,type(keywords)
         keywords.append(self.search_keyword)
-        print 'save_search3:',keywords,type(keywords)
         self.settings.setValue('savedSearch',QVariant(keywords))
                                 
     def open_saved_search(self):
         keywords = self.settings.value('savedSearch').toPyObject()
-        print 'open_saved_search:',keywords
         if (type(keywords)==QString):
             keywords = [keywords,]
 
@@ -1215,12 +1204,18 @@ class Khweeteur(QApplication):
                 "An error occur on khweeteur in the previous launch. Report this bug on the bug tracker ?",
                 QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                 url = 'http://khertan.net/report.php' # write ur URL here
-                values = {
-                      'project' : APP_NAME.lower(),
-                      'version':APP_VERSION,
-                      'description':error,
-                      }    
                 try:
+                    filename = os.path.join(CACHE_PATH,'crash_report')
+                    output = open(filename, 'rb')
+                    error = pickle.load(output)
+                    output.close()
+
+                    values = {
+                          'project' : 'khweeteur',
+                          'version': __version__,
+                          'description':error,
+                      }    
+        
                     data = urllib.urlencode(values)
                     req = urllib2.Request(url, data)
                     response = urllib2.urlopen(req)
