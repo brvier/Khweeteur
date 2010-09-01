@@ -22,7 +22,7 @@ import dbus.service
 import dbus.mainloop.qt
 import pickle
 
-__version__ = '0.0.20'
+__version__ = '0.0.22'
 
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
@@ -88,7 +88,7 @@ class KhweeteurNotification(QObject):
     def info(self,message):
         self.iface.SystemNoteInfoprint('Khweeteur : '+message)
         
-    def notify(self,title,message,category='im.received',icon='khweeteur_32',count=1):
+    def notify(self,title,message,category='im.received',icon='khweeteur',count=1):
         self.m_id = self.iface.Notify('Khweeteur',
                           self.m_id,
                           icon,
@@ -102,7 +102,7 @@ class KhweeteurNotification(QObject):
                           -1
                           )
                           
-    def notify_search(self,keyword,title,message,category='im.received',icon='khweeteur_32',count=1):
+    def notify_search(self,keyword,title,message,category='im.received',icon='khweeteur',count=1):
         self.m_id = self.iface.Notify('Khweeteur',
                           self.m_id,
                           icon,
@@ -115,6 +115,72 @@ class KhweeteurNotification(QObject):
                           'count':count},
                           -1
                           )
+class KhweeteurActionWorker(QThread):
+
+    def __init__(self, parent = None, action=None, data=None, data2=None, data3=None):
+        QThread.__init__(self, parent)
+        self.settings = QSettings()
+        self.action = action
+        self.data = data
+        self.tb_text_replyid = data2
+        self.tb_text_replytext = data3
+
+    def run(self):
+        if self.action=='tweet':
+            self.tweet()
+        elif self.action=='retweet':
+            self.retweet()
+
+    def tweet(self):
+        try:
+                status_text = self.data
+                if status_text.startswith(self.tb_text_replytext):
+                    self.tb_text_replyid = 0
+                    
+                if self.settings.value("twitter_access_token_key").toString()!='':     
+                    api = twitter.Api(
+                                      username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    self.notifications.info('Tweet send to Twitter')
+                    self.emit(SIGNAL("info(PyQt_PyObject)"),'Tweet send to Twitter')
+
+                if self.settings.value("identica_access_token_key").toString()!='':     
+                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    self.notifications.info('Tweet send to Identica')
+                    self.emit(SIGNAL("info(PyQt_PyObject)"),'Tweet send to Identica')
+                                        
+                self.emit(SIGNAL("tweetSent()"))
+
+#                self.tb_text.setText('')
+#                self.tb_text_replyid = 0
+#                self.tb_text_replytext = ''
+        except (twitter.TwitterError,StandardError),e:
+            import traceback
+            print traceback.print_exc()
+            print traceback.print_stack()
+            if type(e)==twitter.TwitterError:
+#                self.notifications.warn('Send tweet failed : '+(e.message))
+                self.emit(SIGNAL("warn(PyQt_PyObject)"),e.message)
+                print e.message
+            else:
+#                self.notifications.warn('Send tweet failed : '+str(e))
+                self.emit(SIGNAL("warn(PyQt_PyObject)"),str(e))
+                print e 
+
                           
 class KhweeteurWorker(QThread):
 
@@ -128,6 +194,7 @@ class KhweeteurWorker(QThread):
         if self.search_keyword==None:
             self.refresh()
         else:
+            print 'Worker Refresh search : '+self.search_keyword 
             self.refresh_search()
 
     def testCacheFolders(self):
@@ -297,7 +364,7 @@ class KhweetsModel(QAbstractListModel):
         self.display_timestamp = False
         self.display_avatar = True
 
-        self.keyword = None
+        self.keyword = keyword
 
     def GetRelativeCreatedAt(self,timestamp):
         '''Get a human redable string representing the posting time
@@ -344,6 +411,7 @@ class KhweetsModel(QAbstractListModel):
         
     def addStatuses(self,listVariant):
         GetRelativeCreatedAt = self.GetRelativeCreatedAt
+        print 'Debug addstatuses count:',len(listVariant)
         for _,variant in listVariant:
             try:
                 if all(item[1]!=variant.id for item in self._items):
@@ -355,13 +423,14 @@ class KhweetsModel(QAbstractListModel):
                              variant.text,
                              variant.user.profile_image_url,
                              GetRelativeCreatedAt(variant.created_at_in_seconds),))
-                    if variant.user.screen_name!=None:
-                        try:
-                            if variant.user.profile_image_url[4]!=None:
-                                pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
-                                self._avatars[variant.user.profile_image_url] = QIcon(pix)
-                        except StandardError, err:
-                            print 'error on loading avatar :',err
+
+                        if variant.user.screen_name!=None:
+                            try:
+                                if variant.user.profile_image_url[4]!=None:
+                                    pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
+                                    self._avatars[variant.user.profile_image_url] = QIcon(pix)
+                            except StandardError, err:
+                                print 'error on loading avatar :',err
                     else:
                         self._items.insert(0,
                              (variant.created_at_in_seconds,
@@ -479,9 +548,11 @@ class KhweetsView(QListView):
         QListView.__init__(self,parent)
         self.setIconSize(QSize(128, 128))
         self.setWordWrap(True)
+        self.setUniformItemSizes(True)
         self.setResizeMode(QListView.Adjust)
         self.setViewMode(QListView.ListMode)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+#        self.setAlternatingRowColors(True)
 
 
 class KhweeteurAbout(QMainWindow):
@@ -594,57 +665,60 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('twitter_access_token',False)
             self.twitter_value.setText('Auth on Twitter')
         else:
-            import os
-            import sys
-            try:
-                from urlparse import parse_qsl
-            except:
-                from cgi import parse_qsl
-            import oauth2 as oauth
-            
-            REQUEST_TOKEN_URL = 'https://api.twitter.com/oauth/request_token'
-            ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
-            AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
-
-            signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
-            oauth_consumer             = oauth.Consumer(key=KHWEETEUR_TWITTER_CONSUMER_KEY, secret=KHWEETEUR_TWITTER_CONSUMER_SECRET)
-            oauth_client               = oauth.Client(oauth_consumer)
-            
-            resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
-            
-            if resp['status'] != '200':
-                KhweeteurNotification().warn('Invalid respond from Twitter requesting temp token: %s' % resp['status'])
+            if not self.parent.nw.device_has_networking:
+                self.parent.nw.request_connection_with_tmp_callback(self.request_twitter_access_or_clear)
             else:
-                request_token = dict(parse_qsl(content))
-
-                QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                import os
+                import sys
+                try:
+                    from urlparse import parse_qsl
+                except:
+                    from cgi import parse_qsl
+                import oauth2 as oauth
                 
-                pincode, ok = QInputDialog.getText(self, 'Twitter Authentification', 'Enter the pincode :')
-
-                if ok:
-                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-                    token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                    token.set_verifier(str(pincode))
-
-                    oauth_client  = oauth.Client(oauth_consumer, token)
-                    resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
-                    access_token  = dict(parse_qsl(content))
-
-                    if resp['status'] != '200':
-                        KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
-                        self.settings.setValue('twitter_access_token_key',QString())
-                        self.settings.setValue('twitter_access_token_secret',QString())
-                        self.settings.setValue('twitter_access_token',False)
-                    else:
-                        print access_token['oauth_token']
-                        print access_token['oauth_token_secret']
-                        self.settings.setValue('twitter_access_token_key',QString(access_token['oauth_token']))
-                        self.settings.setValue('twitter_access_token_secret',QString(access_token['oauth_token_secret']))
-                        self.settings.setValue('twitter_access_token',True)
-                        self.twitter_value.setText('Clear Twitter Auth')
-                        KhweeteurNotification().info('Khweeteur is now authorized to connect')
-                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                REQUEST_TOKEN_URL = 'https://api.twitter.com/oauth/request_token'
+                ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
+                AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
+    
+                signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+                oauth_consumer             = oauth.Consumer(key=KHWEETEUR_TWITTER_CONSUMER_KEY, secret=KHWEETEUR_TWITTER_CONSUMER_SECRET)
+                oauth_client               = oauth.Client(oauth_consumer)
                 
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+                
+                if resp['status'] != '200':
+                    KhweeteurNotification().warn('Invalid respond from Twitter requesting temp token: %s' % resp['status'])
+                else:
+                    request_token = dict(parse_qsl(content))
+    
+                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                    
+                    pincode, ok = QInputDialog.getText(self, 'Twitter Authentification', 'Enter the pincode :')
+    
+                    if ok:
+                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                        token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+                        token.set_verifier(str(pincode))
+    
+                        oauth_client  = oauth.Client(oauth_consumer, token)
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        access_token  = dict(parse_qsl(content))
+    
+                        if resp['status'] != '200':
+                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            self.settings.setValue('twitter_access_token_key',QString())
+                            self.settings.setValue('twitter_access_token_secret',QString())
+                            self.settings.setValue('twitter_access_token',False)
+                        else:
+                            print access_token['oauth_token']
+                            print access_token['oauth_token_secret']
+                            self.settings.setValue('twitter_access_token_key',QString(access_token['oauth_token']))
+                            self.settings.setValue('twitter_access_token_secret',QString(access_token['oauth_token_secret']))
+                            self.settings.setValue('twitter_access_token',True)
+                            self.twitter_value.setText('Clear Twitter Auth')
+                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                    
     def request_identica_access_or_clear(self):
 
         if self.settings.value('identica_access_token').toBool():
@@ -653,57 +727,60 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('identica_access_token',False)
             self.identica_value.setText('Auth on Identi.ca')
         else:
-            import os
-            import sys
-            try:
-                from urlparse import parse_qsl
-            except:
-                from cgi import parse_qsl
-            import oauth2 as oauth
-            
-            REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token'
-            ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
-            AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
-
-            signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
-            oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
-            oauth_client               = oauth.Client(oauth_consumer)
-            
-            resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
-            
-            if resp['status'] != '200':
-                KhweeteurNotification().warn('Invalid respond from Identi.ca requesting temp token: %s' % resp['status'])
+            if not self.parent.nw.device_has_networking:
+                self.parent.nw.request_connection_with_tmp_callback(self.request_identica_access_or_clear)
             else:
-                request_token = dict(parse_qsl(content))
-
-                QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                import os
+                import sys
+                try:
+                    from urlparse import parse_qsl
+                except:
+                    from cgi import parse_qsl
+                import oauth2 as oauth
                 
-                pincode, ok = QInputDialog.getText(self, 'Identi.ca Authentification', 'Enter the token :')
-
-                if ok:
-                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-                    token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                    token.set_verifier(str(pincode))
-
-                    oauth_client  = oauth.Client(oauth_consumer, token)
-                    resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
-                    access_token  = dict(parse_qsl(content))
-
-                    if resp['status'] != '200':
-                        KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
-                        self.settings.setValue('identica_access_token_key',QString())
-                        self.settings.setValue('identica_access_token_secret',QString())
-                        self.settings.setValue('identica_access_token',False)
-                    else:
-                        print access_token['oauth_token']
-                        print access_token['oauth_token_secret']
-                        self.settings.setValue('identica_access_token_key',QString(access_token['oauth_token']))
-                        self.settings.setValue('identica_access_token_secret',QString(access_token['oauth_token_secret']))
-                        self.settings.setValue('identica_access_token',True)
-                        self.identica_value.setText('Clear Identi.ca Auth')
-                        KhweeteurNotification().info('Khweeteur is now authorized to connect')
-                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token'
+                ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
+                AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
+    
+                signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+                oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
+                oauth_client               = oauth.Client(oauth_consumer)
+                
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+                
+                if resp['status'] != '200':
+                    KhweeteurNotification().warn('Invalid respond from Identi.ca requesting temp token: %s' % resp['status'])
+                else:
+                    request_token = dict(parse_qsl(content))
+    
+                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
                     
+                    pincode, ok = QInputDialog.getText(self, 'Identi.ca Authentification', 'Enter the token :')
+    
+                    if ok:
+                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                        token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+                        token.set_verifier(str(pincode))
+    
+                        oauth_client  = oauth.Client(oauth_consumer, token)
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        access_token  = dict(parse_qsl(content))
+    
+                        if resp['status'] != '200':
+                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            self.settings.setValue('identica_access_token_key',QString())
+                            self.settings.setValue('identica_access_token_secret',QString())
+                            self.settings.setValue('identica_access_token',False)
+                        else:
+                            print access_token['oauth_token']
+                            print access_token['oauth_token_secret']
+                            self.settings.setValue('identica_access_token_key',QString(access_token['oauth_token']))
+                            self.settings.setValue('identica_access_token_secret',QString(access_token['oauth_token_secret']))
+                            self.settings.setValue('identica_access_token',True)
+                            self.identica_value.setText('Clear Identi.ca Auth')
+                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                        
     def setupGUI(self):
 #        self.aWidget = QWidget()
         self.scrollArea = QScrollArea(self)
@@ -871,6 +948,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
         self.tb_text_replytext = '@'+user+' '
         self.tb_text.setText('@'+user+' ')
+        print 'DEbug tweet id :',self.tb_text_replyid 
 
     def open_url(self):
         import re
@@ -884,88 +962,94 @@ class KhweeteurWin(QMainWindow):
             except StandardError,e:
                 print e
                 
-    def follow(self):
+    def follow(self):       
         self.tweetActionDialog.accept()
-        for index in self.tweetsView.selectedIndexes():
-            if ((QMessageBox.question(self,
-                       "Khweeteur",
-                       "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
-                       QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                user_screenname = self.tweetsModel._items[index.row()][2]
-                print 'DEBUG Follow:',user_screenname
-                try:
-                    if self.settings.value("twitter_access_token_key").toString()!='':     
-                        api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
-                                          access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
-                                          access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                        api.SetUserAgent('Khweeteur/%s' % (__version__))
-                        api.CreateFriendship(user_screenname)
-                        self.notifications.info('You are now following %s on Twitter' % (user_screenname))
-                except (twitter.TwitterError,StandardError),e:
-                    if type(e)==twitter.TwitterError:
-                        self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
-                        print e.message
-                    else:
-                        self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,str(e)))
-                        print e                     
-                try:
-                    if self.settings.value("identica_access_token_key").toString()!='': 
-                        api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                          password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                          access_token_key=str(self.settings.value("identica_access_token_key").toString()),
-                                          access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
-                        api.SetUserAgent('Khweeteur/%s' % (__version__))    
-                        api.CreateFriendship(user_screenname)
-                        self.notifications.info('You are now following %s on Identi.ca' % (user_screenname))
-                except (twitter.TwitterError,StandardError),e:
-                    if type(e)==twitter.TwitterError:
-                        self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
-                        print e.message
-                    else:
-                        self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,str(e)))
-                        print e                                   
+        if not self.nw.device_has_networking:
+            self.parent().nw.request_connection_with_tmp_callback(self.follow)
+        else:
+            for index in self.tweetsView.selectedIndexes():
+                if ((QMessageBox.question(self,
+                           "Khweeteur",
+                           "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
+                           QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+                    user_screenname = self.tweetsModel._items[index.row()][2]
+                    print 'DEBUG Follow:',user_screenname
+                    try:
+                        if self.settings.value("twitter_access_token_key").toString()!='':     
+                            api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                              access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                              access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                            api.SetUserAgent('Khweeteur/%s' % (__version__))
+                            api.CreateFriendship(user_screenname)
+                            self.notifications.info('You are now following %s on Twitter' % (user_screenname))
+                    except (twitter.TwitterError,StandardError),e:
+                        if type(e)==twitter.TwitterError:
+                            self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
+                            print e.message
+                        else:
+                            self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,str(e)))
+                            print e                     
+                    try:
+                        if self.settings.value("identica_access_token_key").toString()!='': 
+                            api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                              password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                              access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                              access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
+                            api.SetUserAgent('Khweeteur/%s' % (__version__))    
+                            api.CreateFriendship(user_screenname)
+                            self.notifications.info('You are now following %s on Identi.ca' % (user_screenname))
+                    except (twitter.TwitterError,StandardError),e:
+                        if type(e)==twitter.TwitterError:
+                            self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
+                            print e.message
+                        else:
+                            self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,str(e)))
+                            print e                                   
 
     def unfollow(self):  
         self.tweetActionDialog.accept()
-        for index in self.tweetsView.selectedIndexes():
-            if ((QMessageBox.question(self,
-                       "Khweeteur",
-                       "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
-                       QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                user_screenname = self.tweetsModel._items[index.row()][2]
-                print 'DEBUG Follow:',user_screenname
-                try:
-                    if self.settings.value("twitter_access_token_key").toString()!='':     
-                        api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
-                                          access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
-                                          access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                        api.SetUserAgent('Khweeteur/%s' % (__version__))
-                        api.DestroyFriendship(user_screenname)
-                        self.notifications.info('You didn\'t follow %s anymore on Twitter' % (user_screenname))
-                except (twitter.TwitterError,StandardError),e:
-                    if type(e)==twitter.TwitterError:
-                        self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
-                        print e.message
-                    else:
-                        self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,str(e)))
-                        print e                     
-                try:
-                    if self.settings.value("identica_access_token_key").toString()!='': 
-                        api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                          password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                          access_token_key=str(self.settings.value("identica_access_token_key").toString()),
-                                          access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
-                        api.SetUserAgent('Khweeteur/%s' % (__version__))    
-                        api.DestroyFriendship(user_screenname)
-                        self.notifications.info('You didn\'t follow %s anymore on Identi.ca' % (user_screenname))
-                except (twitter.TwitterError,StandardError),e:
-                    if type(e)==twitter.TwitterError:
-                        self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
-                        print e.message
-                    else:
-                        self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,str(e)))
-                        print e                           
-                        
+        if not self.nw.device_has_networking:
+            self.parent().nw.request_connection_with_tmp_callback(self.unfollow)
+        else:
+            for index in self.tweetsView.selectedIndexes():
+                if ((QMessageBox.question(self,
+                           "Khweeteur",
+                           "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
+                           QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+                    user_screenname = self.tweetsModel._items[index.row()][2]
+                    print 'DEBUG Follow:',user_screenname
+                    try:
+                        if self.settings.value("twitter_access_token_key").toString()!='':     
+                            api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                              access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                              access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                            api.SetUserAgent('Khweeteur/%s' % (__version__))
+                            api.DestroyFriendship(user_screenname)
+                            self.notifications.info('You didn\'t follow %s anymore on Twitter' % (user_screenname))
+                    except (twitter.TwitterError,StandardError),e:
+                        if type(e)==twitter.TwitterError:
+                            self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
+                            print e.message
+                        else:
+                            self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,str(e)))
+                            print e                     
+                    try:
+                        if self.settings.value("identica_access_token_key").toString()!='': 
+                            api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                              password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                              access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                              access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
+                            api.SetUserAgent('Khweeteur/%s' % (__version__))    
+                            api.DestroyFriendship(user_screenname)
+                            self.notifications.info('You didn\'t follow %s anymore on Identi.ca' % (user_screenname))
+                    except (twitter.TwitterError,StandardError),e:
+                        if type(e)==twitter.TwitterError:
+                            self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
+                            print e.message
+                        else:
+                            self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,str(e)))
+                            print e                           
+                            
     def retweet(self):
         self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
@@ -1007,50 +1091,71 @@ class KhweeteurWin(QMainWindow):
                         self.notifications.warn('Retweet to identi.ca failed : '+str(e))
                         print e                 
 
-                                              
-    def tweet(self):
-        try:
-                status_text = unicode(self.tb_text.text()).encode('UTF-8')
-                if status_text.startswith(self.tb_text_replytext):
-                    self.tb_text_replyid = 0
-                    
-                if self.settings.value("twitter_access_token_key").toString()!='':     
-                    api = twitter.Api(
-                                      username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
-                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
-                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                    api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if self.settings.value('useSerialization').toBool():
-                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
-                    else:
-                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
-                    self.notifications.info('Tweet send to Twitter')
+    def tweetSent(self):
+        self.tb_text.setText('')
+        self.tb_text_replyid = 0
+        self.tb_text_replytext = ''
 
-                if self.settings.value("identica_access_token_key").toString()!='':     
-                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
-                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                    api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if self.settings.value('useSerialization').toBool():
-                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
-                    else:
-                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
-                    self.notifications.info('Tweet send to Identica')
-                    
-                self.tb_text.setText('')
-                self.tb_text_replyid = 0
-                self.tb_text_replytext = ''
-        except (twitter.TwitterError,StandardError),e:
-            import traceback
-            print traceback.print_exc()
-            print traceback.print_stack()
-            if type(e)==twitter.TwitterError:
-                self.notifications.warn('Send tweet failed : '+(e.message))
-                print e.message
-            else:
-                self.notifications.warn('Send tweet failed : '+str(e))
-                print e 
+    def tweetSentFinished(self):
+        self.tb_text.setEnabled(True)
+        self.tb_tweet.setEnabled(True)
+#Test of a threaded post from #Khweeteur 0.0.21
+
+    def tweet(self):
+        if not self.nw.device_has_networking:
+            self.nw.request_connection_with_tmp_callback(self.tweet)
+        else:
+            self.tb_text.setDisabled(True)
+            self.tb_tweet.setDisabled(True)
+            self.tweetAction = KhweeteurActionWorker(self,'tweet',unicode(self.tb_text.text()).encode('UTF-8'),self.tb_text_replyid,self.tb_text_replytext)
+            self.connect(self.tweetAction, SIGNAL("tweetSent()"), self.tweetSent)
+            self.connect(self.tweetAction, SIGNAL("finished()"), self.tweetSentFinished)
+            self.notifications.connect(self.tweetAction, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
+            self.notifications.connect(self.tweetAction, SIGNAL('warn(PyQt_PyObject)'), self.notifications.warn)
+            self.tweetAction.start()
+
+#        try:
+#                status_text = unicode(self.tb_text.text()).encode('UTF-8')
+#                if status_text.startswith(self.tb_text_replytext):
+#                    self.tb_text_replyid = 0
+#                    
+#                if self.settings.value("twitter_access_token_key").toString()!='':     
+#                    api = twitter.Api(
+#                                      username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+#                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+#                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+#                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+#                    if self.settings.value('useSerialization').toBool():
+#                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    else:
+#                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    self.notifications.info('Tweet send to Twitter')
+#
+#                if self.settings.value("identica_access_token_key").toString()!='':     
+#                    api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+#                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+#                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+#                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+#                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+#                    if self.settings.value('useSerialization').toBool():
+#                        status = api.PostSerializedUpdates(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    else:
+#                        status = api.PostUpdate(status_text,in_reply_to_status_id=self.tb_text_replyid)
+#                    self.notifications.info('Tweet send to Identica')
+#                    
+#                self.tb_text.setText('')
+#                self.tb_text_replyid = 0
+#                self.tb_text_replytext = ''
+#        except (twitter.TwitterError,StandardError),e:
+#            import traceback
+#            print traceback.print_exc()
+#            print traceback.print_stack()
+#            if type(e)==twitter.TwitterError:
+#                self.notifications.warn('Send tweet failed : '+(e.message))
+#                print e.message
+#            else:
+#                self.notifications.warn('Send tweet failed : '+str(e))
+#                print e 
 
     def refreshEnded(self):
 #        if self.search_keyword == None:
@@ -1069,7 +1174,7 @@ class KhweeteurWin(QMainWindow):
     def do_refresh_now(self):
         print type(self.settings.value('useNotification').toString()),self.settings.value('useNotification').toString()
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-        self.worker = KhweeteurWorker(search_keyword=self.search_keyword)
+        self.worker = KhweeteurWorker(self,search_keyword=self.search_keyword)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
         self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)

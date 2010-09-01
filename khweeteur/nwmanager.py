@@ -17,6 +17,7 @@ class NetworkManager(QObject):
         self.bearer = None
         
         self.callback_if_connected = callback_if_connected
+        self.tmp_callback_if_connected = None
 
         # Note prints so I wont forget the hack on for releases
         if self.device_has_networking:
@@ -37,6 +38,11 @@ class NetworkManager(QObject):
         self.mainloop_context.iteration(True)
         
     def request_connection(self):
+        if not self.device_has_networking:
+            self.connection.request_connection(conic.CONNECT_FLAG_NONE)
+
+    def request_connection_with_tmp_callback(self,temporary_callback):
+        self.tmp_callback_if_connected = temporary_callback
         if not self.device_has_networking:
             self.connection.request_connection(conic.CONNECT_FLAG_NONE)
 
@@ -83,5 +89,8 @@ class NetworkManager(QObject):
         
         self.bearer = bearer
         if (self.device_has_networking):
-            self.callback_if_connected()
-
+            if self.tmp_callback_if_connected:
+                self.tmp_callback_if_connected()
+                self.tmp_callback_if_connected = None
+            else:
+                self.callback_if_connected()
