@@ -1361,6 +1361,7 @@ class Khweeteur(QApplication):
         self.crash_report()
         self.win.show()
         sys.exit(self.exec_())
+#        self.exec_()
 
 if __name__ == '__main__':
     Khweeteur()
