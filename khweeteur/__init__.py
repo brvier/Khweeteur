@@ -22,7 +22,7 @@ import dbus.service
 import dbus.mainloop.qt
 import pickle
 
-__version__ = '0.0.22'
+__version__ = '0.0.23'
 
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
@@ -415,6 +415,7 @@ class KhweetsModel(QAbstractListModel):
         for _,variant in listVariant:
             try:
                 if all(item[1]!=variant.id for item in self._items):
+                    self.beginInsertRows(QModelIndex(), 0,1)  
                     if type(variant) != twitter.DirectMessage:
                         self._items.insert(0,
                             (variant.created_at_in_seconds,
@@ -439,16 +440,16 @@ class KhweetsModel(QAbstractListModel):
                               variant.text,
                               None,
                               GetRelativeCreatedAt(variant.created_at_in_seconds),))
-                              
                     self._new_counter = self._new_counter + 1
                     self.now = time.time()
-                    
+                    self.endInsertRows()
             except StandardError, e:
                 print "We shouldn't got this error here :",e
 
         if len(listVariant):
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             self.serialize()
+
             
     def getNewAndReset(self):
         counter = self._new_counter
@@ -466,13 +467,15 @@ class KhweetsModel(QAbstractListModel):
                         self._items = mlist
                         self._new_counter = 0
                         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+                        return True
                     else:
                         print 'Wrong cache format'
                         KhweeteurNotification().info('Old cache format. Reinit cache.')            
         except:
             KhweeteurNotification().info('Wrong cache format. Reinit cache.')
             print 'Wrong cache format'
-
+        return False
+        
     def serialize(self):
         try:
             if self.keyword==None:
@@ -546,12 +549,15 @@ class KhweetsModel(QAbstractListModel):
 class KhweetsView(QListView):
     def __init__(self,parent=None):
         QListView.__init__(self,parent)
-        self.setIconSize(QSize(128, 128))
+        #self.setIconSize(QSize(128, 128))
         self.setWordWrap(True)
-        self.setUniformItemSizes(True)
+        #self.setUniformItemSizes(False)
         self.setResizeMode(QListView.Adjust)
-        self.setViewMode(QListView.ListMode)
+        #self.setViewMode(QListView.ListMode)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.setWrapping(True)
+        #self.setFlow(QListView.TopToBottom)
+#        self.setAlternatingRowColors(True)  
 #        self.setAlternatingRowColors(True)
 
 
@@ -908,7 +914,7 @@ class KhweeteurWin(QMainWindow):
         self.toolbar = self.addToolBar('Toolbar')
 
         self.tb_open = QAction(QIcon.fromTheme("general_add"),'More', self)
-        self.connect(self.tb_open, SIGNAL('triggered()'), self.tweetAction)
+        self.connect(self.tb_open, SIGNAL('triggered()'), self.tweet_do_ask_action)
         self.toolbar.addAction(self.tb_open)
         
         # self.tb_retweet = QAction(QIcon.fromTheme("general_refresh"),'Retweet', self)
@@ -932,7 +938,7 @@ class KhweeteurWin(QMainWindow):
         QTimer.singleShot(200, self.timedUnserialize)
 #        self.tweetsModel.unSerialize(self.search_keyword)
 
-    def tweetAction(self):
+    def tweet_do_ask_action(self):
         self.tweetActionDialog = KhweetAction(self)
         self.connect(self.tweetActionDialog.openurl,SIGNAL('clicked()'),self.open_url)
         self.connect(self.tweetActionDialog.retweet,SIGNAL('clicked()'),self.retweet)
