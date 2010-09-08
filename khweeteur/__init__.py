@@ -24,18 +24,18 @@ import pickle
 
 __version__ = '0.0.23'
 
+def write_report(error):
+    filename = os.path.join(CACHE_PATH,'crash_report')
+    output = open(filename, 'wb')
+    pickle.dump(error, output)
+    output.close()
+        
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
 def install_excepthook(app_name,app_version):
 
     APP_NAME = 'Khweeteur'
     APP_VERSION = __version__
-
-    def write_report(error):
-        filename = os.path.join(CACHE_PATH,'crash_report')
-        output = open(filename, 'wb')
-        pickle.dump(error, output)
-        output.close()
         
     def my_excepthook(exctype, value, tb):
         #traceback give us all the errors information message like the method, file line ... everything like
@@ -429,7 +429,7 @@ class KhweetsModel(QAbstractListModel):
                             try:
                                 if variant.user.profile_image_url[4]!=None:
                                     pix = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/','_')))).scaled(50,50)
-                                    self._avatars[variant.user.profile_image_url] = QIcon(pix)
+                                    self._avatars[variant.user.profile_image_url] = (pix)
                             except StandardError, err:
                                 print 'error on loading avatar :',err
                     else:
@@ -470,9 +470,11 @@ class KhweetsModel(QAbstractListModel):
                         return True
                     else:
                         print 'Wrong cache format'
+                        write_report("%s Version %s\nOld cache format : %s\n" % ('Khweeteur', __version__, ''))
                         KhweeteurNotification().info('Old cache format. Reinit cache.')            
-        except:
+        except StandardError,err:
             KhweeteurNotification().info('Wrong cache format. Reinit cache.')
+            write_report("%s Version %s\nWrong cache format : %s\n" % ('Khweeteur', __version__, err))
             print 'Wrong cache format'
         return False
         
@@ -520,7 +522,7 @@ class KhweetsModel(QAbstractListModel):
                 try:
                     if item[4]!=None:
                         pix = (QPixmap(os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/','_'))))).scaled(50,50)
-                        self._avatars[item[4]] = QIcon(pix)
+                        self._avatars[item[4]] = (pix)
                 except StandardError, err:
                     print 'error on loading avatar :',err 
             self._items.sort()
@@ -530,11 +532,13 @@ class KhweetsModel(QAbstractListModel):
     def data(self, index, role = Qt.DisplayRole):
         if role == Qt.DisplayRole:
             status = self._items[index.row()][3]
-            if self.display_timestamp:
-                status = status +'\n'+ self._items[index.row()][5]     
+#            if self.display_timestamp:
+#                status = status +'<br><span style="color:#7AB4F5;font-size:0.5em;">'+ self._items[index.row()][5]+'</span>'
             if self.display_screenname:
                 status = self._items[index.row()][2]+ ' : ' + status            
             return QVariant(status)
+        elif role == Qt.ToolTipRole:
+            return self._items[index.row()][5]
         elif role == Qt.DecorationRole:            
             if self.display_avatar:
                 try:
@@ -546,15 +550,83 @@ class KhweetsModel(QAbstractListModel):
         else:
             return QVariant()
 
+class CustomDelegate(QStyledItemDelegate):
+    def __init__(self, parent):
+        QStyledItemDelegate.__init__(self, parent)
+
+    def paint(self, painter, option, index):
+        model = index.model()
+        tweet = index.data(Qt.DisplayRole).toString();
+        time = index.data(Qt.ToolTipRole).toString();
+        icon = index.data(Qt.DecorationRole).toPyObject();
+        
+        painter.save()
+        
+#        opt = QStyleOptionViewItemV4(option)
+#        self.initStyleOption(opt, mi)
+#        opt.text = ''
+#        style = opt.widget.style()
+#        style.drawControl(style.CE_ItemViewItem, opt, painter, opt.widget)
+
+        # Draw alternate ?
+        if (index.row()%2)==0:
+            painter.fillRect(option.rect, QColor('#333333'))
+
+        # highlight selected items
+        if option.state & QStyle.State_Selected: 
+            painter.fillRect(option.rect, option.palette.highlight());
+                    
+        # Draw icon
+        x1,y1,x2,y2 = option.rect.getCoords()
+        painter.drawPixmap(x1,y1+(((y2-y1)-50)/2),50,50,icon)
+        
+        # Draw tweet
+        new_rect = painter.drawText(option.rect.adjusted(70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet);            
+                
+        # Draw Timeline
+        painter.setPen(QColor('#7AB4F5'))
+        painter.drawText(option.rect.adjusted(70,0,-2,0),  int(Qt.AlignBottom) | int(Qt.AlignRight) | int(Qt.TextWordWrap), time);
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        size = QStyledItemDelegate.sizeHint(self,option,index)
+        return QSize(size.width(), size.height()+20)
+        
+class HTMLDelegate(QStyledItemDelegate):
+
+    def paint(self, painter, option, index):
+        model = index.model()
+        record = model.data(index)
+        doc = QTextDocument(self)
+        doc.setHtml((record).toString())
+        doc.setTextWidth(option.rect.width())
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+
+        painter.save()
+        painter.translate(option.rect.topLeft());
+        painter.setClipRect(option.rect.translated(-option.rect.topLeft()))
+        dl = doc.documentLayout()
+        dl.draw(painter, ctx)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        return QSize(800, 80)
+
+
 class KhweetsView(QListView):
     def __init__(self,parent=None):
         QListView.__init__(self,parent)
         #self.setIconSize(QSize(128, 128))
+        #self.setStyleSheet('QListView { background-color: rgb(241, 245, 250); border: 0; }')
         self.setWordWrap(True)
+        self.setItemDelegate(CustomDelegate(self))
+        self.setSpacing(2)
         #self.setUniformItemSizes(False)
         self.setResizeMode(QListView.Adjust)
         #self.setViewMode(QListView.ListMode)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         #self.setWrapping(True)
         #self.setFlow(QListView.TopToBottom)
 #        self.setAlternatingRowColors(True)  
