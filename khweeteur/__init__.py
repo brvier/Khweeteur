@@ -22,8 +22,9 @@ import dbus.service
 import dbus.mainloop.qt
 import pickle
 from PIL import Image
+import re
 
-__version__ = '0.0.23'
+__version__ = '0.0.24'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -136,6 +137,20 @@ class KhweeteurActionWorker(QThread):
     def tweet(self):
         try:
                 status_text = self.data
+
+                if self.settings.value("useBitly").toBool():
+                    urls = re.findall("(?P<url>https?://[^\s]+)", status_text)
+                    if len(urls)>0:
+                        import bitly                 
+                        a=bitly.Api(login="pythonbitly",apikey="R_06871db6b7fd31a4242709acaf1b6648")
+
+                    for url in urls:
+                        try:
+                            short_url=a.shorten(url)
+                            status_text = status_text.replace(url,short_url)
+                        except:
+                            pass
+
                 if status_text.startswith(self.tb_text_replytext):
                     self.tb_text_replyid = 0
                     
@@ -790,6 +805,7 @@ class KhweeteurPref(QMainWindow):
         self.displayTimestamp_value.setCheckState(self.settings.value("displayTimestamp").toInt()[0])
         self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
         self.useSerialization_value.setCheckState(self.settings.value("useSerialization").toInt()[0])
+        self.useBitly_value.setCheckState(self.settings.value("useBitly").toInt()[0])
 
     def savePrefs(self):
         self.settings.setValue('refreshInterval',self.refresh_value.value())
@@ -798,6 +814,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useSerialization',self.useSerialization_value.checkState())
         self.settings.setValue('displayAvatar',self.displayAvatar_value.checkState())
         self.settings.setValue('displayTimestamp',self.displayTimestamp_value.checkState())
+        self.settings.setValue('useBitly',self.useBitly_value.checkState())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -979,6 +996,9 @@ class KhweeteurPref(QMainWindow):
 
         self.useSerialization_value = QCheckBox('Use Serialization')
         self._main_layout.addWidget(self.useSerialization_value,7,1)
+
+        self.useBitly_value = QCheckBox('Use Bit.ly')
+        self._main_layout.addWidget(self.useBitly_value,8,1)
 
         self.aWidget.setLayout(self._main_layout)
 #        self.setCentralWidget(self.aWidget)
