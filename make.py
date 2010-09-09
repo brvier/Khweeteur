@@ -27,7 +27,7 @@ if __name__ == "__main__":
     p.author="Benoit HERVIER"
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
-    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic"
+    p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging"
 #    p.suggests = ""
     p.section="user/network"
     p.arch="armel"
@@ -58,9 +58,10 @@ if __name__ == "__main__":
 
     p.postinstall = """#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
-python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
+python -m compileall /usr/lib/python2.5/site-packages/khweeteur
+rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Add method to auto connect on authentification, tweet, retweet if there is any connection established, fix for auto resize of the tweet list
+    p.changelog=""" New display, fix bugs, improve speed.
 """
 
 print p.generate(build_binary=True,build_src=True)

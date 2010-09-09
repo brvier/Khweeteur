@@ -40,6 +40,9 @@ import StringIO
 
 import oauth2 as oauth
 
+import socket
+socket.setdefaulttimeout(120)
+
 # parse_qsl moved to urlparse module in v2.6
 try:
   from urlparse import parse_qsl, parse_qs
