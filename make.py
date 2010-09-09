@@ -61,7 +61,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" New display, fix bugs, improve speed.
+    p.changelog=""" Better error managment, add shorten url with bit.ly .
 """
 
 print p.generate(build_binary=True,build_src=True)
