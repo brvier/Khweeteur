@@ -1,4 +1,9 @@
-import conic
+try:
+    import conic
+    isAVAILABLE = True
+except:
+    isAVAILABLE = False
+        
 import dbus
 import dbus.glib
 import gobject
@@ -12,7 +17,7 @@ class NetworkManager(QObject):
     
     def __init__(self, callback_if_connected=None):
         QObject.__init__(self)
-        self.device_has_networking = False
+        self.device_has_networking = not isAVAILABLE
         self.connection = None
         self.bearer = None
         
