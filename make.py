@@ -50,7 +50,9 @@ if __name__ == "__main__":
         prefix = 'khweeteur/'
         if os.path.basename(root) != 'khweeteur':
             prefix = prefix + os.path.basename(root) + '/'
-        files.append(prefix+os.path.basename(f))
+        #print os.path.splitext(f)[1]
+        if ((os.path.splitext(f)[1] not in ('.pyc','.pyo')) and (os.path.basename(f) not in ('profile.py','pstats.py','get_access_token.py') )):
+            files.append(prefix+os.path.basename(f))
     print files
 
     

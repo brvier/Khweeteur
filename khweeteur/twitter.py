@@ -1788,7 +1788,6 @@ class Api(object):
 
     url = '%s/statuses/update.json' % self.base_url
 
-    print 'PostUpdate:',type(status)
     #тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест 
     if len(status.decode('utf-8')) > CHARACTER_LIMIT:
       raise TwitterError("Text must be less than or equal to %d characters. "

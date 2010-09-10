@@ -352,17 +352,18 @@ class KhweeteurWorker(QThread):
                         access_token_key=str(self.settings.value("identica_access_token_key").toString()), \
                         access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetFriendsTimeline(count=100,since_id=self.settings.value("identica_last_id").toString()):
+                for status in api.GetFriendsTimeline(count=100,since_id=self.settings.value("identica_last_id").toString(),retweets=True):
 #                    if status.created_at_in_seconds > current_dt:
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()
-                for status in api.GetRetweetedByMe(since_id=self.settings.value("twitter_last_id").toString()):
-                    downloadProfileImage(status)
-                    mlist.append((status.created_at_in_seconds,status))
-                    if status.GetId() > twitter_last_id:
-                        twitter_last_id = status.GetId()
+                # Not yet supported by identi.ca
+                # for status in api.GetRetweetedByMe(since_id=self.settings.value("twitter_last_id").toString()):
+                    # downloadProfileImage(status)
+                    # mlist.append((status.created_at_in_seconds,status))
+                    # if status.GetId() > twitter_last_id:
+                        # twitter_last_id = status.GetId()
                 for status in api.GetReplies(since_id=self.settings.value("identica_last_id").toString()):
 #                    if status.created_at_in_seconds > current_dt:
                     downloadProfileImage(status)
