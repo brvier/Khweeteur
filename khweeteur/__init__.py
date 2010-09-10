@@ -641,6 +641,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         if self.fm == None:
             self.fm = QFontMetrics(option.font)
         height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()
+        if height<37:
+            height=37        
         return QSize(size.width(), height+25)
         
 
@@ -721,6 +723,8 @@ class WhiteCustomDelegate(QStyledItemDelegate):
         if self.fm == None:
             self.fm = QFontMetrics(option.font)
         height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()
+        if height<37:
+            height=37        
         return QSize(size.width(), height+25)
         
 

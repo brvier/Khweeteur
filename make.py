@@ -61,9 +61,9 @@ if __name__ == "__main__":
     p.postinstall = """#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
-#rm -rf /home/user/.khweeteur/"""
+#rm -rf /home/user/.khweeteur/
 
-    p.changelog=""" Fix unicode errors.
+    p.changelog=""" Implement a White Theme, Fix min height of tweet for icon size, fixed update timestamp, add feature to destroy tweet
 """
 
 print p.generate(build_binary=True,build_src=True)
