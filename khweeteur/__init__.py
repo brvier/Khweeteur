@@ -507,6 +507,9 @@ class KhweetsModel(QAbstractListModel):
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             self.serialize()
 
+    def destroyStatus(self,index):
+        self._items.pop(index.row())
+        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             
     def getNewAndReset(self):
         counter = self._new_counter
@@ -894,6 +897,10 @@ class KhweetAction(QDialog):
         self.retweet.setText(self.tr('&Retweet'))
         _layout.addWidget(self.retweet,0,1)
 
+        self.destroy_tweet = QPushButton('Destroy')
+        self.destroy_tweet.setText(self.tr('&Destroy'))
+        _layout.addWidget(self.destroy_tweet,1,1)
+
         self.openurl = QPushButton('Open URL')
         self.openurl.setText(self.tr('&Open URL'))
         _layout.addWidget(self.openurl,1,0)
@@ -1261,6 +1268,7 @@ class KhweeteurWin(QMainWindow):
         self.connect(self.tweetActionDialog.retweet,SIGNAL('clicked()'),self.retweet)
         self.connect(self.tweetActionDialog.follow,SIGNAL('clicked()'),self.follow)
         self.connect(self.tweetActionDialog.unfollow,SIGNAL('clicked()'),self.unfollow)
+        self.connect(self.tweetActionDialog.destroy_tweet,SIGNAL('clicked()'),self.destroy_tweet)
         self.tweetActionDialog.exec_()
         
     def countChar(self,text):
@@ -1415,6 +1423,49 @@ class KhweeteurWin(QMainWindow):
                         print e.message
                     else:
                         self.notifications.warn('Retweet to identi.ca failed : '+str(e))
+                        print e                 
+
+    def destroy_tweet(self):
+        self.tweetActionDialog.accept()
+        for index in self.tweetsView.selectedIndexes():
+            if ((QMessageBox.question(self,
+                       "Khweeteur",
+                       "Destroy this : %s ?" % self.tweetsModel._items[index.row()][3],
+                       QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+                tweetid = self.tweetsModel._items[index.row()][1]
+                #print 'DEBUG Retweet:',tweetid
+                try:
+                    if self.settings.value("twitter_access_token_key").toString()!='':     
+                        api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                          access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                          access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                        api.SetUserAgent('Khweeteur/%s' % (__version__))
+                        api.DestroyStatus(tweetid)
+                        self.tweetsModel.destroyStatus(index)
+                        self.notifications.info('Status destroyed Twitter')
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError),e:
+                    if type(e)==twitter.TwitterError:
+                        self.notifications.warn('Destroy status from twitter failed : '+(e.message))
+                        print e.message
+                    else:
+                        self.notifications.warn('Destroy status from twitter failed : '+str(e))
+                        print e                     
+                try:
+                    if self.settings.value("identica_access_token_key").toString()!='': 
+                        api = twitter.Api(base_url='http://identi.ca/api/',username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                          password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                          access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                          access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))    
+                        api.SetUserAgent('Khweeteur/%s' % (__version__))    
+                        api.DestroyStatus(tweetid)
+                        self.tweetsModel.destroyStatus(index)
+                        self.notifications.info('Status destroyed from Identi.ca')
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError),e:
+                    if type(e)==twitter.TwitterError:
+                        self.notifications.warn('Destroy status from identi.ca failed : '+(e.message))
+                        print e.message
+                    else:
+                        self.notifications.warn('Destroy status from identi.ca failed : '+str(e))
                         print e                 
 
     def tweetSent(self):
