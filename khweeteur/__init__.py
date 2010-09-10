@@ -447,6 +447,7 @@ class KhweetsModel(QAbstractListModel):
         return len(self._items)
 
     def refreshTimestamp(self):
+        self.now = time.time()
         for index,item in enumerate(self._items):
             try:
                 self._items[index] = (item[0],
@@ -611,7 +612,7 @@ class KhweetsModel(QAbstractListModel):
     def wantsUpdate(self):
         QObject.emit(self, SIGNAL("layoutChanged()"))
 
-class CustomDelegate(QStyledItemDelegate):
+class DefaultCustomDelegate(QStyledItemDelegate):
     '''Delegate to do custom draw of the items'''
 
     def __init__(self, parent):
@@ -668,7 +669,7 @@ class CustomDelegate(QStyledItemDelegate):
             icon = index.data(Qt.DecorationRole).toPyObject();
             if icon != None:
                 x1,y1,x2,y2 = option.rect.getCoords()
-                painter.drawPixmap(x1+2,y1+6,50,50,icon)
+                painter.drawPixmap(x1+10,y1+6,50,50,icon)
                                                 
         # Draw tweet
         new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
@@ -689,6 +690,89 @@ class CustomDelegate(QStyledItemDelegate):
 
         painter.restore()
 
+class WhiteCustomDelegate(QStyledItemDelegate):
+    '''Delegate to do custom draw of the items'''
+
+    def __init__(self, parent):
+        '''Initialization'''
+        QStyledItemDelegate.__init__(self, parent)
+        self.show_avatar = True
+        self.show_screenname = True
+        self.show_timestamp = True
+
+        self.tips_color = QColor('#7AB4F5')
+        self.bg_color = QColor('#FFFFFF')
+        self.bg_alternate_color = QColor('#dddddd')
+        self.text_color = QColor('#000000')
+                
+        self.fm = None
+        
+        self.normFont = None
+        self.miniFont = None
+
+    def sizeHint (self, option, index):
+        '''Custom size calculation of our items'''
+        size = QStyledItemDelegate.sizeHint(self, option, index)
+        tweet = index.data(Qt.DisplayRole).toString()
+        #One time is enought sizeHint need to be fast
+        if self.fm == None:
+            self.fm = QFontMetrics(option.font)
+        height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()
+        return QSize(size.width(), height+25)
+        
+
+    def paint(self, painter, option, index):
+        '''Paint our tweet'''
+        self.fm = QFontMetrics(option.font)
+
+        model = index.model()
+        tweet = index.data(Qt.DisplayRole).toString()
+        
+        #Instantiate font only one time !
+        if self.normFont == None:
+            self.normFont = QFont(option.font)
+            self.miniFont = QFont(option.font)
+            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)            
+        
+        painter.save()
+        
+        # Draw alternate ?
+        if (index.row()%2)==0:
+            painter.fillRect(option.rect, self.bg_color)
+        else:
+            painter.fillRect(option.rect, self.bg_alternate_color)            
+
+        # highlight selected items
+        if option.state & QStyle.State_Selected: 
+            painter.fillRect(option.rect, option.palette.highlight());
+                    
+        # Draw icon
+        if self.show_avatar:
+            icon = index.data(Qt.DecorationRole).toPyObject();
+            if icon != None:
+                x1,y1,x2,y2 = option.rect.getCoords()
+                painter.drawPixmap(x1+10,y1+6,50,50,icon)
+                                                
+        # Draw tweet
+        painter.setPen(self.text_color)
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+                
+        # Draw Timeline
+        if self.show_timestamp:
+            time = index.data(Qt.ToolTipRole).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.tips_color)
+            painter.drawText(option.rect.adjusted(70,0,-2,0),  int(Qt.AlignBottom) | int(Qt.AlignRight), time);
+
+        # Draw screenname
+        if self.show_screenname:
+            screenname = index.data(SCREENNAMEROLE).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.tips_color)
+            painter.drawText(option.rect.adjusted(70,0,-2,0),  int(Qt.AlignBottom) | int(Qt.AlignLeft), screenname);
+
+        painter.restore()
+        
 class KhweetsView(QListView):
     ''' Model View '''
     def __init__(self,parent=None):
@@ -696,8 +780,7 @@ class KhweetsView(QListView):
         #self.setIconSize(QSize(128, 128))
         #self.setStyleSheet('QListView { background-color: rgb(241, 245, 250); border: 0; }')
         self.setWordWrap(True)
-        self.custom_delegate = CustomDelegate(self)
-        self.setItemDelegate(self.custom_delegate)
+        self.refreshCustomDelegate()
         self.setEditTriggers(QAbstractItemView.SelectedClicked)
         self.setSpacing(2)
         self.setUniformItemSizes(False)
@@ -710,8 +793,19 @@ class KhweetsView(QListView):
 #        self.setAlternatingRowColors(True)  
 #        self.setAlternatingRowColors(True)
 
+    def refreshCustomDelegate(self):
+        theme = self.parent().settings.value('theme')
+        if theme == KhweeteurPref.WHITETHEME:
+            self.custom_delegate = WhiteCustomDelegate(self)
+        elif theme == KhweeteurPref.DEFAULTTHEME:
+            self.custom_delegate = DefaultCustomDelegate(self)
+        else:
+            self.custom_delegate = DefaultCustomDelegate(self)
+        self.setItemDelegate(self.custom_delegate)
+
 
 class KhweeteurAbout(QMainWindow):
+    '''About Window'''
     def __init__(self, parent=None):
         QMainWindow.__init__(self,parent)
         self.parent = parent
@@ -813,6 +907,10 @@ class KhweetAction(QDialog):
         _layout.addWidget(self.unfollow,1,2)        
         
 class KhweeteurPref(QMainWindow):
+    DEFAULTTHEME = 'Default'
+    WHITETHEME = 'White'
+    THEMES = [DEFAULTTHEME,WHITETHEME,]
+
     def __init__(self, parent=None):
         QMainWindow.__init__(self,parent)
         self.parent = parent
@@ -835,6 +933,9 @@ class KhweeteurPref(QMainWindow):
         self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
         self.useSerialization_value.setCheckState(self.settings.value("useSerialization").toInt()[0])
         self.useBitly_value.setCheckState(self.settings.value("useBitly").toInt()[0])
+        if self.settings.value("theme"):
+            self.settings.setValue("theme",'Default')
+        self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme").toString()))
 
     def savePrefs(self):
         self.settings.setValue('refreshInterval',self.refresh_value.value())
@@ -844,6 +945,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('displayAvatar',self.displayAvatar_value.checkState())
         self.settings.setValue('displayTimestamp',self.displayTimestamp_value.checkState())
         self.settings.setValue('useBitly',self.useBitly_value.checkState())
+        self.settings.setValue('theme',self.theme_value.currentText())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -1037,6 +1139,12 @@ class KhweeteurPref(QMainWindow):
         self.useBitly_value = QCheckBox('Use Bit.ly')
         self._main_layout.addWidget(self.useBitly_value,8,1)
 
+        self._main_layout.addWidget(QLabel('Theme :'),9,0)
+        self.theme_value = QComboBox()
+        self._main_layout.addWidget(self.theme_value,9,1)
+        for theme in self.THEMES:
+            self.theme_value.addItem(theme)
+        
         self.aWidget.setLayout(self._main_layout)
 #        self.setCentralWidget(self.aWidget)
         self.setCentralWidget(self.scrollArea)
@@ -1367,6 +1475,7 @@ class KhweeteurWin(QMainWindow):
             self.do_refresh_now()
  
     def restartTimer(self):
+        self.tweetsView.refreshCustomDelegate()
         self.tweetsView.custom_delegate.show_screenname = self.settings.value("displayUser").toBool()
         self.tweetsView.custom_delegate.show_timestamp = self.settings.value("displayTimestamp").toBool()
         self.tweetsView.custom_delegate.show_avatar = self.settings.value("displayAvatar").toBool()
