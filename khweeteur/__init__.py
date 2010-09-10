@@ -292,7 +292,7 @@ class KhweeteurWorker(QThread):
         if len(mlist)>0:
             if (twitter_last_id != None):
                 self.settings.setValue('twitter_last_id_'+search_keyword,twitter_last_id)
-                print 'DEBUG SAVED SEARCH Last twiter id : ',twitter_last_id
+                #print 'DEBUG SAVED SEARCH Last twiter id : ',twitter_last_id
             if (identica_last_id != None):
                 self.settings.setValue('identica_last_id_'+search_keyword,identica_last_id)
             mlist.sort()            
@@ -337,10 +337,10 @@ class KhweeteurWorker(QThread):
                             twitter_last_id = status.GetId()
 
         except twitter.TwitterError,e:
-            print 'Error during refresh : ',e.message
+            print 'Error during twitter refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
         except (StandardError,urllib2.HTTPError),e:
-            print 'Error during refresh : ',e.message
+            print 'Error during twitter refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
 
         try:
@@ -353,7 +353,6 @@ class KhweeteurWorker(QThread):
                         access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                 for status in api.GetFriendsTimeline(count=100,since_id=self.settings.value("identica_last_id").toString(),retweets=True):
-#                    if status.created_at_in_seconds > current_dt:
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > identica_last_id:
@@ -365,27 +364,24 @@ class KhweeteurWorker(QThread):
                     # if status.GetId() > twitter_last_id:
                         # twitter_last_id = status.GetId()
                 for status in api.GetReplies(since_id=self.settings.value("identica_last_id").toString()):
-#                    if status.created_at_in_seconds > current_dt:
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()                        
                 for status in api.GetDirectMessages(since_id=self.settings.value("identica_last_id").toString()):
-#                    if status.created_at_in_seconds > current_dt:
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()
                 for status in api.GetMentions(since_id=self.settings.value("identica_last_id").toString()):
-#                    if status.created_at_in_seconds > current_dt:
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))                        
         except twitter.TwitterError,e:
-            print 'Error during refresh : ',e.message
+            print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
         except (StandardError,urllib2.HTTPError),e:
-            print 'Error during refresh : ',e.message
+            print 'Error during identi.ca refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
                 
 
@@ -662,8 +658,9 @@ class CustomDelegate(QStyledItemDelegate):
         # Draw icon
         if self.show_avatar:
             icon = index.data(Qt.DecorationRole).toPyObject();
-            x1,y1,x2,y2 = option.rect.getCoords()
-            painter.drawPixmap(x1+2,y1+6,50,50,icon)
+            if icon != None:
+                x1,y1,x2,y2 = option.rect.getCoords()
+                painter.drawPixmap(x1+2,y1+6,50,50,icon)
                                                 
         # Draw tweet
         new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 

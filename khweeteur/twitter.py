@@ -1631,7 +1631,7 @@ class Api(object):
       parameters['since'] = since
     if since_id:
       parameters['since_id'] = since_id
-    print url
+    
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -1837,7 +1837,7 @@ class Api(object):
           results.append(self.PostUpdate(lines[0], **kwargs))        
     else:
         for line in lines:
-          print 'line',type(unicode(line,'utf-8').encode('utf-8')),line
+          #print 'line',type(unicode(line,'utf-8').encode('utf-8')),line
           r = self.PostUpdate(line \
                    + ' ' \
                    + str(counter) \
