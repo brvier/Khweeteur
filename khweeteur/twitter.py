@@ -1824,7 +1824,7 @@ class Api(object):
     '''
     results = list()    
     line_length = CHARACTER_LIMIT
-    lines = textwrap.wrap(status.decode('utf-8'), line_length)    
+    lines = textwrap.wrap(status, line_length)    
     if len(lines) > 9:
         line_length = CHARACTER_LIMIT - 6
         lines = textwrap.wrap(status, line_length)                
@@ -2764,13 +2764,8 @@ class _FileCache(object):
     
 if __name__ == '__main__':
     print 'test'
-    s=(u'''тест тест тест тест тест тест
-     тест тест тест тест тест тест тест тест тест
-      тест тест тест тест тест тест тест тест тест
-       тест тест тест тест тест тест тест тест тест
-        тест тест тест тест тест тест тест тест тест
-         тест тест тест тест тест тест тест тест тест
-          тест тест тест тест тест''').encode('utf-8')
+    s=(u'''тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест  тест ''').encode('utf-8')
+    s2=(u'''тест тест тест тест тест тест''').encode('utf-8')
     api = Api(username='twitterfdghjuser', password='twittgfjker pass',
                             access_token_key='the_key_g',
                             access_token_secret='the_key_secret')

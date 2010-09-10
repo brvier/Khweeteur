@@ -8,8 +8,13 @@
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from PyQt4.QtMaemo5 import *
 
+try:
+    from PyQt4.QtMaemo5 import *
+    isMAEMO = True
+except:
+    isMAEMO = False
+    
 #import khweeteur
 import twitter
 import sys
@@ -25,7 +30,7 @@ from PIL import Image
 import re
 import urllib2
 
-__version__ = '0.0.25'
+__version__ = '0.0.27'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -60,11 +65,12 @@ KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
 SCREENNAMEROLE = 20
 
 class KhweeteurDBus(dbus.service.Object):
+
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='', out_signature='')
     def show(self):
-        self.win.activateWindow()
         self.win.tweetsModel.getNewAndReset()
+        self.win.activateWindow()
 
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='s', out_signature='')
@@ -87,10 +93,12 @@ class KhweeteurNotification(QObject):
         self.m_id = 0
         
     def warn(self,message):
-        self.iface.SystemNoteDialog(message,0,'Nothing')
+        if isMAEMO:
+            self.iface.SystemNoteDialog(message,0,'Nothing')
         
     def info(self,message):
-        self.iface.SystemNoteInfoprint('Khweeteur : '+message)
+        if isMAEMO:
+            self.iface.SystemNoteInfoprint('Khweeteur : '+message)
         
     def notify(self,title,message,category='im.received',icon='khweeteur',count=1):
         self.m_id = self.iface.Notify('Khweeteur',
@@ -98,7 +106,7 @@ class KhweeteurNotification(QObject):
                           icon,
                           title,
                           message,
-                          ['default','test'],
+                          ['default',],
                           {'category':category,
                           'desktop-entry':'khweeteur',
                           'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
@@ -112,7 +120,7 @@ class KhweeteurNotification(QObject):
                           icon,
                           title,
                           message,
-                          ['default','test'],
+                          ['default',],
                           {'category':category,
                           'desktop-entry':'khweeteur',
                           'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_search(%s)' % (keyword,),
@@ -708,8 +716,9 @@ class KhweeteurAbout(QMainWindow):
         QMainWindow.__init__(self,parent)
         self.parent = parent
 
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur About")
 
         aboutScrollArea = QScrollArea(self)
@@ -718,8 +727,12 @@ class KhweeteurAbout(QMainWindow):
         awidget.setMinimumSize(480,1000)
         awidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         aboutScrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
-        scroller = aboutScrollArea.property("kineticScroller").toPyObject()
-        scroller.setEnabled(True)
+        #Kinetic scroller is available on Maemo and should be on meego
+        try:
+            scroller = aboutScrollArea.property("kineticScroller").toPyObject()
+            scroller.setEnabled(True)
+        except:
+            pass
 
         aboutLayout = QVBoxLayout(awidget)
 
@@ -804,8 +817,9 @@ class KhweeteurPref(QMainWindow):
         QMainWindow.__init__(self,parent)
         self.parent = parent
 
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
 
         self.settings = QSettings()
@@ -873,7 +887,8 @@ class KhweeteurPref(QMainWindow):
                     pincode, ok = QInputDialog.getText(self, 'Twitter Authentification', 'Enter the pincode :')
     
                     if ok:
-                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                        if isMAEMO:
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
                         token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
                         token.set_verifier(str(pincode))
     
@@ -894,7 +909,8 @@ class KhweeteurPref(QMainWindow):
                             self.settings.setValue('twitter_access_token',True)
                             self.twitter_value.setText('Clear Twitter Auth')
                             KhweeteurNotification().info('Khweeteur is now authorized to connect')
-                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                        if isMAEMO:
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
                     
     def request_identica_access_or_clear(self):
 
@@ -935,7 +951,8 @@ class KhweeteurPref(QMainWindow):
                     pincode, ok = QInputDialog.getText(self, 'Identi.ca Authentification', 'Enter the token :')
     
                     if ok:
-                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                        if isMAEMO:
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
                         token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
                         token.set_verifier(str(pincode))
     
@@ -956,7 +973,8 @@ class KhweeteurPref(QMainWindow):
                             self.settings.setValue('identica_access_token',True)
                             self.identica_value.setText('Clear Identi.ca Auth')
                             KhweeteurNotification().info('Khweeteur is now authorized to connect')
-                        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+                        if isMAEMO:                        
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
                         
     def setupGUI(self):
 #        self.aWidget = QWidget()
@@ -967,8 +985,12 @@ class KhweeteurPref(QMainWindow):
         self.aWidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scrollArea.setWidget(self.aWidget)
-        scroller = self.scrollArea.property("kineticScroller").toPyObject()
-        scroller.setEnabled(True)
+        #Available on maemo but should be too on Meego
+        try:
+            scroller = self.scrollArea.property("kineticScroller").toPyObject()
+            scroller.setEnabled(True)
+        except:
+            pass
         self._main_layout = QGridLayout(self.aWidget)
 
         self._main_layout.addWidget(QLabel('Authorizations :'),0,0)
@@ -1030,9 +1052,10 @@ class KhweeteurWin(QMainWindow):
 
         #crappy trick to avoid search win to be garbage collected
         self.search_win = []
-            
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+
+        if isMAEMO:            
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
         if self.search_keyword != None:
             self.setWindowTitle("Khweeteur:"+unicode(self.search_keyword))      
@@ -1072,9 +1095,11 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel.refreshTimestamp()
 
     def timedUnserialize(self):
-        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.tweetsModel.unSerialize()
-        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def setupMain(self):
 
@@ -1312,15 +1337,14 @@ class KhweeteurWin(QMainWindow):
         counter=self.tweetsModel.getNew()
         
         if (counter>0) and (self.settings.value('useNotification').toBool()) and not (self.isActiveWindow()):
-            if self.search_keyword:
-                pass
-            else:
+            if self.search_keyword == None:
                 self.notifications.notify('Khweeteur',str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
         #print type(self.settings.value('useNotification').toString()),self.settings.value('useNotification').toString()
-        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         self.worker = KhweeteurWorker(self,search_keyword=self.search_keyword)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
