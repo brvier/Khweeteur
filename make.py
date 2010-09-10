@@ -63,7 +63,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Better error managment, add shorten url with bit.ly, Fix unicode support, show self retweet.
+    p.changelog=""" Fix delete saved search feature, add trigger to refresh after a tweet post.
 """
 
 print p.generate(build_binary=True,build_src=True)

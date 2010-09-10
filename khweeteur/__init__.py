@@ -25,7 +25,7 @@ from PIL import Image
 import re
 import urllib2
 
-__version__ = '0.0.24'
+__version__ = '0.0.25'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -1288,6 +1288,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_text.setText('')
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
+        self.request_refresh() #Feature Request : 201
 
     def tweetSentFinished(self):
         self.tb_text.setEnabled(True)
@@ -1384,10 +1385,12 @@ class KhweeteurWin(QMainWindow):
         elif (type(keywords)==QString):
             if (self.search_keyword==keywords):
                 keywords = []
-        else:
+        elif (type(keywords)==QStringList):
             index = keywords.indexOf(self.search_keyword)
             if index>=0:
                 keywords.removeAt(index)
+        else:
+            keywords.remove(self.search_keyword)
         self.settings.setValue('savedSearch',QVariant(keywords))
         self.close()
                                 
