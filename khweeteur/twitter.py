@@ -1,5 +1,5 @@
 #!/usr/bin/python2.4
-#
+# -*- coding: utf-8 -*-
 # Copyright 2007 The Python-Twitter Developers
 # This version is a fork made by Khertan
 #
@@ -1631,6 +1631,7 @@ class Api(object):
       parameters['since'] = since
     if since_id:
       parameters['since_id'] = since_id
+    print url
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -1787,7 +1788,9 @@ class Api(object):
 
     url = '%s/statuses/update.json' % self.base_url
 
-    if len(status) > CHARACTER_LIMIT:
+    print 'PostUpdate:',type(status)
+    #тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест 
+    if len(status.decode('utf-8')) > CHARACTER_LIMIT:
       raise TwitterError("Text must be less than or equal to %d characters. "
                          "Consider using PostUpdates." % CHARACTER_LIMIT)
 
@@ -1822,7 +1825,7 @@ class Api(object):
     '''
     results = list()    
     line_length = CHARACTER_LIMIT
-    lines = textwrap.wrap(status, line_length)    
+    lines = textwrap.wrap(status.decode('utf-8'), line_length)    
     if len(lines) > 9:
         line_length = CHARACTER_LIMIT - 6
         lines = textwrap.wrap(status, line_length)                
@@ -1830,11 +1833,19 @@ class Api(object):
         line_length = CHARACTER_LIMIT - 4
         lines = textwrap.wrap(status, line_length)        
     counter = 1
+    tot = len(lines)
     if len(lines)==1:
           results.append(self.PostUpdate(lines[0], **kwargs))        
-    else: 
+    else:
         for line in lines:
-          results.append(self.PostUpdate(line + u' ' + unicode(counter)+u'/'+unicode(len(lines)), **kwargs))
+          print 'line',type(unicode(line,'utf-8').encode('utf-8')),line
+          r = self.PostUpdate(line \
+                   + ' ' \
+                   + str(counter) \
+                   + '/' \
+                   + str(tot), \
+                   **kwargs)
+          results.append(r)
           counter = counter + 1
     return results
     
@@ -2242,6 +2253,51 @@ class Api(object):
     '''
 
     url = '%s/statuses/mentions.json' % self.base_url
+
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+
+    parameters = {}
+
+    if since_id:
+      parameters['since_id'] = since_id
+    if max_id:
+      parameters['max_id'] = max_id
+    if page:
+      parameters['page'] = page
+
+    json = self._FetchUrl(url, parameters=parameters)
+    data = simplejson.loads(json)
+
+    self._CheckForTwitterError(data)
+
+    return [Status.NewFromJsonDict(x) for x in data]
+
+  def GetRetweetedByMe(self,
+                  since_id=None,
+                  max_id=None,
+                  page=None):
+    '''Returns the 20 most recent retweet made by user (status containing @username)
+    for the authenticating user.
+    
+    Args:
+      since_id:
+        Returns only public statuses with an ID greater than
+        (that is, more recent than) the specified ID. [optional]
+    
+      max_id:
+        Returns only statuses with an ID less than
+        (that is, older than) the specified ID.  [optional]
+    
+      page:
+        Retrieves the 20 next most recent replies. [optional]
+    
+    Returns:
+      A sequence of twitter.Status instances, one for each retweet of the user.
+      see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
+    '''
+
+    url = '%s/statuses/retweeted_by_me.json' % self.base_url
 
     if not self._oauth_consumer:
       raise TwitterError("The twitter.Api instance must be authenticated.")
@@ -2706,3 +2762,17 @@ class _FileCache(object):
 
   def _GetPrefix(self,hashed_key):
     return os.path.sep.join(hashed_key[0:_FileCache.DEPTH])
+    
+if __name__ == '__main__':
+    print 'test'
+    s=(u'''тест тест тест тест тест тест
+     тест тест тест тест тест тест тест тест тест
+      тест тест тест тест тест тест тест тест тест
+       тест тест тест тест тест тест тест тест тест
+        тест тест тест тест тест тест тест тест тест
+         тест тест тест тест тест тест тест тест тест
+          тест тест тест тест тест''').encode('utf-8')
+    api = Api(username='twitterfdghjuser', password='twittgfjker pass',
+                            access_token_key='the_key_g',
+                            access_token_secret='the_key_secret')
+    api.PostSerializedUpdates(s)
