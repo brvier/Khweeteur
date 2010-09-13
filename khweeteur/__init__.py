@@ -29,8 +29,9 @@ import pickle
 from PIL import Image
 import re
 import urllib2
+import socket
 
-__version__ = '0.0.27'
+__version__ = '0.0.28'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -194,7 +195,7 @@ class KhweeteurActionWorker(QThread):
 #                self.tb_text.setText('')
 #                self.tb_text_replyid = 0
 #                self.tb_text_replytext = ''
-        except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+        except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
             if type(e)==twitter.TwitterError:
 #                self.notifications.warn('Send tweet failed : '+(e.message))
                 self.emit(SIGNAL("warn(PyQt_PyObject)"),e.message)
@@ -217,7 +218,7 @@ class KhweeteurWorker(QThread):
         if self.search_keyword==None:
             self.refresh()
         else:
-            print 'Worker Refresh search : '+self.search_keyword 
+#            print 'Worker Refresh search : '+self.search_keyword 
             self.refresh_search()
 
     def testCacheFolders(self):
@@ -245,7 +246,7 @@ class KhweeteurWorker(QThread):
                     #im.save(os.path.splitext(cache)[0]+'.png', 'PNG', transparency=transparency)
                     im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
 #                    print os.path.splitext(cache)[0]+'.png'
-                except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                     print 'DownloadProfileImage Error : ',e
         
     def refresh_search(self):
@@ -271,9 +272,8 @@ class KhweeteurWorker(QThread):
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
-            print 'Error during refresh : ',e.message
-            self.emit(SIGNAL("info(PyQt_PyObject)"),"A network error occur')
+        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
+            self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
 
         try:
             identica_last_id = None
@@ -289,7 +289,7 @@ class KhweeteurWorker(QThread):
         except twitter.TwitterError,e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
             print 'Error during refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
 
@@ -344,7 +344,7 @@ class KhweeteurWorker(QThread):
         except twitter.TwitterError,e:
             print 'Error during twitter refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
             print 'Error during twitter refresh : ',e
             self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
 
@@ -385,7 +385,7 @@ class KhweeteurWorker(QThread):
         except twitter.TwitterError,e:
             print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
             print 'Error during identi.ca refresh : ',e
             self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
                 
@@ -522,16 +522,16 @@ class KhweetsModel(QAbstractListModel):
     def setTweets(self,mlist):
         try:
             if len(mlist)>0:
-                if type(mlist[0])==tuple:
-                    if len(mlist[0])==6:
-                        self._items = mlist
-                        self._new_counter = 0
-                        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-                        return True
-                    else:
-                        print 'Wrong cache format'
-                        write_report("%s Version %s\nOld cache format : %s\n" % ('Khweeteur', __version__, ''))
-                        KhweeteurNotification().info('Old cache format. Reinit cache.')            
+                #if type(mlist[0])==tuple:
+                #    if len(mlist[0])==6:
+                self._items = mlist
+                self._new_counter = 0
+                QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+                return True
+                 #   else:
+                 #       print 'Wrong cache format'
+                 #       write_report("%s Version %s\nOld cache format : %s\n" % ('Khweeteur', __version__, ''))
+                 #       KhweeteurNotification().info('Old cache format. Reinit cache.')            
         except StandardError,err:
             KhweeteurNotification().info('Wrong cache format. Reinit cache.')
             write_report("%s Version %s\nWrong cache format : %s\n" % ('Khweeteur', __version__, err))
@@ -585,8 +585,8 @@ class KhweetsModel(QAbstractListModel):
                         if not path.endswith('.png'):
                             path = os.path.splitext(path)[0]+'.png'
                         pix = (QPixmap(path)) #.scaled(50,50)
-                        if pix.isNull():
-                            print path
+#                        if pix.isNull():
+#                            print path
                         self._avatars[item[4]] = (pix)
                 except StandardError, err:
                     print 'error on loading avatar :',err 
@@ -776,6 +776,190 @@ class WhiteCustomDelegate(QStyledItemDelegate):
             painter.drawText(option.rect.adjusted(70,0,-2,0),  int(Qt.AlignBottom) | int(Qt.AlignLeft), screenname);
 
         painter.restore()
+
+class CoolWhiteCustomDelegate(QStyledItemDelegate):
+    '''Delegate to do custom draw of the items'''
+
+    def __init__(self, parent):
+        '''Initialization'''
+        QStyledItemDelegate.__init__(self, parent)
+        self.show_avatar = True
+        self.show_screenname = True
+        self.show_timestamp = True
+
+        self.user_color = QColor('#3399cc')
+        self.time_color = QColor('#94a1a7')
+        self.bg_color = QColor('#edf1f2')
+        self.bg_alternate_color = QColor('#e6eaeb')
+        self.text_color = QColor('#444444')
+        self.separator_color = QColor('#c8cdcf')
+                
+        self.fm = None
+        
+        self.normFont = None
+        self.miniFont = None
+
+    def sizeHint (self, option, index):
+        '''Custom size calculation of our items'''
+        size = QStyledItemDelegate.sizeHint(self, option, index)
+        tweet = index.data(Qt.DisplayRole).toString()
+        #One time is enought sizeHint need to be fast
+        if self.fm == None:
+            self.fm = QFontMetrics(option.font)
+        height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()
+        if height<40:
+            height=40        
+        return QSize(size.width(), height+44)
+        
+
+    def paint(self, painter, option, index):
+        '''Paint our tweet'''
+        self.fm = QFontMetrics(option.font)
+
+        model = index.model()
+        tweet = index.data(Qt.DisplayRole).toString()
+        
+        #Instantiate font only one time !
+        if self.normFont == None:
+            self.normFont = QFont(option.font)
+            self.miniFont = QFont(option.font)
+            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)            
+        
+        painter.save()
+        
+        # Draw alternate ?
+        if (index.row()%2)==0:
+            painter.fillRect(option.rect, self.bg_color)
+        else:
+            painter.fillRect(option.rect, self.bg_alternate_color)            
+
+        # highlight selected items
+        if option.state & QStyle.State_Selected: 
+            painter.fillRect(option.rect, option.palette.highlight());
+                    
+        # Draw icon
+        if self.show_avatar:
+            icon = index.data(Qt.DecorationRole).toPyObject();
+            if icon != None:
+                x1,y1,x2,y2 = option.rect.getCoords()
+                painter.drawPixmap(x1+10,y1+10,50,50,icon)
+                                                
+        # Draw tweet
+        painter.setPen(self.text_color)
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+                
+        # Draw Timeline
+        if self.show_timestamp:
+            time = index.data(Qt.ToolTipRole).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.time_color)
+            painter.drawText(option.rect.adjusted(70,10,-10,-9),  int(Qt.AlignBottom) | int(Qt.AlignRight), time);
+
+        # Draw screenname
+        if self.show_screenname:
+            screenname = index.data(SCREENNAMEROLE).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.user_color)
+            painter.drawText(option.rect.adjusted(70,10,-10,-9),  int(Qt.AlignBottom) | int(Qt.AlignLeft), screenname);
+
+        # Draw line
+        painter.setPen(self.separator_color)
+        x1,y1,x2,y2 = option.rect.getCoords()
+        painter.drawLine(x1,y2,x2,y2) 
+
+        painter.restore()
+
+class CoolGrayCustomDelegate(QStyledItemDelegate):
+    '''Delegate to do custom draw of the items'''
+
+    def __init__(self, parent):
+        '''Initialization'''
+        QStyledItemDelegate.__init__(self, parent)
+        self.show_avatar = True
+        self.show_screenname = True
+        self.show_timestamp = True
+
+        self.user_color = QColor('#3399cc')
+        self.time_color = QColor('#94a1a7')
+        self.bg_color = QColor('#4a5153')
+        self.bg_alternate_color = QColor('#444b4d')
+        self.text_color = QColor('#FFFFFF')
+        self.separator_color = QColor('#333536')
+                
+        self.fm = None
+        
+        self.normFont = None
+        self.miniFont = None
+
+    def sizeHint (self, option, index):
+        '''Custom size calculation of our items'''
+        size = QStyledItemDelegate.sizeHint(self, option, index)
+        tweet = index.data(Qt.DisplayRole).toString()
+        #One time is enought sizeHint need to be fast
+        if self.fm == None:
+            self.fm = QFontMetrics(option.font)
+        height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()
+        if height<40:
+            height=40        
+        return QSize(size.width(), height+44)
+        
+
+    def paint(self, painter, option, index):
+        '''Paint our tweet'''
+        self.fm = QFontMetrics(option.font)
+
+        model = index.model()
+        tweet = index.data(Qt.DisplayRole).toString()
+        
+        #Instantiate font only one time !
+        if self.normFont == None:
+            self.normFont = QFont(option.font)
+            self.miniFont = QFont(option.font)
+            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)            
+        
+        painter.save()
+        
+        # Draw alternate ?
+        if (index.row()%2)==0:
+            painter.fillRect(option.rect, self.bg_color)
+        else:
+            painter.fillRect(option.rect, self.bg_alternate_color)            
+
+        # highlight selected items
+        if option.state & QStyle.State_Selected: 
+            painter.fillRect(option.rect, option.palette.highlight());
+                    
+        # Draw icon
+        if self.show_avatar:
+            icon = index.data(Qt.DecorationRole).toPyObject();
+            if icon != None:
+                x1,y1,x2,y2 = option.rect.getCoords()
+                painter.drawPixmap(x1+10,y1+10,50,50,icon)
+                                                
+        # Draw tweet
+        painter.setPen(self.text_color)
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+                
+        # Draw Timeline
+        if self.show_timestamp:
+            time = index.data(Qt.ToolTipRole).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.time_color)
+            painter.drawText(option.rect.adjusted(70,10,-10,-9),  int(Qt.AlignBottom) | int(Qt.AlignRight), time);
+
+        # Draw screenname
+        if self.show_screenname:
+            screenname = index.data(SCREENNAMEROLE).toString();
+            painter.setFont(self.miniFont)
+            painter.setPen(self.user_color)
+            painter.drawText(option.rect.adjusted(70,10,-10,-9),  int(Qt.AlignBottom) | int(Qt.AlignLeft), screenname);
+
+        # Draw line
+        painter.setPen(self.separator_color)
+        x1,y1,x2,y2 = option.rect.getCoords()
+        painter.drawLine(x1,y2,x2,y2) 
+
+        painter.restore()
         
 class KhweetsView(QListView):
     ''' Model View '''
@@ -786,7 +970,7 @@ class KhweetsView(QListView):
         self.setWordWrap(True)
         self.refreshCustomDelegate()
         self.setEditTriggers(QAbstractItemView.SelectedClicked)
-        self.setSpacing(2)
+        self.setSpacing(0)
         self.setUniformItemSizes(False)
         self.setResizeMode(QListView.Adjust)
         #self.setViewMode(QListView.ListMode)
@@ -803,6 +987,10 @@ class KhweetsView(QListView):
             self.custom_delegate = WhiteCustomDelegate(self)
         elif theme == KhweeteurPref.DEFAULTTHEME:
             self.custom_delegate = DefaultCustomDelegate(self)
+        elif theme == KhweeteurPref.COOLWHITETHEME:
+            self.custom_delegate = CoolWhiteCustomDelegate(self)
+        elif theme == KhweeteurPref.COOLGRAYTHEME:
+            self.custom_delegate = CoolGrayCustomDelegate(self)
         else:
             self.custom_delegate = DefaultCustomDelegate(self)
         self.setItemDelegate(self.custom_delegate)
@@ -917,7 +1105,9 @@ class KhweetAction(QDialog):
 class KhweeteurPref(QMainWindow):
     DEFAULTTHEME = 'Default'
     WHITETHEME = 'White'
-    THEMES = [DEFAULTTHEME,WHITETHEME,]
+    COOLWHITETHEME = 'CoolWhite'
+    COOLGRAYTHEME = 'CoolGray'
+    THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME]
 
     def __init__(self, parent=None):
         QMainWindow.__init__(self,parent)
@@ -941,7 +1131,7 @@ class KhweeteurPref(QMainWindow):
         self.useNotification_value.setCheckState(self.settings.value("useNotification").toInt()[0])
         self.useSerialization_value.setCheckState(self.settings.value("useSerialization").toInt()[0])
         self.useBitly_value.setCheckState(self.settings.value("useBitly").toInt()[0])
-        if self.settings.value("theme"):
+        if not self.settings.value("theme"):
             self.settings.setValue("theme",'Default')
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme").toString()))
 
@@ -1189,6 +1379,10 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel.display_avatar = self.settings.value("displayAvatar").toBool()
             
         QTimer.singleShot(200, self.justAfterInit)
+
+    def closeEvent(self,widget,*args):
+        for win in self.search_win:
+            win.close()
         
     def justAfterInit(self):
         from nwmanager import NetworkManager
@@ -1317,7 +1511,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))
                             api.CreateFriendship(user_screenname)
                             self.notifications.info('You are now following %s on Twitter' % (user_screenname))
-                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
                             print e.message
@@ -1333,7 +1527,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))    
                             api.CreateFriendship(user_screenname)
                             self.notifications.info('You are now following %s on Identi.ca' % (user_screenname))
-                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
                             print e.message
@@ -1361,7 +1555,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))
                             api.DestroyFriendship(user_screenname)
                             self.notifications.info('You didn\'t follow %s anymore on Twitter' % (user_screenname))
-                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
                             print e.message
@@ -1377,7 +1571,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))    
                             api.DestroyFriendship(user_screenname)
                             self.notifications.info('You didn\'t follow %s anymore on Identi.ca' % (user_screenname))
-                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                    except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
                             print e.message
@@ -1402,7 +1596,7 @@ class KhweeteurWin(QMainWindow):
                         api.SetUserAgent('Khweeteur/%s' % (__version__))
                         api.PostRetweet(tweetid)
                         self.notifications.info('Retweet send to Twitter')
-                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                     if type(e)==twitter.TwitterError:
                         self.notifications.warn('Retweet to twitter failed : '+(e.message))
                         print e.message
@@ -1418,7 +1612,7 @@ class KhweeteurWin(QMainWindow):
                         api.SetUserAgent('Khweeteur/%s' % (__version__))    
                         api.PostRetweet(tweetid)
                         self.notifications.info('Retweet send to Identi.ca')
-                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                     if type(e)==twitter.TwitterError:
                         self.notifications.warn('Retweet to identi.ca failed : '+(e.message))
                         print e.message
@@ -1444,7 +1638,7 @@ class KhweeteurWin(QMainWindow):
                         api.DestroyStatus(tweetid)
                         self.tweetsModel.destroyStatus(index)
                         self.notifications.info('Status destroyed on Twitter')
-                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                     if type(e)==twitter.TwitterError:
                         self.notifications.warn('Destroy status from twitter failed : '+(e.message))
                         print e.message
@@ -1461,7 +1655,7 @@ class KhweeteurWin(QMainWindow):
                         api.DestroyStatus(tweetid)
                         self.tweetsModel.destroyStatus(index)
                         self.notifications.info('Status destroyed on Identi.ca')
-                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine),e:
+                except (twitter.TwitterError,StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout),e:
                     if type(e)==twitter.TwitterError:
                         self.notifications.warn('Destroy status from identi.ca failed : '+(e.message))
                         print e.message
@@ -1675,7 +1869,6 @@ class Khweeteur(QApplication):
                 else:
                     QMessageBox.question(None,
                     "Khweeteur Crash Report",
-                    "%s" % the_page,
                     QMessageBox.Close)
                     return False
             try:
@@ -1688,9 +1881,9 @@ class Khweeteur(QApplication):
         self.dbus_object.attach_win(self.win)
         self.crash_report()
         self.win.show()
-        sys.exit(self.exec_())
+        
 #        self.exec_()
 
 if __name__ == '__main__':
-    Khweeteur()
+    sys.exit(Khweeteur().exec_())
 

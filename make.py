@@ -63,7 +63,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
 #rm -rf /home/user/.khweeteur/
 
-    p.changelog=""" Implement a White Theme, Fix min height of tweet for icon size, fixed update timestamp, add feature to destroy tweet
+    p.changelog=""" Implement a White Theme, Fix min height of tweet for icon size, fixed update timestamp, add feature to destroy tweet, Improve error managment.
 """
 
 print p.generate(build_binary=True,build_src=True)
