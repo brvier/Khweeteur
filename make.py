@@ -28,6 +28,7 @@ if __name__ == "__main__":
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
     p.depends = "python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging"
+    #p.depends = "python2.5-qt4-experimental-gui,python2.5-qt4-experimental-core, python2.5-qt4-experimental-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging"
 #    p.suggests = ""
     p.section="user/network"
     p.arch="armel"
@@ -60,10 +61,10 @@ if __name__ == "__main__":
 
     p.postinstall = """#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
-python -m compileall /usr/lib/python2.5/site-packages/khweeteur"""
-#rm -rf /home/user/.khweeteur/
+python -m compileall /usr/lib/python2.5/site-packages/khweeteur
+rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Implement a White Theme, Fix min height of tweet for icon size, fixed update timestamp, add feature to destroy tweet, Improve error managment.
+    p.changelog=""" Fix segfault, add timeout exception, closing main window close also search, implement coolgray and coolwhite theme, some cleaning.
 """
 
 print p.generate(build_binary=True,build_src=True)

@@ -66,7 +66,7 @@ KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
 SCREENNAMEROLE = 20
 
 class KhweeteurDBus(dbus.service.Object):
-
+    '''DBus Object handle dbus callback'''
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='', out_signature='')
     def show(self):
@@ -85,6 +85,7 @@ class KhweeteurDBus(dbus.service.Object):
         self.win = win
         
 class KhweeteurNotification(QObject):
+    '''Notification class interface'''
     def __init__(self):
         QObject.__init__(self)
         self.m_bus = dbus.SystemBus()
@@ -128,8 +129,9 @@ class KhweeteurNotification(QObject):
                           'count':count},
                           -1
                           )
+                          
 class KhweeteurActionWorker(QThread):
-
+    '''ActionWorker : Post tweet in background'''
     def __init__(self, parent = None, action=None, data=None, data2=None, data3=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
@@ -207,7 +209,7 @@ class KhweeteurActionWorker(QThread):
 
                           
 class KhweeteurWorker(QThread):
-
+    ''' Thread to Refresh in background '''
     def __init__(self, parent = None, search_keyword=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
@@ -316,7 +318,7 @@ class KhweeteurWorker(QThread):
                         access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
                         access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetFriendsTimeline(since_id=self.settings.value("twitter_last_id").toString()):
+                for status in api.GetFriendsTimeline(since_id=self.settings.value("twitter_last_id").toString(), retweets=True):
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > twitter_last_id:
@@ -340,7 +342,11 @@ class KhweeteurWorker(QThread):
                     mlist.append((status.created_at_in_seconds,status))                        
                     if status.GetId() > twitter_last_id:
                             twitter_last_id = status.GetId()
-
+                            
+                #Moved here to avoid partial refresh
+                if (twitter_last_id != None):
+                    self.settings.setValue('twitter_last_id',twitter_last_id)
+                    
         except twitter.TwitterError,e:
             print 'Error during twitter refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -381,7 +387,9 @@ class KhweeteurWorker(QThread):
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()
                     downloadProfileImage(status)
-                    mlist.append((status.created_at_in_seconds,status))                        
+                    mlist.append((status.created_at_in_seconds,status))                   
+                if (identica_last_id != None):
+                    self.settings.setValue('identica_last_id',identica_last_id)      
         except twitter.TwitterError,e:
             print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -391,10 +399,6 @@ class KhweeteurWorker(QThread):
                 
 
         if len(mlist)>0:
-            if (twitter_last_id != None):
-                self.settings.setValue('twitter_last_id',twitter_last_id)
-            if (identica_last_id != None):
-                self.settings.setValue('identica_last_id',identica_last_id)
             mlist.sort()            
             self.emit(SIGNAL("newStatuses(PyQt_PyObject)"),mlist)
                         
@@ -976,11 +980,29 @@ class KhweetsView(QListView):
         #self.setViewMode(QListView.ListMode)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+#        self.overShootMove = False
         #self.setWrapping(True)
         #self.setFlow(QListView.TopToBottom)
 #        self.setAlternatingRowColors(True)  
 #        self.setAlternatingRowColors(True)
 
+    #Work around for qt4.6 scrollarea bug which didn't work
+#    def event(self,anEvent):        
+#        if anEvent.type() == QEvent.Move:
+#            if not self.overShootMove:
+#                self.overShootMove = True
+#                r = QAbstractScrollArea.event(self,anEvent)
+#                self.overShootMove = False
+#                return r
+#        else:
+#            return QListView.event(self,anEvent)
+#            
+#    def setScrollPosition(self,point1,point2):
+#        self.overShootMove = True
+#        r = QAbstractScrollArea.setScrollPosition(self,point1,point2)
+#        self.overShootMove = False
+#        return r
+        
     def refreshCustomDelegate(self):
         theme = self.parent().settings.value('theme')
         if theme == KhweeteurPref.WHITETHEME:
