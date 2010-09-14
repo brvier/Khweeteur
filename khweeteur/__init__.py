@@ -31,7 +31,7 @@ import re
 import urllib2
 import socket
 
-__version__ = '0.0.28'
+__version__ = '0.0.29'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -678,7 +678,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 painter.drawPixmap(x1+10,y1+6,50,50,icon)
                                                 
         # Draw tweet
-        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
                 
         # Draw Timeline
         if self.show_timestamp:
@@ -763,7 +763,7 @@ class WhiteCustomDelegate(QStyledItemDelegate):
                                                 
         # Draw tweet
         painter.setPen(self.text_color)
-        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,0,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
                 
         # Draw Timeline
         if self.show_timestamp:
@@ -850,7 +850,7 @@ class CoolWhiteCustomDelegate(QStyledItemDelegate):
                                                 
         # Draw tweet
         painter.setPen(self.text_color)
-        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
                 
         # Draw Timeline
         if self.show_timestamp:
@@ -942,7 +942,7 @@ class CoolGrayCustomDelegate(QStyledItemDelegate):
                                                 
         # Draw tweet
         painter.setPen(self.text_color)
-        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,0,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
+        new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,5,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet); 
                 
         # Draw Timeline
         if self.show_timestamp:
@@ -1092,10 +1092,10 @@ class KhweeteurAbout(QMainWindow):
         
             
 class KhweetAction(QDialog):
-    def __init__(self,parent = None):
+    def __init__(self,parent = None,title = ''):
         QDialog.__init__(self,parent)
         #if name == None:
-        self.setWindowTitle('Khweeteur')
+        self.setWindowTitle('Khweeteur : '+title)
         _layout = QGridLayout(self)
         _layout.setSpacing(6)
         _layout.setMargin(11)
@@ -1366,9 +1366,7 @@ class KhweeteurPref(QMainWindow):
             self.theme_value.addItem(theme)
         
         self.aWidget.setLayout(self._main_layout)
-#        self.setCentralWidget(self.aWidget)
         self.setCentralWidget(self.scrollArea)
-
         
 class KhweeteurWin(QMainWindow):
 
@@ -1440,23 +1438,13 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.custom_delegate.show_timestamp = self.settings.value("displayTimestamp").toBool()
         self.tweetsView.custom_delegate.show_avatar = self.settings.value("displayAvatar").toBool()
 
-#        self.connect(self.tweetsView,SIGNAL('doubleClicked(const QModelIndex&)'),self.reply)
         self.connect(self.tweetsView,SIGNAL('doubleClicked(const QModelIndex&)'),self.tweet_do_ask_action)
         self.tweetsModel = KhweetsModel([],self.search_keyword)
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
-#        if self.search_keyword == None:
 
         self.toolbar = self.addToolBar('Toolbar')
 
-        # self.tb_open = QAction(QIcon.fromTheme("general_add"),'More', self)
-        # self.connect(self.tb_open, SIGNAL('triggered()'), self.tweet_do_ask_action)
-        # self.toolbar.addAction(self.tb_open)
-        
-        # self.tb_retweet = QAction(QIcon.fromTheme("general_refresh"),'Retweet', self)
-        # self.connect(self.tb_retweet, SIGNAL('triggered()'), self.retweet)
-        # self.toolbar.addAction(self.tb_retweet)
-        
         self.tb_update = QAction(QIcon.fromTheme("general_refresh"),'Update', self)
         self.connect(self.tb_update, SIGNAL('triggered()'), self.request_refresh)
         self.toolbar.addAction(self.tb_update)
@@ -1476,10 +1464,11 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_tweet)
 
         QTimer.singleShot(200, self.timedUnserialize)
-#        self.tweetsModel.unSerialize(self.search_keyword)
 
     def tweet_do_ask_action(self):
-        self.tweetActionDialog = KhweetAction(self)
+        for index in self.tweetsView.selectedIndexes():
+            user = self.tweetsModel._items[index.row()][2]            
+        self.tweetActionDialog = KhweetAction(self, user)
         self.connect(self.tweetActionDialog.reply,SIGNAL('clicked()'),self.reply)
         self.connect(self.tweetActionDialog.openurl,SIGNAL('clicked()'),self.open_url)
         self.connect(self.tweetActionDialog.retweet,SIGNAL('clicked()'),self.retweet)
@@ -1493,13 +1482,11 @@ class KhweeteurWin(QMainWindow):
 
     def reply(self):
         self.tweetActionDialog.accept()
-        # user = self.tweetsModel._items[index.row()][2]
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel._items[index.row()][2]
             self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
             self.tb_text_replytext = '@'+user+' '
             self.tb_text.setText('@'+user+' ')
-            #print 'DEbug tweet id :',self.tb_text_replyid 
 
     def open_url(self):
         import re
@@ -1694,7 +1681,6 @@ class KhweeteurWin(QMainWindow):
     def tweetSentFinished(self):
         self.tb_text.setEnabled(True)
         self.tb_tweet.setEnabled(True)
-#Test of a threaded post from #Khweeteur 0.0.21
 
     def tweet(self):
         if not self.nw.device_has_networking:
@@ -1904,8 +1890,6 @@ class Khweeteur(QApplication):
         self.crash_report()
         self.win.show()
         
-#        self.exec_()
-
 if __name__ == '__main__':
     sys.exit(Khweeteur().exec_())
 
