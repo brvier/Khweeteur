@@ -1631,7 +1631,7 @@ class Api(object):
       parameters['since'] = since
     if since_id:
       parameters['since_id'] = since_id
-    
+    print url
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)

@@ -1154,7 +1154,10 @@ class KhweeteurPref(QMainWindow):
         self.useSerialization_value.setCheckState(self.settings.value("useSerialization").toInt()[0])
         self.useBitly_value.setCheckState(self.settings.value("useBitly").toInt()[0])
         if not self.settings.value("theme"):
-            self.settings.setValue("theme",'Default')
+            self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
+        if not self.settings.value("theme").toString() in self.THEMES:
+            self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
+
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme").toString()))
 
     def savePrefs(self):
