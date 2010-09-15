@@ -31,7 +31,7 @@ import re
 import urllib2
 import socket
 
-__version__ = '0.0.29'
+__version__ = '0.0.31'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -63,15 +63,26 @@ KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
 KHWEETEUR_TWITTER_CONSUMER_SECRET = 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU'
 KHWEETEUR_IDENTICA_CONSUMER_KEY = 'c7e86efd4cb951871200440ad1774413'
 KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
+KHWEETEUR_STATUSNET_CONSUMER_KEY = '84e768bba2b6625f459a9a19f5d57bd1'
+KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 SCREENNAMEROLE = 20
 
 class KhweeteurDBus(dbus.service.Object):
     '''DBus Object handle dbus callback'''
+    def __init__(self):
+        bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=dbus.SessionBus())
+        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur/show')
+    #activated = pyqtSignal()
+        
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='', out_signature='')
     def show(self):
-        self.win.tweetsModel.getNewAndReset()
-        self.win.activateWindow()
+        print 'dbus ?'
+        self.app.activated_by_dbus.emit()
+        
+#        self.win.emit()
+#        self.win.tweetsModel.getNewAndReset()
+#        self.win.activateWindow()
 
     @dbus.service.method("net.khertan.khweeteur",
                          in_signature='s', out_signature='')
@@ -81,8 +92,10 @@ class KhweeteurDBus(dbus.service.Object):
                 win.activateWindow()
                 win.tweetsModel.getNewAndReset()
                 
-    def attach_win(self,win):
-        self.win = win
+#    def attach_win(self,win):
+#        self.win = win
+    def attach_app(self,app):
+        self.app = app
         
 class KhweeteurNotification(QObject):
     '''Notification class interface'''
@@ -108,7 +121,7 @@ class KhweeteurNotification(QObject):
                           icon,
                           title,
                           message,
-                          ['default',],
+                          ['default','test'],
                           {'category':category,
                           'desktop-entry':'khweeteur',
                           'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
@@ -327,7 +340,19 @@ class KhweeteurWorker(QThread):
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > twitter_last_id:
-                        twitter_last_id = status.GetId()
+                        twitter_last_id = status.GetId().value
+#                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("twitter_last_id").toString()):
+                for my_status in api.GetRetweetsOfMe():
+                    for status in api.GetRetweetsForStatus(my_status.id):
+                        downloadProfileImage(status)
+                        mlist.append((status.created_at_in_seconds,status))
+                        if status.GetId() > twitter_last_id:
+                            twitter_last_id = status.GetId()          
+                for status in api.GetRetweetedToMe(since_id=self.settings.value("twitter_last_id").toString()):
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > twitter_last_id:
+                        twitter_last_id = status.GetId()                          
                 for status in api.GetReplies(since_id=self.settings.value("twitter_last_id").toString()):
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
@@ -368,12 +393,24 @@ class KhweeteurWorker(QThread):
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > identica_last_id:
                         identica_last_id = status.GetId()
-                # Not yet supported by identi.ca
-                # for status in api.GetRetweetedByMe(since_id=self.settings.value("twitter_last_id").toString()):
-                    # downloadProfileImage(status)
-                    # mlist.append((status.created_at_in_seconds,status))
-                    # if status.GetId() > twitter_last_id:
-                        # twitter_last_id = status.GetId()
+                 #Not yet supported by Identi.ca
+#                for status in api.GetRetweetedByMe(since_id=self.settings.value("identica_last_id").toString()):
+#                    downloadProfileImage(status)
+#                    mlist.append((status.created_at_in_seconds,status))
+#                    if status.GetId() > identica_last_id:
+#                        identica_last_id = status.GetId().value
+                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("identica_last_id").toString()):
+                    for status in api.GetRetweetsForStatus(my_status.id):
+                        downloadProfileImage(status)
+                        mlist.append((status.created_at_in_seconds,status))
+                        if status.GetId() > identica_last_id:
+                            identica_last_id = status.GetId()          
+                #Not yet supported by Identi.ca
+#                for status in api.GetRetweetedToMe(since_id=self.settings.value("identica_last_id").toString()):
+#                    downloadProfileImage(status)
+#                    mlist.append((status.created_at_in_seconds,status))
+#                    if status.GetId() > identica_last_id:
+#                        identica_last_id = status.GetId()
                 for status in api.GetReplies(since_id=self.settings.value("identica_last_id").toString()):
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
@@ -394,7 +431,67 @@ class KhweeteurWorker(QThread):
             print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
         except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+            import traceback
+
             print 'Error during identi.ca refresh : ',e
+            traceback.print_exc(sys.stdout)
+            self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
+                
+        try:
+            statusnet_last_id = None
+            if (self.settings.value("statusnet_access_token_key").toString()!=''): 
+                api = twitter.Api(base_url='http://khertan.status.net/api/', \
+                        username=KHWEETEUR_STATUSNET_CONSUMER_KEY, \
+                        password=KHWEETEUR_STATUSNET_CONSUMER_SECRET, \
+                        access_token_key=str(self.settings.value("statusnet_access_token_key").toString()), \
+                        access_token_secret=str(self.settings.value("statusnet_access_token_secret").toString()))
+                api.SetUserAgent('Khweeteur/%s' % (__version__))
+                for status in api.GetFriendsTimeline(count=100,since_id=self.settings.value("statusnet_last_id").toString(),retweets=True):
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > statusnet_last_id:
+                        statusnet_last_id = status.GetId()
+                 #Not yet supported by Identi.ca
+#                for status in api.GetRetweetedByMe(since_id=self.settings.value("identica_last_id").toString()):
+#                    downloadProfileImage(status)
+#                    mlist.append((status.created_at_in_seconds,status))
+#                    if status.GetId() > identica_last_id:
+#                        identica_last_id = status.GetId().value
+                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("statusnet_last_id").toString()):
+                    for status in api.GetRetweetsForStatus(my_status.id):
+                        downloadProfileImage(status)
+                        mlist.append((status.created_at_in_seconds,status))
+                        if status.GetId() > statusnet_last_id:
+                            statusnet_last_id = status.GetId()          
+                #Not yet supported by Identi.ca
+#                for status in api.GetRetweetedToMe(since_id=self.settings.value("identica_last_id").toString()):
+#                    downloadProfileImage(status)
+#                    mlist.append((status.created_at_in_seconds,status))
+#                    if status.GetId() > identica_last_id:
+#                        identica_last_id = status.GetId()
+                for status in api.GetReplies(since_id=self.settings.value("statusnet_last_id").toString()):
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > statusnet_last_id:
+                        statusnet_last_id = status.GetId()                        
+                for status in api.GetDirectMessages(since_id=self.settings.value("statusnet_last_id").toString()):
+                    mlist.append((status.created_at_in_seconds,status))
+                    if status.GetId() > statusnet_last_id:
+                        statusnet_last_id = status.GetId()
+                for status in api.GetMentions(since_id=self.settings.value("statusnet_last_id").toString()):
+                    if status.GetId() > statusnet_last_id:
+                        statusnet_last_id = status.GetId()
+                    downloadProfileImage(status)
+                    mlist.append((status.created_at_in_seconds,status))                   
+                if (statusnet_last_id != None):
+                    self.settings.setValue('statusnet_last_id',identica_last_id)      
+        except twitter.TwitterError,e:
+            print 'Error during status.net refresh: ',e.message
+            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+        except (StandardError,urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+            import traceback
+            print 'Error during status.net refresh : ',e
+            traceback.print_exc(sys.stdout)
             self.emit(SIGNAL("info(PyQt_PyObject)"),'A network error occur')
                 
 
@@ -511,7 +608,7 @@ class KhweetsModel(QAbstractListModel):
     def destroyStatus(self,index):
         self._items.pop(index.row())
         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-            
+        
     def getNewAndReset(self):
         counter = self._new_counter
         self._new_counter = 0
@@ -577,6 +674,8 @@ class KhweetsModel(QAbstractListModel):
                 
         finally:
             #14 Day limitations
+            self._items.sort()
+            self._items.reverse()            
             current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
             for index, item in enumerate(self._items):
                 if item[0] < current_dt:
@@ -1025,7 +1124,8 @@ class KhweeteurAbout(QMainWindow):
         self.parent = parent
 
         if isMAEMO:
-            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            if self.settings.value('useAutoRotation').toInt()[0]:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur About")
 
@@ -1096,6 +1196,13 @@ class KhweetAction(QDialog):
         QDialog.__init__(self,parent)
         #if name == None:
         self.setWindowTitle('Khweeteur : '+title)
+
+        self.settings = QSettings()
+
+        if isMAEMO:
+            if self.settings.value('useAutoRotation').toInt()[0]:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+
         _layout = QGridLayout(self)
         _layout.setSpacing(6)
         _layout.setMargin(11)
@@ -1135,12 +1242,13 @@ class KhweeteurPref(QMainWindow):
         QMainWindow.__init__(self,parent)
         self.parent = parent
 
+        self.settings = QSettings()
+
         if isMAEMO:
-            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            if self.settings.value('useAutoRotation').toInt()[0]:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
-
-        self.settings = QSettings()
 
         self.setupGUI()
         self.loadPrefs()
@@ -1157,8 +1265,10 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
         if not self.settings.value("theme").toString() in self.THEMES:
             self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
-
+        if not self.settings.value("theme"):
+            self.settings.setValue("useAutoRotation",True)            
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme").toString()))
+        self.useAutoRotation_value.setCheckState(self.settings.value("useAutoRotation").toInt()[0])
 
     def savePrefs(self):
         self.settings.setValue('refreshInterval',self.refresh_value.value())
@@ -1169,6 +1279,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('displayTimestamp',self.displayTimestamp_value.checkState())
         self.settings.setValue('useBitly',self.useBitly_value.checkState())
         self.settings.setValue('theme',self.theme_value.currentText())
+        self.settings.setValue('useAutoRotation',self.useAutoRotation_value.checkState())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -1300,6 +1411,75 @@ class KhweeteurPref(QMainWindow):
                             KhweeteurNotification().info('Khweeteur is now authorized to connect')
                         if isMAEMO:                        
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+
+    def request_statusnet_access_or_clear(self):
+        QMessageBox.question(self,
+           "Khweeteur",
+           "Status.net isn't yet fully implemented",
+           QMessageBox.Close)
+        return
+        
+        if self.settings.value('statusnet_access_token').toBool():
+            self.settings.setValue('statusnet_access_token_key',QString())
+            self.settings.setValue('statusnet_access_token_secret',QString())
+            self.settings.setValue('statusnet_access_token',False)
+            self.identica_value.setText('Auth on Status.net')
+        else:
+            if not self.parent.nw.device_has_networking:
+                self.parent.nw.request_connection_with_tmp_callback(self.request_identica_access_or_clear)
+            else:
+                import os
+                import sys
+                try:
+                    from urlparse import parse_qsl
+                except:
+                    from cgi import parse_qsl
+                import oauth2 as oauth
+                
+                REQUEST_TOKEN_URL = 'http://khertan.status.net/api/oauth/request_token'
+                ACCESS_TOKEN_URL  = 'http://khertan.status.net/api/oauth/access_token'
+                AUTHORIZATION_URL = 'http://khertan.status.net/api/oauth/authorize'
+    
+                signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+                oauth_consumer             = oauth.Consumer(key=KHWEETEUR_STATUSNET_CONSUMER_KEY, secret=KHWEETEUR_STATUSNET_CONSUMER_SECRET)
+                oauth_client               = oauth.Client(oauth_consumer)
+                
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+                
+                if resp['status'] != '200':
+                    KhweeteurNotification().warn('Invalid respond from Status.net requesting temp token: %s' % resp['status'])
+                else:
+                    request_token = dict(parse_qsl(content))
+    
+                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                    
+                    pincode, ok = QInputDialog.getText(self, 'Status.net Authentification', 'Enter the token :')
+    
+                    if ok:
+                        if isMAEMO:
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+                        token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
+                        token.set_verifier(str(pincode))
+    
+                        oauth_client  = oauth.Client(oauth_consumer, token)
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        access_token  = dict(parse_qsl(content))
+    
+                        if resp['status'] != '200':
+                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            self.settings.setValue('statusnet_access_token_key',QString())
+                            self.settings.setValue('statusnet_access_token_secret',QString())
+                            self.settings.setValue('statusnet_access_token',False)
+                        else:
+                            #print access_token['oauth_token']
+                            #print access_token['oauth_token_secret']
+                            self.settings.setValue('statusnet_access_token_key',QString(access_token['oauth_token']))
+                            self.settings.setValue('statusnet_access_token_secret',QString(access_token['oauth_token_secret']))
+                            self.settings.setValue('statusnet_access_token',True)
+                            self.statusnet_value.setText('Clear Status.net Auth')
+                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                        if isMAEMO:                        
+                            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
                         
     def setupGUI(self):
 #        self.aWidget = QWidget()
@@ -1332,39 +1512,49 @@ class KhweeteurPref(QMainWindow):
             self.identica_value = QPushButton('Auth on Identi.ca')
         self._main_layout.addWidget(self.identica_value,1,1)
         self.connect(self.identica_value,SIGNAL('clicked()'),self.request_identica_access_or_clear)
+
+        if self.settings.value('statusnet_access_token').toBool():
+            self.statusnet_value = QPushButton('Clear Status.net Auth')
+        else:
+            self.statusnet_value = QPushButton('Auth on Status.net')
+        self._main_layout.addWidget(self.statusnet_value,2,1)
+        self.connect(self.statusnet_value,SIGNAL('clicked()'),self.request_statusnet_access_or_clear)
         
         # self._main_layout.addWidget(QLabel('Password :'),1,0)
         # self.password_value = QLineEdit()
         # self.password_value.setEchoMode(QLineEdit.PasswordEchoOnEdit)
         # self._main_layout.addWidget(self.password_value,1,1)
 
-        self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),2,0)
+        self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),3,0)
         self.refresh_value = QSpinBox()
-        self._main_layout.addWidget(self.refresh_value,2,1)
+        self._main_layout.addWidget(self.refresh_value,3,1)
 
-        self._main_layout.addWidget(QLabel('Display preferences :'),3,0)
+        self._main_layout.addWidget(QLabel('Display preferences :'),4,0)
         self.displayUser_value = QCheckBox('Display username')
-        self._main_layout.addWidget(self.displayUser_value,3,1)
+        self._main_layout.addWidget(self.displayUser_value,4,1)
 
         self.displayAvatar_value = QCheckBox('Display avatar')
-        self._main_layout.addWidget(self.displayAvatar_value,4,1)
+        self._main_layout.addWidget(self.displayAvatar_value,5,1)
 
         self.displayTimestamp_value = QCheckBox('Display timestamp')
-        self._main_layout.addWidget(self.displayTimestamp_value,5,1)
+        self._main_layout.addWidget(self.displayTimestamp_value,6,1)
 
-        self._main_layout.addWidget(QLabel('Other preferences :'),6,0)
+        self.useAutoRotation_value = QCheckBox('Use AutoRotation')
+        self._main_layout.addWidget(self.useAutoRotation_value,7,1)
+
+        self._main_layout.addWidget(QLabel('Other preferences :'),8,0)
         self.useNotification_value = QCheckBox('Use Notification')
-        self._main_layout.addWidget(self.useNotification_value,6,1)
+        self._main_layout.addWidget(self.useNotification_value,8,1)
 
         self.useSerialization_value = QCheckBox('Use Serialization')
-        self._main_layout.addWidget(self.useSerialization_value,7,1)
+        self._main_layout.addWidget(self.useSerialization_value,9,1)
 
         self.useBitly_value = QCheckBox('Use Bit.ly')
-        self._main_layout.addWidget(self.useBitly_value,8,1)
+        self._main_layout.addWidget(self.useBitly_value,10,1)
 
-        self._main_layout.addWidget(QLabel('Theme :'),9,0)
+        self._main_layout.addWidget(QLabel('Theme :'),11,0)
         self.theme_value = QComboBox()
-        self._main_layout.addWidget(self.theme_value,9,1)
+        self._main_layout.addWidget(self.theme_value,11,1)
         for theme in self.THEMES:
             self.theme_value.addItem(theme)
         
@@ -1382,16 +1572,17 @@ class KhweeteurWin(QMainWindow):
         #crappy trick to avoid search win to be garbage collected
         self.search_win = []
 
+        self.settings = QSettings()
+
         if isMAEMO:            
-            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            if self.settings.value('useAutoRotation').toInt()[0]:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
         if self.search_keyword != None:
             self.setWindowTitle("Khweeteur:"+unicode(self.search_keyword))      
         else:           
             self.setWindowTitle("Khweeteur")
-
-        self.settings = QSettings()
                     
         self.setupMenu()
         self.setupMain()
@@ -1731,7 +1922,10 @@ class KhweeteurWin(QMainWindow):
         elif self.worker.isFinished() == True:
             self.do_refresh_now()
  
-    def restartTimer(self):
+    def restartTimer(self):        
+        if isMAEMO:
+            if self.settings.value('useAutoRotation').toInt()[0]:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
         self.tweetsView.refreshCustomDelegate()
         self.tweetsView.custom_delegate.show_screenname = self.settings.value("displayUser").toBool()
         self.tweetsView.custom_delegate.show_timestamp = self.settings.value("displayTimestamp").toBool()
@@ -1741,6 +1935,10 @@ class KhweeteurWin(QMainWindow):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         else:
             self.timer.stop()
+        for search_win in self.search_win:
+            search_win.restartTimer()
+#        if type(self.parent()) == KhweeteurWin:
+#            self.parent().restartTimer()
 
     def setupMenu(self):
         fileMenu = QMenu(self.tr("&Menu"), self)
@@ -1821,7 +2019,15 @@ class KhweeteurWin(QMainWindow):
     def do_about(self):
         self.aboutWin = KhweeteurAbout(self)
 
+    @pyqtSlot()
+    def activated_by_dbus(self):
+        self.tweetsModel.getNewAndReset()
+        self.activateWindow()
+
 class Khweeteur(QApplication):
+
+    activated_by_dbus = pyqtSignal()
+    
     def __init__(self):
         
         QApplication.__init__(self,sys.argv)
@@ -1836,7 +2042,7 @@ class Khweeteur(QApplication):
 
         session_bus = dbus.SessionBus()
         name = dbus.service.BusName("net.khertan.khweeteur", session_bus)
-        self.dbus_object = KhweeteurDBus(session_bus, '/net/khertan/khweeteur')        
+        self.dbus_object = KhweeteurDBus() #session_bus, '/net/khertan/khweeteur')        
         self.run()
         
     def crash_report(self):
@@ -1889,7 +2095,9 @@ class Khweeteur(QApplication):
                 
     def run(self):
         self.win = KhweeteurWin()
-        self.dbus_object.attach_win(self.win)
+        self.activated_by_dbus.connect(self.win.activated_by_dbus)
+#        self.dbus_object.attach_win(self.win)
+        self.dbus_object.attach_app(self)
         self.crash_report()
         self.win.show()
         

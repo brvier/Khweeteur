@@ -1615,6 +1615,7 @@ class Api(object):
       src = 'home_timeline'
     else:
       src = 'friends_timeline'
+
     if user:
       url = '%s/%s/%s.json' % (url, src, user)
     else:
@@ -1631,7 +1632,9 @@ class Api(object):
       parameters['since'] = since
     if since_id:
       parameters['since_id'] = since_id
-    print url
+#    if retweets:
+#      parameters['include_rts'] = True
+#    print url
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -1720,6 +1723,28 @@ class Api(object):
     self._CheckForTwitterError(data)
     return [Status.NewFromJsonDict(x) for x in data]
 
+  def GetRetweetsForStatus(self,id=None):
+    '''Return retweet of a status
+    The twitter.Api instance must be authenticated if the status message is private.
+
+    Args:
+      id: The numerical ID of the status to retrieve retweets.
+
+    Returns:
+      A sequence of Status instances, one for each retweet
+    '''
+    if id == None:
+      raise TwitterError("A status id must be specified.")        
+    elif not self._oauth_consumer:
+      raise TwitterError("User must be specified if API is not authenticated.")
+
+    url = '%s/statuses/retweets/%id.json' % (self.base_url,id)
+
+    json = self._FetchUrl(url, parameters={'id':id,})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return [Status.NewFromJsonDict(x) for x in data]
+    
   def GetStatus(self, id):
     '''Returns a single status message.
 
@@ -2319,6 +2344,97 @@ class Api(object):
 
     return [Status.NewFromJsonDict(x) for x in data]
 
+  def GetRetweetsOfMe(self,
+                  since_id=None,
+                  max_id=None,
+                  page=None):
+    '''Returns the 20 most recent retweet of tweet made by the user (status containing @username)
+    for the authenticating user.
+    
+    Args:
+      since_id:
+        Returns only public statuses with an ID greater than
+        (that is, more recent than) the specified ID. [optional]
+    
+      max_id:
+        Returns only statuses with an ID less than
+        (that is, older than) the specified ID.  [optional]
+    
+      page:
+        Retrieves the 20 next most recent replies. [optional]
+    
+    Returns:
+      A sequence of twitter.Status instances, one for each retweet of the user.
+      see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
+    '''
+
+    url = '%s/statuses/retweets_of_me.json' % self.base_url
+
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+
+    parameters = {}
+
+    if since_id:
+      parameters['since_id'] = since_id
+    if max_id:
+      parameters['max_id'] = max_id
+    if page:
+      parameters['page'] = page
+    parameters['trim_user'] = 'false'
+    
+    json = self._FetchUrl(url, parameters=parameters)
+    data = simplejson.loads(json)
+
+    self._CheckForTwitterError(data)
+
+    return [Status.NewFromJsonDict(x) for x in data]
+
+  def GetRetweetedToMe(self,
+                  since_id=None,
+                  max_id=None,
+                  page=None):
+    '''Returns the 20 most recent retweet to the user (status containing @username)
+    for the authenticating user.
+    
+    Args:
+      since_id:
+        Returns only public statuses with an ID greater than
+        (that is, more recent than) the specified ID. [optional]
+    
+      max_id:
+        Returns only statuses with an ID less than
+        (that is, older than) the specified ID.  [optional]
+    
+      page:
+        Retrieves the 20 next most recent replies. [optional]
+    
+    Returns:
+      A sequence of twitter.Status instances, one for each retweet of the user.
+      see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
+    '''
+
+    url = '%s/statuses/retweeted_to_me.json' % self.base_url
+
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+
+    parameters = {}
+
+    if since_id:
+      parameters['since_id'] = since_id
+    if max_id:
+      parameters['max_id'] = max_id
+    if page:
+      parameters['page'] = page
+
+    json = self._FetchUrl(url, parameters=parameters)
+    data = simplejson.loads(json)
+
+    self._CheckForTwitterError(data)
+
+    return [Status.NewFromJsonDict(x) for x in data]
+    
   def GetUserByEmail(self, email):
     '''Returns a single user by email address.
 

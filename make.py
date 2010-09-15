@@ -64,7 +64,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Fix segfault, add timeout exception, closing main window close also search, implement coolgray and coolwhite theme, some cleaning.
+    p.changelog=""" Fix for notifications (But callback still broken), fix for ReTweet support, Add an option for auto rotate.
 """
 
 print p.generate(build_binary=True,build_src=True)
