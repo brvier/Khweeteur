@@ -31,7 +31,7 @@ import re
 import urllib2
 import socket
 
-__version__ = '0.0.31'
+__version__ = '0.0.32'
 
 def write_report(error):
     filename = os.path.join(CACHE_PATH,'crash_report')
@@ -176,7 +176,7 @@ class KhweeteurActionWorker(QThread):
                         except:
                             pass
 
-                if status_text.startswith(self.tb_text_replytext):
+                if not status_text.startswith(self.tb_text_replytext):
                     self.tb_text_replyid = 0
                     
                 if self.settings.value("twitter_access_token_key").toString()!='':     
@@ -1124,6 +1124,8 @@ class KhweeteurAbout(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self,parent)
         self.parent = parent
+
+        self.settings = QSettings()
 
         if isMAEMO:
             if self.settings.value('useAutoRotation').toInt()[0]:
