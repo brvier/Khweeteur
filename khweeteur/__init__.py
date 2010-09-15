@@ -325,6 +325,7 @@ class KhweeteurWorker(QThread):
         try:
             #avatars_url={}
             twitter_last_id = None
+            retwitter_last_id = None
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
                         password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
@@ -341,13 +342,14 @@ class KhweeteurWorker(QThread):
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > twitter_last_id:
                         twitter_last_id = status.GetId().value
-                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("twitter_last_id").toString()):
-#                for my_status in api.GetRetweetsOfMe():
+                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("retwitter_last_id").toString()):
                     for status in api.GetRetweetsForStatus(my_status.id):
                         downloadProfileImage(status)
                         mlist.append((status.created_at_in_seconds,status))
-                        if status.GetId() > twitter_last_id:
-                            twitter_last_id = status.GetId()          
+                        if status.GetId() > retwitter_last_id:
+                            retwitter_last_id = status.GetId()          
+                if (retwitter_last_id != None):
+                    self.settings.setValue('retwitter_last_id',retwitter_last_id)                            
                 for status in api.GetRetweetedToMe(since_id=self.settings.value("twitter_last_id").toString()):
                     downloadProfileImage(status)
                     mlist.append((status.created_at_in_seconds,status))
@@ -399,12 +401,12 @@ class KhweeteurWorker(QThread):
 #                    mlist.append((status.created_at_in_seconds,status))
 #                    if status.GetId() > identica_last_id:
 #                        identica_last_id = status.GetId().value
-                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("identica_last_id").toString()):
+                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("reidentica_last_id").toString()):
                     for status in api.GetRetweetsForStatus(my_status.id):
                         downloadProfileImage(status)
                         mlist.append((status.created_at_in_seconds,status))
-                        if status.GetId() > identica_last_id:
-                            identica_last_id = status.GetId()          
+                        if status.GetId() > reidentica_last_id:
+                            reidentica_last_id = status.GetId()          
                 #Not yet supported by Identi.ca
 #                for status in api.GetRetweetedToMe(since_id=self.settings.value("identica_last_id").toString()):
 #                    downloadProfileImage(status)
