@@ -341,8 +341,8 @@ class KhweeteurWorker(QThread):
                     mlist.append((status.created_at_in_seconds,status))
                     if status.GetId() > twitter_last_id:
                         twitter_last_id = status.GetId().value
-#                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("twitter_last_id").toString()):
-                for my_status in api.GetRetweetsOfMe():
+                for my_status in api.GetRetweetsOfMe(since_id=self.settings.value("twitter_last_id").toString()):
+#                for my_status in api.GetRetweetsOfMe():
                     for status in api.GetRetweetsForStatus(my_status.id):
                         downloadProfileImage(status)
                         mlist.append((status.created_at_in_seconds,status))
