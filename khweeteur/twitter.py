@@ -104,9 +104,11 @@ class Status(object):
                in_reply_to_screen_name=None,
                in_reply_to_user_id=None,
                in_reply_to_status_id=None,
+               in_reply_to_status_text=None,
                truncated=None,
                source=None,
-               now=None):
+               now=None,
+               origin=None):
     '''An object to hold a Twitter status message.
 
     This class is normally instantiated by the twitter.Api class and
@@ -138,8 +140,10 @@ class Status(object):
     self.in_reply_to_screen_name = in_reply_to_screen_name
     self.in_reply_to_user_id = in_reply_to_user_id
     self.in_reply_to_status_id = in_reply_to_status_id
+    self.in_reply_to_status_text = in_reply_to_status_text
     self.truncated = truncated
     self.source = source
+    self.origin = origin
 
   def GetCreatedAt(self):
     '''Get the time this status message was posted.
@@ -372,23 +376,25 @@ class Status(object):
                  doc='The wallclock time for this status instance.')
 
 
+  def __lt__(self,other):
+    return other and self.created_at < other.created_at
+
+  def __le__(self,other):
+    return other and self.created_at <= other.created_at
+
+  def __gt__(self,other):
+    return other and self.created_at > other.created_at
+
+  def __ge__(self,other):
+    return other and self.created_at >= other.created_at
+    
   def __ne__(self, other):
     return not self.__eq__(other)
 
+    
   def __eq__(self, other):
     try:
-      return other and \
-             self.created_at == other.created_at and \
-             self.id == other.id and \
-             self.text == other.text and \
-             self.location == other.location and \
-             self.user == other.user and \
-             self.in_reply_to_screen_name == other.in_reply_to_screen_name and \
-             self.in_reply_to_user_id == other.in_reply_to_user_id and \
-             self.in_reply_to_status_id == other.in_reply_to_status_id and \
-             self.truncated == other.truncated and \
-             self.favorited == other.favorited and \
-             self.source == other.source
+      return other and self.id == other.id
     except AttributeError:
       return False
 
@@ -1191,6 +1197,13 @@ class DirectMessage(object):
   text = property(GetText, SetText,
                   doc='The text of this direct message')
 
+  def __cmp__(self,other):
+    if self.id == other.id:
+        return 0
+    if self.created_at < other.created_at:
+        return -1
+    return 1
+                 
   def __ne__(self, other):
     return not self.__eq__(other)
 
