@@ -64,7 +64,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Fix error when you double click on a tweet.
+    p.changelog=""" Optimize timeline refresh.
 """
 
 print p.generate(build_binary=True,build_src=True)

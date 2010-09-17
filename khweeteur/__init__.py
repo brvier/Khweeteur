@@ -29,6 +29,7 @@ from PIL import Image
 import re
 import urllib2
 import socket
+import glob
 
 __version__ = '0.0.35'
 
@@ -212,7 +213,230 @@ class KhweeteurActionWorker(QThread):
             print 'A network error occur'
             
 
-                          
+class KhweeteurRefreshWorker(QThread):
+    ''' Common Abstract class for the refresh thread '''
+    
+    #Signal
+    errors = pyqtSignal(Exception)
+    newStatuses = pyqtSignal(list)
+    
+    def __init__(self, parent = None, api=None):
+        QThread.__init__(self, None)
+        self.api = api
+        self.settings = QSettings()
+        
+    def run(self):
+        pass
+        
+    def downloadProfilesImage(self, statuses):
+        for status in statuses:
+            if type(status)!=twitter.DirectMessage:
+                cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url.replace('/', '_')))
+                if not(os.path.exists(cache)):
+                    try:
+                        urlretrieve(status.user.profile_image_url, cache)                    
+                        im = Image.open(cache)
+                        im = im.resize((50,50))
+                        im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
+                    except (StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                        print 'DownloadProfileImage Error : ',e
+                        
+    def getRepliesContent(self, api, statuses):
+        items = None
+        for status in statuses:
+            try:
+                if not hasattr(status, 'in_reply_to_status_id'):
+                    status.in_reply_to_status_text = None
+                elif status.in_reply_to_status_id not in (None,''):
+                    status.in_reply_to_status_text = ''
+                    #Verify in the new statuses
+                    for tw in statuses:
+                        #Verify in id of the new statuses
+                        if status.in_reply_to_status_id == tw.id:
+                            status.in_reply_to_status_text = tw.text
+                            break
+                        #Verify in reply of new statuses
+                        if status.in_reply_to_status_id == tw.in_reply_to_status_id:
+                            if tw.in_reply_to_status_text not in (None,''):
+                                status.in_reply_to_status_text = tw.in_reply_to_status_id
+                                break                                            
+                    
+                    #Verify in all cache
+                    #print '1-<api base_url', api.base_url, ':',status.in_reply_to_status_text,':'
+                    if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
+                        if items == None:
+                            items = []
+                            for path in glob.glob(CACHE_PATH+'/*.cache'):
+                                filename = os.path.join(path)                                
+                                try:
+                                    pkl_file = open(filename, 'rb')                    
+                                    items_ = pickle.load(pkl_file)
+                                    pkl_file.close()
+                                    items.extend(items_)
+                                except StandardError,e:
+                                    print 'getRepliesContent:',e
+                        for item in items:
+                            if item[1] == status.in_reply_to_status_id:
+                                status.in_reply_to_status_text = item[3]
+                                break
+                            if item[7] == status.in_reply_to_status_id:
+                                if item[8] not in (None,''):
+                                    status.in_reply_to_status_text = item[8]
+                                    break
+                                    
+                    #Else get the tweet from the api
+                    #print '2-<api base_url', api.base_url, '==',status.origin,':',status.in_reply_to_status_text,':'
+                    if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
+                        #in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
+                        print 'Get Status ',status.in_reply_to_status_id,':',status.origin
+                        try:
+                            status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
+                        except:
+                            import traceback
+                            traceback.print_exc()
+#                    print status.in_reply_to_status_text
+                else:
+                    status.in_reply_to_status_text = None 
+            except:
+                import traceback
+                traceback.print_exc()
+
+    def applyOrigin(self, api, statuses):
+        for status in statuses:
+            status.origin = api.base_url
+            
+class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)
+        
+    def run(self):
+        #Get Home TimeLine
+        try:            
+            statuses = self.api.GetFriendsTimeline(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetFriendsTimeline').toString(), retweets=True)
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_GetFriendsTimeline', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+            print e
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+
+class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)        
+    def run(self):
+        #Get Retweeted by me            
+        try:
+            statuses = self.api.GetRetweetedByMe(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetRetweetedByMe_last_id').toString())
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:                                                            
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_GetRetweetedByMe', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+
+class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)        
+    def run(self):
+        #Get Retweeted by me    
+        try:
+            statuses = self.api.GetReplies(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetReplies').toString())
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:                                                   
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_GetReplies', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+            
+class KhweeteurDMWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)        
+    def run(self):
+        try:
+            statuses = self.api.GetDirectMessages(since_id=self.settings.value('last_id/'+self.api.base_url+'_DirectMessages').toString())
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:                                                    
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_DirectMessages', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+            
+class KhweeteurMentionWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)        
+    def run(self):
+        try:
+            statuses = self.api.GetMentions(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetMentions').toString())
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:                                                        
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_GetMentions', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+            
+class KhweeteurSearchWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None, keywords=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)      
+        self.keywords = keywords
+        
+    def run(self):
+        try:
+            statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url).toString())
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api,statuses)
+            self.getRepliesContent(self.api,statuses)
+            statuses.sort()
+            statuses.reverse()        
+            if len(statuses)>0:                                                        
+                self.newStatuses.emit(statuses)
+                self.settings.setValue(self.keywords+'/last_id/'+self.api.base_url, statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+            
 class KhweeteurWorker(QThread):
     ''' Thread to Refresh in background '''
     def __init__(self, parent = None, search_keyword=None):
@@ -225,7 +449,6 @@ class KhweeteurWorker(QThread):
         if self.search_keyword==None:
             self.refresh()
         else:
-#            print 'Worker Refresh search : '+self.search_keyword 
             self.refresh_search()
 
     def testCacheFolders(self):
@@ -240,227 +463,91 @@ class KhweeteurWorker(QThread):
         except:
             pass
         
-    def downloadProfileImage(self, status):
-        if type(status)!=twitter.DirectMessage:
-            cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url.replace('/', '_')))
-            if not(os.path.exists(cache)):
-                try:
-                    urlretrieve(status.user.profile_image_url, cache)                    
-                    #print 'try to convert to png'
-                    im = Image.open(cache)
-                    im = im.resize((50,50))
-                    #transparency = im.info['transparency'] 
-                    #im.save(os.path.splitext(cache)[0]+'.png', 'PNG', transparency=transparency)
-                    im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
-#                    print os.path.splitext(cache)[0]+'.png'
-                except (StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
-                    print 'DownloadProfileImage Error : ',e
-
-    def downloadProfilesImage(self, statuses):
-        for status in statuses:
-            if type(status)!=twitter.DirectMessage:
-                cache = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(status.user.profile_image_url.replace('/', '_')))
-                if not(os.path.exists(cache)):
-                    try:
-                        urlretrieve(status.user.profile_image_url, cache)                    
-                        im = Image.open(cache)
-                        im = im.resize((50,50))
-                        im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
-                    except (StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
-                        print 'DownloadProfileImage Error : ',e
-            
     def refresh_search(self):
-        downloadProfileImage = self.downloadProfileImage
-        getRepliesContent = self.getRepliesContent
-        applyOrigin = self.applyOrigin
-        search_keyword = self.search_keyword                       
-        current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
-        mlist = []
-        try:
-            twitter_last_id = None        
-            if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(input_encoding='utf-8', \
-                    username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
-                    password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
-                    access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
-                    access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetSearch(unicode(search_keyword).encode('UTF-8'), since_id=self.settings.value(search_keyword+'/last_id/'+api.base_url).toString()):
-                    #if status.created_at_in_seconds > current_dt:
-                    downloadProfileImage(status)
-                    applyOrigin(api,(status,))
-                    getRepliesContent(api,(status,))
-                    mlist.append(status)
-                    if status.GetId() > twitter_last_id:
-                        twitter_last_id = status.GetId()
-        except twitter.TwitterError,e:
-            print 'Error during refresh : ',e.message
-            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except:
-            self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+        self.error = None
+        
+        if (self.settings.value("twitter_access_token_key").toString()!=''): 
+            api = twitter.Api(input_encoding='utf-8', \
+                username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
+                password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
+                access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
+                access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+            api.SetUserAgent('Khweeteur/%s' % (__version__))
+            self.refresh_search_worker1 = KhweeteurSearchWorker(self,api,self.search_keyword)
+            self.refresh_search_worker1.errors.connect(self.errors)
+            self.refresh_search_worker1.newStatuses.connect(self.newStatuses)
+            self.refresh_search_worker1.start()
+                
 
-        try:
-            identica_last_id = None
-            if (self.settings.value("twitter_access_token_key").toString()!=''): 
-                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()), access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                for status in api.GetSearch(unicode(search_keyword).encode('UTF-8'), since_id=self.settings.value(search_keyword+'/last_id/'+api.base_url).toString()):
-                    #if status.created_at_in_seconds > current_dt:
-                    downloadProfileImage(status)
-                    applyOrigin(api,(status,))
-                    getRepliesContent(api,(status,))
-                    mlist.append(status)
-                    if status.GetId() > identica_last_id:
-                        identica_last_id = status.GetId()
-        except twitter.TwitterError,e:
-            print 'Error during refresh : ',e.message
-            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except:
-            self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+        if (self.settings.value("twitter_access_token_key").toString()!=''): 
+            api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()), access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+            api.SetUserAgent('Khweeteur/%s' % (__version__))
+            self.refresh_search_worker2 = KhweeteurSearchWorker(self,api,self.search_keyword)
+            self.refresh_search_worker2.errors.connect(self.errors)
+            self.refresh_search_worker2.newStatuses.connect(self.newStatuses)
+            self.refresh_search_worker2.start()
 
-
-        if len(mlist)>0:
-            if (twitter_last_id != None):
-                self.settings.setValue(search_keyword+'/last_id/'+api.base_url,twitter_last_id)
-                #print 'DEBUG SAVED SEARCH Last twiter id : ',twitter_last_id
-            if (identica_last_id != None):
-                self.settings.setValue(search_keyword+'/last_id/'+api.base_url, identica_last_id)
-            mlist.sort()
-            self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), mlist)
-
-    def getRepliesContent(self, api, statuses):
-        for status in statuses:
-            try:
-                if not hasattr(status, 'in_reply_to_status_id'):
-                    status.in_reply_to_status_text = None
-                elif status.in_reply_to_status_id != 0:
-                    for tw in twitter_mlist:
-                        if status.in_reply_to_status_id == tw.id:
-                            status.in_reply_to_status_text = tw.text
-                            break
-                    if status.in_reply_to_status_id == 0:
-                        in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
-                        status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
-#                    print status.in_reply_to_status_text
-                else:
-                    status.in_reply_to_status_text = None 
-            except:
-                pass
-
-    def applyOrigin(self, api, statuses):
-        for status in statuses:
-            status.origin = api.base_url
+        while (self.refresh_search_worker1.isRunning()==True) or \
+              (self.refresh_search_worker2.isRunning()==True):
+            self.sleep(2)
+                
+        if self.error != None:
+            raise self.error
+        
+    def errors(self,error):
+        self.error = error
+        
+    def newStatuses(self,list):
+        self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), list)
         
     def refresh_unified(self, api):
-        error_occurs = False
-        downloadProfilesImage = self.downloadProfilesImage
-        getRepliesContent = self.getRepliesContent
-        applyOrigin = self.applyOrigin
         
-        error = None
         
-        #Get Home TimeLine
-        try:            
-            statuses = api.GetFriendsTimeline(since_id=self.settings.value('last_id/'+api.base_url+'_GetFriendsTimeline').toString(), retweets=True)
-            downloadProfilesImage(statuses)
-            getRepliesContent(api, statuses)
-            applyOrigin(api, statuses)
-            statuses.sort()
-            statuses.reverse()
-            if len(statuses)>0:
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                self.settings.setValue('last_id/'+api.base_url+'_GetFriendsTimeline', statuses[0].id)
-        except twitter.TwitterError,e:
-            error = e
-        except:
-            error = StandardError('A network error occurs')
-
-            
-        #Get Self Retweet (This api is available only on Twitter)
+        #print 'Ideal number of thread : ',QThread.idealThreadCount()
+        
+        refresh_timeline_worker = KhweeteurHomeTimelineWorker(self,api)
+        refresh_timeline_worker.errors.connect(self.errors)
+        refresh_timeline_worker.newStatuses.connect(self.newStatuses)
+        refresh_timeline_worker.start()
+        
+        refresh_retweetedbyme_worker = KhweeteurRetweetedByMeWorker(self,api)               
         if 'twitter' in api.base_url:
-            try:
-                statuses = api.GetRetweetedByMe(since_id=self.settings.value('last_id/'+api.base_url+'_GetRetweetedByMe_last_id').toString())
-                downloadProfilesImage(statuses)
-                getRepliesContent(api, statuses)
-                applyOrigin(api, statuses)
-                statuses.sort()
-                statuses.reverse()
-                if len(statuses)>0:                                                            
-                    self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                    self.settings.setValue('last_id/'+api.base_url+'_GetRetweetedByMe', statuses[0].id)
-            except twitter.TwitterError,e:
-                error = e
-            except:
-                error = StandardError('A network error occurs')
-
-        #Get Self Retweet (This api is available only on Twitter)
-        if 'twitter' in api.base_url:
-            try:
-                statuses = api.GetRetweetedByMe(since_id=self.settings.value('last_id/'+api.base_url+'_GetRetweetedByMe_last_id').toString())
-                downloadProfilesImage(statuses)
-                getRepliesContent(api, statuses)
-                applyOrigin(api, statuses)
-                statuses.sort()
-                statuses.reverse()
-                if len(statuses)>0:                                                        
-                    self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                    self.settings.setValue('last_id/'+api.base_url+'_GetRetweetedByMe', statuses[0].id)
-            except twitter.TwitterError,e:
-                error = e
-            except:
-                error = StandardError('A network error occurs')
+            refresh_retweetedbyme_worker.errors.connect(self.errors)
+            refresh_retweetedbyme_worker.newStatuses.connect(self.newStatuses)
+            refresh_retweetedbyme_worker.start()
             
-        #Get Reply
-        try:
-            statuses = api.GetReplies(since_id=self.settings.value('last_id/'+api.base_url+'_GetReplies').toString())
-            downloadProfilesImage(statuses)
-            getRepliesContent(api, statuses)
-            applyOrigin(api, statuses)
-            statuses.sort()
-            statuses.reverse()
-            if len(statuses)>0:                                                   
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                self.settings.setValue('last_id/'+api.base_url+'_GetReplies', statuses[0].id)
-        except twitter.TwitterError,e:
-            error = e
-        except:
-            error = StandardError('A network error occurs')
+        refresh_replies_worker = KhweeteurRepliesWorker(self,api)
+        refresh_replies_worker.errors.connect(self.errors)
+        refresh_replies_worker.newStatuses.connect(self.newStatuses)        
+        refresh_replies_worker.start()
         
-        #Get DirectMessages
-        try:
-            statuses = api.GetDirectMessages(since_id=self.settings.value('last_id/'+api.base_url+'_DirectMessages').toString())
-            downloadProfilesImage(statuses)
-            applyOrigin(api, statuses)
-            statuses.sort()
-            statuses.reverse()
-            if len(statuses)>0:                                                    
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                self.settings.setValue('last_id/'+api.base_url+'_DirectMessages', statuses[0].id)
-        except twitter.TwitterError,e:
-            error = e
-        except:
-            error = StandardError('A network error occurs')
-            
-        #Get Mentions
-        try:
-            statuses = api.GetMentions(since_id=self.settings.value('last_id/'+api.base_url+'_GetMentions').toString())
-            downloadProfilesImage(statuses)
-            getRepliesContent(api, statuses)
-            applyOrigin(api, statuses)
-            statuses.sort()
-            statuses.reverse()
-            if len(statuses)>0:                                                        
-                self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), statuses)
-                self.settings.setValue('last_id/'+api.base_url+'_GetMentions', statuses[0].id)
-        except twitter.TwitterError,e:
-            error = e
-        except:
-            error = StandardError('A network error occurs')
+        refresh_dm_worker = KhweeteurDMWorker(self,api)
+        refresh_dm_worker.errors.connect(self.errors)
+        refresh_dm_worker.newStatuses.connect(self.newStatuses)       
+        refresh_dm_worker.start()
         
-        if error != None:
-            raise e
+        refresh_mention_worker = KhweeteurMentionWorker(self,api)
+        refresh_mention_worker.errors.connect(self.errors)
+        refresh_mention_worker.newStatuses.connect(self.newStatuses)
+        refresh_mention_worker.start()
+        
+        # while (self.refresh_timeline_worker.isRunning()==True) or \
+              # (self.refresh_retweetedbyme_worker.isRunning()==True) or \
+              # (self.refresh_replies_worker.isRunning()==True) or \
+              # (self.refresh_dm_worker.isRunning()==True) or \
+              # (self.refresh_mention_worker.isRunning()==True):
+            # self.sleep(2)
             
+        return [refresh_timeline_worker,
+                refresh_retweetedbyme_worker,
+                refresh_replies_worker,
+                refresh_dm_worker,
+                refresh_mention_worker]
+        
     def refresh(self):
+        self.error = None
+        threads = []
+        
         try:
             if (self.settings.value("twitter_access_token_key").toString()!=''): 
                 #Login to twitter
@@ -469,13 +556,15 @@ class KhweeteurWorker(QThread):
                         access_token_key=str(self.settings.value("twitter_access_token_key").toString()), \
                         access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                self.refresh_unified(api)
+                threads.extend(self.refresh_unified(api))
+                
         except twitter.TwitterError,e:
             print 'Error during twitter refresh : ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except:
+        except StandardError, e:
             self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
-
+            print e
+            
         try:
             identica_mlist = []
             if (self.settings.value("identica_access_token_key").toString()!=''): 
@@ -485,7 +574,7 @@ class KhweeteurWorker(QThread):
                         access_token_key=str(self.settings.value("identica_access_token_key").toString()), \
                         access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))
-                self.refresh_unified(api)                     
+                threads.extend(self.refresh_unified(api))                     
         except twitter.TwitterError,e:
             print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
@@ -500,13 +589,25 @@ class KhweeteurWorker(QThread):
                         access_token_key=str(self.settings.value("statusnet_access_token_key").toString()), \
                         access_token_secret=str(self.settings.value("statusnet_access_token_secret").toString()))
                 api.SetUserAgent('Khweeteur/%s' % (__version__))                            
-                self.refresh_unified(api)                                          
+                threads.extend(self.refresh_unified(api))                                          
         except twitter.TwitterError,e:
             print 'Error during status.net refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
         except:
             self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
-                        
+            
+        while any(thread.isRunning()==True for thread in threads):
+            self.sleep(2)
+                 
+        del threads
+        
+        if self.error != None:
+            if type(self.error) == twitter.TwitterError:
+                print 'Error during twitter refresh : ',e.message
+                self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+            else:
+                self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+            
 class KhweetsModel(QAbstractListModel):
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
 
@@ -629,6 +730,9 @@ class KhweetsModel(QAbstractListModel):
     def destroyStatus(self, index):
         self._items.pop(index.row())
         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+
+    def isInModel(self,tweet_id):
+        return not all(item[1]!=tweet_id for item in self._items)
         
     def getNewAndReset(self):
         counter = self._new_counter
@@ -667,7 +771,7 @@ class KhweetsModel(QAbstractListModel):
             else:
                 filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')               
             output = open(filename, 'wb')
-            pickle.dump(self._items, output)
+            pickle.dump(self._items, output,pickle.HIGHEST_PROTOCOL)
             output.close()
             
         except StandardError,e:
