@@ -30,7 +30,7 @@ import re
 import urllib2
 import socket
 
-__version__ = '0.0.32'
+__version__ = '0.0.34'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -50,7 +50,7 @@ def install_excepthook():
         #we have in the python interpreter
         import traceback
         trace_s = ''.join(traceback.format_exception(exctype, value, tb))
-        print 'Except hook called : %s' % (s)
+        print 'Except hook called : %s' % (trace_s)
         formatted_text = "%s Version %s\nTrace : %s" % ('Khweeteur', __version__, trace_s)
         write_report(formatted_text)
         
@@ -1345,21 +1345,21 @@ class KhweeteurPref(QMainWindow):
         else:
             self.twitter_value = QPushButton('Auth on Twitter')
         self._main_layout.addWidget(self.twitter_value,0,1)
-        self.connect(self.twitter_value, sIGNAL('clicked()'), self.request_twitter_access_or_clear)
+        self.connect(self.twitter_value, SIGNAL('clicked()'), self.request_twitter_access_or_clear)
 
         if self.settings.value('identica_access_token').toBool():
             self.identica_value = QPushButton('Clear Identi.ca Auth')
         else:
             self.identica_value = QPushButton('Auth on Identi.ca')
         self._main_layout.addWidget(self.identica_value,1,1)
-        self.connect(self.identica_value, sIGNAL('clicked()'), self.request_identica_access_or_clear)
+        self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
 
         if self.settings.value('statusnet_access_token').toBool():
             self.statusnet_value = QPushButton('Clear Status.net Auth')
         else:
             self.statusnet_value = QPushButton('Auth on Status.net')
         self._main_layout.addWidget(self.statusnet_value,2,1)
-        self.connect(self.statusnet_value, sIGNAL('clicked()'), self.request_statusnet_access_or_clear)
+        self.connect(self.statusnet_value, SIGNAL('clicked()'), self.request_statusnet_access_or_clear)
         
         # self._main_layout.addWidget(QLabel('Password :'),1,0)
         # self.password_value = QLineEdit()
@@ -1476,9 +1476,9 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.custom_delegate.show_timestamp = self.settings.value("displayTimestamp").toBool()
         self.tweetsView.custom_delegate.show_avatar = self.settings.value("displayAvatar").toBool()
         self.tweetsView.custom_delegate.show_replyto = self.settings.value("displayReplyTo").toBool()
-        self.connect(self.tweetsView, SIGNAL('Clicked(const QModelIndex&)'), self.tweet_do_ask_action)
+#        self.connect(self.tweetsView, SIGNAL('Clicked(const QModelIndex&)'), self.tweet_do_ask_action)
 
-#        self.connect(self.tweetsView, SIGNAL('doubleClicked(const QModelIndex&)'), self.tweet_do_ask_action)
+        self.connect(self.tweetsView, SIGNAL('doubleClicked(const QModelIndex&)'), self.tweet_do_ask_action)
         self.tweetsModel = KhweetsModel([], self.search_keyword)
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
@@ -1509,12 +1509,12 @@ class KhweeteurWin(QMainWindow):
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel._items[index.row()][2]            
         self.tweetActionDialog = KhweetAction(self, user)
-        self.connect(self.tweetActionDialog.reply, sIGNAL('clicked()'), self.reply)
-        self.connect(self.tweetActionDialog.openurl, sIGNAL('clicked()'), self.open_url)
-        self.connect(self.tweetActionDialog.retweet, sIGNAL('clicked()'), self.retweet)
-        self.connect(self.tweetActionDialog.follow, sIGNAL('clicked()'), self.follow)
-        self.connect(self.tweetActionDialog.unfollow, sIGNAL('clicked()'), self.unfollow)
-        self.connect(self.tweetActionDialog.destroy_tweet, sIGNAL('clicked()'), self.destroy_tweet)
+        self.connect(self.tweetActionDialog.reply, SIGNAL('clicked()'), self.reply)
+        self.connect(self.tweetActionDialog.openurl, SIGNAL('clicked()'), self.open_url)
+        self.connect(self.tweetActionDialog.retweet, SIGNAL('clicked()'), self.retweet)
+        self.connect(self.tweetActionDialog.follow, SIGNAL('clicked()'), self.follow)
+        self.connect(self.tweetActionDialog.unfollow, SIGNAL('clicked()'), self.unfollow)
+        self.connect(self.tweetActionDialog.destroy_tweet, SIGNAL('clicked()'), self.destroy_tweet)
         self.tweetActionDialog.exec_()
         
     def countChar(self,text):
@@ -1561,7 +1561,7 @@ class KhweeteurWin(QMainWindow):
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                                 api.CreateFriendship(user_screenname)
                                 self.notifications.info('You are now following %s on Twitter' % (user_screenname))
-                        except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                        except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
                                 self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
                                 print e.message
@@ -1579,7 +1579,7 @@ class KhweeteurWin(QMainWindow):
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))    
                                 api.CreateFriendship(user_screenname)
                                 self.notifications.info('You are now following %s on Identi.ca' % (user_screenname))
-                        except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                        except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
                                 self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
                                 print e.message
@@ -1608,7 +1608,7 @@ class KhweeteurWin(QMainWindow):
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                                 api.DestroyFriendship(user_screenname)
                                 self.notifications.info('You didn\'t follow %s anymore on Twitter' % (user_screenname))
-                        except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                        except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
                                 self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
                                 print e.message
@@ -1626,7 +1626,7 @@ class KhweeteurWin(QMainWindow):
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))    
                                 api.DestroyFriendship(user_screenname)
                                 self.notifications.info('You didn\'t follow %s anymore on Identi.ca' % (user_screenname))
-                        except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                        except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
                                 self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
                                 print e.message
@@ -1651,7 +1651,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))
                             api.PostRetweet(tweetid)
                             self.notifications.info('Retweet sent to Twitter')
-                    except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                    except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Retweet to twitter failed : '+(e.message))
                             print e.message
@@ -1669,7 +1669,7 @@ class KhweeteurWin(QMainWindow):
                             api.SetUserAgent('Khweeteur/%s' % (__version__))    
                             api.PostRetweet(tweetid)
                             self.notifications.info('Retweet sent to Identi.ca')
-                    except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                    except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Retweet to identi.ca failed : '+(e.message))
                             print e.message
@@ -1696,7 +1696,7 @@ class KhweeteurWin(QMainWindow):
                             api.DestroyStatus(tweetid)
                             self.tweetsModel.destroyStatus(index)
                             self.notifications.info('Status destroyed on Twitter')
-                    except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                    except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Destroy status from twitter failed : '+(e.message))
                             print e.message
@@ -1715,7 +1715,7 @@ class KhweeteurWin(QMainWindow):
                             api.DestroyStatus(tweetid)
                             self.tweetsModel.destroyStatus(index)
                             self.notifications.info('Status destroyed on Identi.ca')
-                    except (twitter.TwitterError, standardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
+                    except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
                             self.notifications.warn('Destroy status from identi.ca failed : '+(e.message))
                             print e.message
