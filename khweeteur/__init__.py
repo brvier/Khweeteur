@@ -31,7 +31,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.35'
+__version__ = '0.0.36'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -72,12 +72,13 @@ REPLYTEXTROLE = 22
 class KhweeteurDBus(dbus.service.Object):
     '''DBus Object handle dbus callback'''
     def __init__(self):
-        self.bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=dbus.SessionBus())
+        self.bus = dbus.SessionBus()
+        self.bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=self.bus)
         dbus.service.Object.__init__(self, self.bus_name, '/net/khertan/khweeteur')
     #activated = pyqtSignal()
         
-    @dbus.service.method("net.khertan.khweeteur",
-                         in_signature='', out_signature='')
+    @dbus.service.method("net.khertan.khweeteur",)
+#                         in_signature='', out_signature='')
     def show(self):
         '''Callback called to active the window and reset counter'''
         print 'dbus ?'
@@ -114,15 +115,14 @@ class KhweeteurNotification(QObject):
                           icon,
                           title,
                           message,
-                          ['default', 'test'],
+                          ['default'],
                           {'category':category,
                           'desktop-entry':'khweeteur',
                           'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
                           'count':count},
                           -1
                           )
-                          
-                          
+                                                    
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
     def __init__(self, parent = None, action=None, data=None, data2=None, data3=None, data4=None):
@@ -351,6 +351,31 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
             import traceback
             traceback.print_exc()
 
+class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
+    def __init__(self, parent = None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)        
+    def run(self):
+        #Get Retweeted of me            
+        try:
+            statuses = []
+            mystatuses = self.api.GetRetweetsOfMe(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetRetweetsOfMe_last_id').toString())
+            for mystatus in mystatuses:
+                statuses.extend(self.api.GetRetweetsForStatus(mystatus.id))                
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses)>0:                                                            
+                self.newStatuses.emit(statuses)
+                self.settings.setValue('last_id/'+self.api.base_url+'_GetRetweetsOfMe', statuses[0].id)
+        except twitter.TwitterError,e:
+            self.errors.emit(e)
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+            
+
 class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
         KhweeteurRefreshWorker.__init__(self, None, api)        
@@ -510,6 +535,11 @@ class KhweeteurWorker(QThread):
         refresh_timeline_worker.newStatuses.connect(self.newStatuses)
         refresh_timeline_worker.start()
         
+        refresh_retweetsofme_worker = KhweeteurRetweetsOfMeWorker(self,api)
+        refresh_retweetsofme_worker.errors.connect(self.errors)
+        refresh_retweetsofme_worker.newStatuses.connect(self.newStatuses)
+        refresh_retweetsofme_worker.start()
+        
         refresh_retweetedbyme_worker = KhweeteurRetweetedByMeWorker(self,api)               
         if 'twitter' in api.base_url:
             refresh_retweetedbyme_worker.errors.connect(self.errors)
@@ -540,6 +570,7 @@ class KhweeteurWorker(QThread):
             
         return [refresh_timeline_worker,
                 refresh_retweetedbyme_worker,
+                refresh_retweetsofme_worker,
                 refresh_replies_worker,
                 refresh_dm_worker,
                 refresh_mention_worker]
