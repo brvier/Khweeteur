@@ -30,7 +30,7 @@ import re
 import urllib2
 import socket
 
-__version__ = '0.0.34'
+__version__ = '0.0.35'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -71,8 +71,8 @@ REPLYTEXTROLE = 22
 class KhweeteurDBus(dbus.service.Object):
     '''DBus Object handle dbus callback'''
     def __init__(self):
-        bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=dbus.SessionBus())
-        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur/show')
+        self.bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=dbus.SessionBus())
+        dbus.service.Object.__init__(self, self.bus_name, '/net/khertan/khweeteur')
     #activated = pyqtSignal()
         
     @dbus.service.method("net.khertan.khweeteur",
@@ -124,13 +124,14 @@ class KhweeteurNotification(QObject):
                           
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
-    def __init__(self, parent = None, action=None, data=None, data2=None, data3=None):
+    def __init__(self, parent = None, action=None, data=None, data2=None, data3=None, data4=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
         self.action = action
         self.data = data
         self.tb_text_replyid = data2
         self.tb_text_replytext = data3
+        self.tb_text_replysource = data4
 
     def run(self):
         '''Run the background thread'''
@@ -159,42 +160,47 @@ class KhweeteurActionWorker(QThread):
 
             if not status_text.startswith(self.tb_text_replytext):
                 self.tb_text_replyid = 0
+                self.tb_text_reply = ''
+                self.tb_text_replysource =''
 
-            if self.settings.value("twitter_access_token_key").toString()!='':     
-                api = twitter.Api(
-                                  username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
-                                  access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
-                                  access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                if self.settings.value('useSerialization').toBool():
-                    status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                else:
-                    status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Twitter')
+            if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
+                if self.settings.value("twitter_access_token_key").toString()!='':     
+                    api = twitter.Api(
+                                      username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET, 
+                                      access_token_key=str(self.settings.value("twitter_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Twitter')
 
-            if self.settings.value("identica_access_token_key").toString()!='':     
-                api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                  password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                  access_token_key=str(self.settings.value("identica_access_token_key").toString()),
-                                  access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                if self.settings.value('useSerialization').toBool():
-                    status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                else:
-                    status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
+            if ('http:/identi.ca/api/' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
+                if self.settings.value("identica_access_token_key").toString()!='':     
+                    api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                      access_token_key=str(self.settings.value("identica_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
 
-            if self.settings.value("statusnet_access_token_key").toString()!='':     
-                api = twitter.Api(base_url='http://khertan.status.net/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                  password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                  access_token_key=str(self.settings.value("statusnet_access_token_key").toString()),
-                                  access_token_secret=str(self.settings.value("statutsnet_access_token_secret").toString()))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                if self.settings.value('useSerialization').toBool():
-                    status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                else:
-                    status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
-                self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
+            if ('http://khertan.status.net' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
+                if self.settings.value("statusnet_access_token_key").toString()!='':     
+                    api = twitter.Api(base_url='http://khertan.status.net/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                      access_token_key=str(self.settings.value("statusnet_access_token_key").toString()),
+                                      access_token_secret=str(self.settings.value("statutsnet_access_token_secret").toString()))
+                    api.SetUserAgent('Khweeteur/%s' % (__version__))
+                    if self.settings.value('useSerialization').toBool():
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    else:
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                    self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
 
             self.emit(SIGNAL("tweetSent()"))
 
@@ -1527,6 +1533,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
             self.tb_text_replytext = '@'+user+' '
             self.tb_text.setText('@'+user+' ')
+            self.tb_text_replysource = self.tweetsModel._items[index.row()][8]
 
     def open_url(self):
         import re
@@ -1739,7 +1746,7 @@ class KhweeteurWin(QMainWindow):
         else:
             self.tb_text.setDisabled(True)
             self.tb_tweet.setDisabled(True)
-            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext)
+            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource)
             self.connect(self.tweetAction, SIGNAL("tweetSent()"), self.tweetSent)
             self.connect(self.tweetAction, SIGNAL("finished()"), self.tweetSentFinished)
             self.notifications.connect(self.tweetAction, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
@@ -1897,8 +1904,8 @@ class Khweeteur(QApplication):
 
         dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
 
-        session_bus = dbus.SessionBus()
-        name = dbus.service.BusName("net.khertan.khweeteur", session_bus)
+#        self.session_bus = dbus.SessionBus()
+#        name = dbus.service.BusName("net.khertan.khweeteur", self.session_bus)
         self.dbus_object = KhweeteurDBus() #session_bus, '/net/khertan/khweeteur')        
         self.run()
         
@@ -1952,8 +1959,8 @@ class Khweeteur(QApplication):
                 
     def run(self):
         self.win = KhweeteurWin()
-        self.activated_by_dbus.connect(self.win.activated_by_dbus)
         self.dbus_object.attach_app(self)
+        self.activated_by_dbus.connect(self.win.activated_by_dbus)
         self.crash_report()
         self.win.show()
         
