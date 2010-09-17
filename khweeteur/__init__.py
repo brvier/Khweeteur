@@ -334,12 +334,13 @@ class KhweeteurWorker(QThread):
                 if not hasattr(status, 'in_reply_to_status_id'):
                     status.in_reply_to_status_text = None
                 elif status.in_reply_to_status_id != 0:
-#                    for tw in twitter_mlist:
-#                        if status.in_reply_to_status_id == tw.id:
-#                            status.in_reply_to_status_text = tw.text
-#                            break                    
-#                    in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
-                    status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
+                    for tw in twitter_mlist:
+                        if status.in_reply_to_status_id == tw.id:
+                            status.in_reply_to_status_text = tw.text
+                            break
+                    if status.in_reply_to_status_id == 0:
+                        in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
+                        status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
 #                    print status.in_reply_to_status_text
                 else:
                     status.in_reply_to_status_text = None 
@@ -1498,6 +1499,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_text = QLineEdit()
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
+        self.tb_text_replysource = ''
         self.tb_text.enabledChange(True)
         self.toolbar.addWidget(self.tb_text)
 
