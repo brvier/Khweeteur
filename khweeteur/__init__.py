@@ -72,17 +72,17 @@ REPLYTEXTROLE = 22
 class KhweeteurDBus(dbus.service.Object):
     '''DBus Object handle dbus callback'''
     def __init__(self):
-        self.bus = dbus.SessionBus()
-        self.bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=self.bus)
-        dbus.service.Object.__init__(self, self.bus_name, '/net/khertan/khweeteur')
+        bus_name = dbus.service.BusName('net.khertan.khweeteur', bus=dbus.SessionBus())
+#        dbus.service.Object.__init__(self, self.bus, '/net/khertan/khweeteur')
+        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur')
     #activated = pyqtSignal()
         
-    @dbus.service.method("net.khertan.khweeteur",)
-#                         in_signature='', out_signature='')
-    def show(self):
+    @dbus.service.method('net.khertan.khweeteur')
+    def show_now(self):
         '''Callback called to active the window and reset counter'''
         print 'dbus ?'
         self.app.activated_by_dbus.emit()
+        return True
         
     def attach_app(self, app):
         self.app = app
@@ -115,7 +115,7 @@ class KhweeteurNotification(QObject):
                           icon,
                           title,
                           message,
-                          ['default'],
+                          ['default','call'],
                           {'category':category,
                           'desktop-entry':'khweeteur',
                           'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
@@ -2037,15 +2037,21 @@ class Khweeteur(QApplication):
         self.setApplicationName("Khweeteur")
         self.version = __version__
 
-        install_excepthook()
-
         dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
 
-#        self.session_bus = dbus.SessionBus()
+        install_excepthook()
+        self.dbus_object = KhweeteurDBus()
+
+#        self.bus = dbus.SessionBus()
+#        self.bus.add_signal_receiver(self.handle_signal, None, None, None)
 #        name = dbus.service.BusName("net.khertan.khweeteur", self.session_bus)
-        self.dbus_object = KhweeteurDBus() #session_bus, '/net/khertan/khweeteur')        
+         #session_bus, '/net/khertan/khweeteur')        
+
         self.run()
-        
+
+    def handle_signal(self,*args):
+        print 'received signal:', args        
+
     def crash_report(self):
         if os.path.isfile(os.path.join(CACHE_PATH, 'crash_report')):
             import urllib2
