@@ -706,49 +706,52 @@ class KhweetsModel(QAbstractListModel):
     def addStatuses(self,listVariant):
         GetRelativeCreatedAt = self.GetRelativeCreatedAt
         #print 'Debug addstatuses count:',len(listVariant)
+        current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+
         for variant in listVariant:
             try:
 #                if not variant in self._items:
                 if all(item[1]!=variant.id for item in self._items):
-                    #self.beginInsertRows(QModelIndex(), 0,1)  
-                    if type(variant) != twitter.DirectMessage:
-                        self._items.insert(0,
-                            (variant.created_at_in_seconds,
-                             variant.id,
-                             variant.user.screen_name,
-                             variant.text,
-                             variant.user.profile_image_url,
-                             GetRelativeCreatedAt(variant.created_at_in_seconds),
-                             variant.in_reply_to_screen_name,
-                             variant.in_reply_to_status_text,
-                             variant.origin))
-
-                        if variant.user.screen_name!=None:
-                            try:
-                                if variant.user.profile_image_url[4]!=None:
-                                    path = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/', '_')))
-                                    if not path.endswith('.png'):
-                                        path = os.path.splitext(path)[0] + '.png'
-                                    pix = QPixmap(path) #.scaled(50,50)
-                                    if pix.isNull():
-                                        print path
-                                    self._avatars[variant.user.profile_image_url] = (pix)
-                            except StandardError, err:
-                                print 'error on loading avatar :',err
-                    else:
-                        self._items.insert(0,
-                             (variant.created_at_in_seconds,
-                              variant.id,
-                              variant.sender_screen_name,
-                              variant.text,
-                              None,
-                              GetRelativeCreatedAt(variant.created_at_in_seconds),
-                              None,
-                              None,
-                              variant.origin))
-                              
-                    self._new_counter = self._new_counter + 1
-                    self.now = time.time()
+                    #self.beginInsertRows(QModelIndex(), 0,1)
+                    if variant.created_at_in_seconds >= current_dt:
+                        if type(variant) != twitter.DirectMessage:
+                            self._items.insert(0,
+                                (variant.created_at_in_seconds,
+                                 variant.id,
+                                 variant.user.screen_name,
+                                 variant.text,
+                                 variant.user.profile_image_url,
+                                 GetRelativeCreatedAt(variant.created_at_in_seconds),
+                                 variant.in_reply_to_screen_name,
+                                 variant.in_reply_to_status_text,
+                                 variant.origin))
+    
+                            if variant.user.screen_name!=None:
+                                try:
+                                    if variant.user.profile_image_url[4]!=None:
+                                        path = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/', '_')))
+                                        if not path.endswith('.png'):
+                                            path = os.path.splitext(path)[0] + '.png'
+                                        pix = QPixmap(path) #.scaled(50,50)
+                                        if pix.isNull():
+                                            print path
+                                        self._avatars[variant.user.profile_image_url] = (pix)
+                                except StandardError, err:
+                                    print 'error on loading avatar :',err
+                        else:
+                            self._items.insert(0,
+                                 (variant.created_at_in_seconds,
+                                  variant.id,
+                                  variant.sender_screen_name,
+                                  variant.text,
+                                  None,
+                                  GetRelativeCreatedAt(variant.created_at_in_seconds),
+                                  None,
+                                  None,
+                                  variant.origin))
+                                  
+                        self._new_counter += 1
+#                    self.now = time.time()
                     #self.endInsertRows()
             except StandardError, e:
                 print "We shouldn't got this error here :",e
@@ -1114,7 +1117,7 @@ class KhweeteurAbout(QMainWindow):
         aboutScrollArea = QScrollArea(self)
         aboutScrollArea.setWidgetResizable(True)
         awidget = QWidget(aboutScrollArea)
-        awidget.setMinimumSize(480,1000)
+        awidget.setMinimumSize(480,1200)
         awidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         aboutScrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
         #Kinetic scroller is available on Maemo and should be on meego
@@ -1144,6 +1147,9 @@ class KhweeteurAbout(QMainWindow):
                                    <br><br>To activate automatic update set a refresh interval different of zero.
                                    <br><br>Use preferences from dialog to set your account with oauth,
                                    <br>and to display or not timestamp, username or avatar.                                   
+                                   <br><br><b>Shortcuts :</b>
+                                   <br>Control-U : Refresh current view
+                                   <br>Control-R : Reply to selected tweet
                                    <br><br><b>Thanks to :</b>
                                    <br>ddoodie on #pyqt                                   
                                    <br>xnt14 on #maemo
@@ -1578,7 +1584,9 @@ class KhweeteurWin(QMainWindow):
         self.tweetsModel.display_screenname = self.settings.value("displayUser").toBool()
         self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp").toBool()
         self.tweetsModel.display_avatar = self.settings.value("displayAvatar").toBool()
-            
+
+        self.tweetActionDialog = None
+        
         QTimer.singleShot(200, self.justAfterInit)
 
     def closeEvent(self,widget,*args):
@@ -1629,6 +1637,7 @@ class KhweeteurWin(QMainWindow):
         self.toolbar = self.addToolBar('Toolbar')
 
         self.tb_update = QAction(QIcon.fromTheme("general_refresh"), 'Update', self)
+        self.tb_update.setShortcut('Ctrl+U')
         self.connect(self.tb_update, SIGNAL('triggered()'), self.request_refresh)
         self.toolbar.addAction(self.tb_update)
         
@@ -1646,6 +1655,13 @@ class KhweeteurWin(QMainWindow):
         self.tb_tweet = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
         self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
         self.toolbar.addAction(self.tb_tweet)
+
+        #Actions not in toolbar
+        self.tb_reply = QAction('Reply', self)
+        self.tb_reply.setShortcut('Ctrl+R')
+        self.connect(self.tb_reply,
+             SIGNAL('triggered()'), self.reply)
+        self.addAction(self.tb_reply)
 
         QTimer.singleShot(200, self.timedUnserialize)
 
@@ -1665,7 +1681,8 @@ class KhweeteurWin(QMainWindow):
         self.tb_charCounter.setText(unicode(140-len(text)))
 
     def reply(self):
-        self.tweetActionDialog.accept()
+        if self.tweetActionDialog != None:
+            self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel._items[index.row()][2]
             self.tb_text_replyid = self.tweetsModel._items[index.row()][1]

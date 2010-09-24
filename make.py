@@ -64,7 +64,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Optimize timeline refresh.
+    p.changelog=""" Fix retweet of me, fix notifications, add ctrl-u (update) and ctrl-r (reply) shortcuts
 """
 
 print p.generate(build_binary=True,build_src=True)
