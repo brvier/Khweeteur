@@ -31,7 +31,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.36'
+__version__ = '0.0.37'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -1084,6 +1084,10 @@ class KhweetsView(QListView):
 #        r = QAbstractScrollArea.setScrollPosition(self,point1,point2)
 #        self.overShootMove = False
 #        return r
+
+    def keyPressEvent(self,event):
+        self.parent().tb_text.setFocus()
+        self.parent().tb_text.keyPressEvent(event)
         
     def refreshCustomDelegate(self):
         theme = self.parent().settings.value('theme')
@@ -1148,8 +1152,10 @@ class KhweeteurAbout(QMainWindow):
                                    <br><br>Use preferences from dialog to set your account with oauth,
                                    <br>and to display or not timestamp, username or avatar.                                   
                                    <br><br><b>Shortcuts :</b>
-                                   <br>Control-U : Refresh current view
-                                   <br>Control-R : Reply to selected tweet
+                                   <br>Control-R : Refresh current view
+                                   <br>Control-A : Reply to selected tweet
+                                   <br>Control-Up : To scroll to top
+                                   <br>Control-Bottom : To scroll to bottom
                                    <br><br><b>Thanks to :</b>
                                    <br>ddoodie on #pyqt                                   
                                    <br>xnt14 on #maemo
@@ -1637,7 +1643,7 @@ class KhweeteurWin(QMainWindow):
         self.toolbar = self.addToolBar('Toolbar')
 
         self.tb_update = QAction(QIcon.fromTheme("general_refresh"), 'Update', self)
-        self.tb_update.setShortcut('Ctrl+U')
+        self.tb_update.setShortcut('Ctrl+R')
         self.connect(self.tb_update, SIGNAL('triggered()'), self.request_refresh)
         self.toolbar.addAction(self.tb_update)
         
@@ -1658,13 +1664,31 @@ class KhweeteurWin(QMainWindow):
 
         #Actions not in toolbar
         self.tb_reply = QAction('Reply', self)
-        self.tb_reply.setShortcut('Ctrl+R')
+        self.tb_reply.setShortcut('Ctrl+A')
         self.connect(self.tb_reply,
              SIGNAL('triggered()'), self.reply)
         self.addAction(self.tb_reply)
 
+        self.tb_scrolltop = QAction('Scroll to top', self)
+        self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
+        self.connect(self.tb_scrolltop,
+             SIGNAL('triggered()'), self.scrolltop)
+        self.addAction(self.tb_scrolltop)
+        
+        self.tb_scrollbottom = QAction('Scroll to bottom', self)
+        self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
+        self.connect(self.tb_scrollbottom,
+             SIGNAL('triggered()'), self.scrollbottom)
+        self.addAction(self.tb_scrollbottom)
+
         QTimer.singleShot(200, self.timedUnserialize)
 
+    def scrolltop(self):
+        self.tweetsView.scrollToTop()
+                
+    def scrollbottom(self):
+        self.tweetsView.scrollToBottom()
+        
     def tweet_do_ask_action(self):
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel._items[index.row()][2]            

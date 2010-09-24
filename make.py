@@ -64,7 +64,7 @@ chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/"""
 
-    p.changelog=""" Fix retweet of me, fix notifications, add ctrl-u (update) and ctrl-r (reply) shortcuts
+    p.changelog=""" Fix retweet of me, fix notifications, add ctrl-r (update), ctrl-a (reply), ctrl-up (scroll to top) and crtl-bottom (scroll to bottom) shortcuts, Add auto focus on text field when key pressed
 """
 
 print p.generate(build_binary=True,build_src=True)
