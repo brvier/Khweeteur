@@ -23,7 +23,7 @@ import datetime
 import time
 import dbus
 import dbus.service
-import dbus.mainloop.qt
+from dbus.mainloop.qt import DBusQtMainLoop
 import pickle
 from PIL import Image
 import re
@@ -77,7 +77,7 @@ class KhweeteurDBus(dbus.service.Object):
         dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur')
     #activated = pyqtSignal()
         
-    @dbus.service.method('net.khertan.khweeteur')
+    @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):
         '''Callback called to active the window and reset counter'''
         print 'dbus ?'
@@ -118,8 +118,9 @@ class KhweeteurNotification(QObject):
                           ['default','call'],
                           {'category':category,
                           'desktop-entry':'khweeteur',
-                          'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show',
-                          'count':count},
+                          'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                          'count':count,
+                          'amount':count},
                           -1
                           )
                                                     
@@ -2037,13 +2038,16 @@ class Khweeteur(QApplication):
         self.setApplicationName("Khweeteur")
         self.version = __version__
 
-        dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
-
+#        mainloop = dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
+        self.dbus_loop = DBusQtMainLoop()
+        dbus.set_default_main_loop(self.dbus_loop)     
         install_excepthook()
         self.dbus_object = KhweeteurDBus()
-
+        
 #        self.bus = dbus.SessionBus()
+        
 #        self.bus.add_signal_receiver(self.handle_signal, None, None, None)
+#        self.bus.start_service_by_name('net.khertan.khweeteur')
 #        name = dbus.service.BusName("net.khertan.khweeteur", self.session_bus)
          #session_bus, '/net/khertan/khweeteur')        
 
