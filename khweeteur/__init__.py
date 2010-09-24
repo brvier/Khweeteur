@@ -1086,8 +1086,12 @@ class KhweetsView(QListView):
 #        return r
 
     def keyPressEvent(self,event):
-        self.parent().tb_text.setFocus()
-        self.parent().tb_text.keyPressEvent(event)
+        print event.key(),Qt.Key_Up, Qt.Key_Down
+        if event.key() not in (Qt.Key_Up, Qt.Key_Down):
+            self.parent().tb_text.setFocus()
+            self.parent().tb_text.keyPressEvent(event)
+        else:
+            QListView.keyPressEvent(self,event)
         
     def refreshCustomDelegate(self):
         theme = self.parent().settings.value('theme')
@@ -1153,7 +1157,7 @@ class KhweeteurAbout(QMainWindow):
                                    <br>and to display or not timestamp, username or avatar.                                   
                                    <br><br><b>Shortcuts :</b>
                                    <br>Control-R : Refresh current view
-                                   <br>Control-A : Reply to selected tweet
+                                   <br>Control-M : Reply to selected tweet
                                    <br>Control-Up : To scroll to top
                                    <br>Control-Bottom : To scroll to bottom
                                    <br><br><b>Thanks to :</b>
@@ -1664,7 +1668,7 @@ class KhweeteurWin(QMainWindow):
 
         #Actions not in toolbar
         self.tb_reply = QAction('Reply', self)
-        self.tb_reply.setShortcut('Ctrl+A')
+        self.tb_reply.setShortcut('Ctrl+M')
         self.connect(self.tb_reply,
              SIGNAL('triggered()'), self.reply)
         self.addAction(self.tb_reply)
