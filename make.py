@@ -23,7 +23,7 @@ if __name__ == "__main__":
     p.version=khweeteur.__version__
     p.buildversion='1'
     p.display_name='Khweeteur'
-    p.description="Khweeteur is a small twitter client for Maemo and Meego."
+    p.description="Khweeteur is a small twitter client for Maemo and MeeGo. It showing DMs, mentions and the follower timeline in one window, with a subsequent window for each search. Maemo's notification system is supported, as is auto-update and themeing.""
     p.author="Benoit HERVIER"
     p.maintainer="Khertan"
     p.email="khertan@khertan.net"
@@ -66,6 +66,7 @@ rm -rf /home/user/.khweeteur/"""
 
     p.changelog=""" Change ctrl-a (reply) for ctrl-m, prevent auto focus to catch up and down to scroll in list
 """
+    p.upgrade_description = p.changelog
 
 print p.generate(build_binary=True,build_src=True)
 #print p.generate(build_binary=True,build_src=True)

@@ -31,7 +31,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.37'
+__version__ = '0.0.38'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -1166,6 +1166,7 @@ class KhweeteurAbout(QMainWindow):
                                    <br>trebormints on twitter
                                    <br>moubaildotcom on twitter
                                    <br>teotwaki on twitter
+                                   <br>Jaffa on maemo.org
                                    </center>''' % __version__)
         aboutLayout.addWidget(aboutLabel)
         self.bugtracker_button = QPushButton('BugTracker')
