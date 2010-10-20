@@ -8,7 +8,7 @@
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-
+from PyQt4.QtMobility.QtLocation import *
 try:
     from PyQt4.QtMaemo5 import *
     isMAEMO = True
@@ -31,7 +31,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.38'
+__version__ = '0.0.39'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -126,7 +126,7 @@ class KhweeteurNotification(QObject):
                                                     
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
-    def __init__(self, parent = None, action=None, data=None, data2=None, data3=None, data4=None):
+    def __init__(self, parent = None, action=None, data=None, data2=None, data3=None, data4=None, data5=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
         self.action = action
@@ -134,6 +134,7 @@ class KhweeteurActionWorker(QThread):
         self.tb_text_replyid = data2
         self.tb_text_replytext = data3
         self.tb_text_replysource = data4
+        self.geolocation = data5
 
     def run(self):
         '''Run the background thread'''
@@ -165,6 +166,12 @@ class KhweeteurActionWorker(QThread):
                 self.tb_text_reply = ''
                 self.tb_text_replysource =''
 
+            print 'test'
+            if self.geolocation:
+                latitude,longitude = self.geolocation
+            else:
+                latitude,longitude = (None,None)                
+            
             if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("twitter_access_token_key").toString()!='':     
                     api = twitter.Api(
@@ -173,9 +180,11 @@ class KhweeteurActionWorker(QThread):
                                       access_token_secret=str(self.settings.value("twitter_access_token_secret").toString()))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if self.settings.value('useSerialization').toBool():
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Twitter')
 
             if ('http:/identi.ca/api/' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
@@ -186,9 +195,11 @@ class KhweeteurActionWorker(QThread):
                                       access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if self.settings.value('useSerialization').toBool():
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
 
             if ('http://khertan.status.net' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
@@ -199,9 +210,11 @@ class KhweeteurActionWorker(QThread):
                                       access_token_secret=str(self.settings.value("statutsnet_access_token_secret").toString()))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if self.settings.value('useSerialization').toBool():
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid)
+                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                                                           latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
 
             self.emit(SIGNAL("tweetSent()"))
@@ -212,6 +225,8 @@ class KhweeteurActionWorker(QThread):
         except:
             self.emit(SIGNAL("warn(PyQt_PyObject)"), 'A network error occur')
             print 'A network error occur'
+#            import traceback
+#            traceback.print_exc()
             
 
 class KhweeteurRefreshWorker(QThread):
@@ -239,8 +254,9 @@ class KhweeteurRefreshWorker(QThread):
                         im = Image.open(cache)
                         im = im.resize((50,50))
                         im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
-                    except (StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
-                        print 'DownloadProfileImage Error : ',e
+                    except:
+                        pass
+#                        print 'DownloadProfileImage Error : ',e
                         
     def getRepliesContent(self, api, statuses):
         items = None
@@ -275,7 +291,7 @@ class KhweeteurRefreshWorker(QThread):
                                     pkl_file.close()
                                     items.extend(items_)
                                 except StandardError,e:
-                                    print 'getRepliesContent:',e
+                                    pass #print 'getRepliesContent:',e
                         for item in items:
                             if item[1] == status.in_reply_to_status_id:
                                 status.in_reply_to_status_text = item[3]
@@ -289,18 +305,20 @@ class KhweeteurRefreshWorker(QThread):
                     #print '2-<api base_url', api.base_url, '==',status.origin,':',status.in_reply_to_status_text,':'
                     if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
                         #in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
-                        print 'Get Status ',status.in_reply_to_status_id,':',status.origin
+#                        print 'Get Status ',status.in_reply_to_status_id,':',status.origin
                         try:
                             status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
                         except:
-                            import traceback
-                            traceback.print_exc()
+                            pass
+#                            import traceback
+#                            traceback.print_exc()
 #                    print status.in_reply_to_status_text
                 else:
                     status.in_reply_to_status_text = None 
             except:
-                import traceback
-                traceback.print_exc()
+                pass
+#                import traceback
+#                traceback.print_exc()
 
     def applyOrigin(self, api, statuses):
         for status in statuses:
@@ -327,8 +345,8 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
             print e
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
 
 class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -349,8 +367,8 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
 
 class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -373,8 +391,8 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             
 
 class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
@@ -396,8 +414,8 @@ class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             
 class KhweeteurDMWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -416,8 +434,8 @@ class KhweeteurDMWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             
 class KhweeteurMentionWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -437,8 +455,8 @@ class KhweeteurMentionWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             
 class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None, keywords=None):
@@ -460,8 +478,8 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             
 class KhweeteurWorker(QThread):
     ''' Thread to Refresh in background '''
@@ -1269,6 +1287,7 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue("useAutoRotation",True)            
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme").toString()))
         self.useAutoRotation_value.setCheckState(self.settings.value("useAutoRotation").toInt()[0])
+        self.useGPS_value.setCheckState(self.settings.value("useGPS").toInt()[0])
 
     def savePrefs(self):
         self.settings.setValue('refreshInterval', self.refresh_value.value())
@@ -1281,6 +1300,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useAutoRotation', self.useAutoRotation_value.checkState())
+        self.settings.setValue('useGPS', self.useGPS_value.checkState())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -1556,9 +1576,12 @@ class KhweeteurPref(QMainWindow):
         self.useBitly_value = QCheckBox('Use Bit.ly')
         self._main_layout.addWidget(self.useBitly_value,11,1)
 
-        self._main_layout.addWidget(QLabel('Theme :'),12,0)
+        self.useGPS_value = QCheckBox('Use GPS Geopositionning')
+        self._main_layout.addWidget(self.useGPS_value,12,1)
+ 
+        self._main_layout.addWidget(QLabel('Theme :'),13,0)
         self.theme_value = QComboBox()
-        self._main_layout.addWidget(self.theme_value,12,1)
+        self._main_layout.addWidget(self.theme_value,13,1)
         for theme in self.THEMES:
             self.theme_value.addItem(theme)
         
@@ -1577,6 +1600,9 @@ class KhweeteurWin(QMainWindow):
         self.search_win = []
 
         self.settings = QSettings()
+
+        if self.settings.value('useGPS').toInt()[0]:
+            self.parent.positionStart()
 
         if isMAEMO:            
             if self.settings.value('useAutoRotation').toInt()[0]:
@@ -1786,7 +1812,7 @@ class KhweeteurWin(QMainWindow):
             for index in self.tweetsView.selectedIndexes():
                 if ((QMessageBox.question(self,
                            "Khweeteur",
-                           "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
+                           "Unfollow : %s ?" % self.tweetsModel._items[index.row()][2],
                            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                     user_screenname = self.tweetsModel._items[index.row()][2]
                     #print 'DEBUG Follow:', user_screenname
@@ -1930,7 +1956,14 @@ class KhweeteurWin(QMainWindow):
         else:
             self.tb_text.setDisabled(True)
             self.tb_tweet.setDisabled(True)
-            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource)
+            print 'test0'
+            if self.parent.coordinates:
+                print 'test1'
+                geoposition = (self.parent.coordinates)
+                print 'test2'
+            else:
+                geoposition = None
+            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource,geoposition)
             self.connect(self.tweetAction, SIGNAL("tweetSent()"), self.tweetSent)
             self.connect(self.tweetAction, SIGNAL("finished()"), self.tweetSentFinished)
             self.notifications.connect(self.tweetAction, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
@@ -1983,6 +2016,10 @@ class KhweeteurWin(QMainWindow):
             self.timer.start(self.settings.value("refreshInterval").toInt()[0]*60*1000)
         else:
             self.timer.stop()
+        if (self.settings.value("useGPS").toInt()[0]):
+            self.parent.positionStart()
+        else:
+            self.parent.positionStop()
         for search_win in self.search_win:
             search_win.restartTimer()
 #        if type(self.parent()) == KhweeteurWin:
@@ -2084,20 +2121,34 @@ class Khweeteur(QApplication):
         self.setApplicationName("Khweeteur")
         self.version = __version__
 
-#        mainloop = dbus.mainloop.qt.DBusQtMainLoop(set_as_default=True)
         self.dbus_loop = DBusQtMainLoop()
         dbus.set_default_main_loop(self.dbus_loop)     
         install_excepthook()
         self.dbus_object = KhweeteurDBus()
-        
-#        self.bus = dbus.SessionBus()
-        
-#        self.bus.add_signal_receiver(self.handle_signal, None, None, None)
-#        self.bus.start_service_by_name('net.khertan.khweeteur')
-#        name = dbus.service.BusName("net.khertan.khweeteur", self.session_bus)
-         #session_bus, '/net/khertan/khweeteur')        
 
+        self.coordinates = None
+        self.source = None
+        
         self.run()
+
+    def positionStart(self):
+        if self.source is None:
+            self.source = QGeoPositionInfoSource.createDefaultSource(None)
+            if self.source is not None:
+                self.source.setUpdateInterval(5000)
+                self.source.positionUpdated.connect(self.positionUpdated)
+                self.source.startUpdates()
+                print "Waiting for a fix..."
+    
+    def positionStop(self):
+        if self.source is not None:
+            self.source.stopUpdates()
+            self.source = None
+
+    def positionUpdated(self,update):
+        if update.isValid():
+            self.coordinates = (update.coordinate().latitude(),update.coordinate().longitude())
+            print 'Position Updated:',self.coordinates
 
     def handle_signal(self,*args):
         print 'received signal:', args        
@@ -2151,7 +2202,7 @@ class Khweeteur(QApplication):
                 pass
                 
     def run(self):
-        self.win = KhweeteurWin()
+        self.win = KhweeteurWin(self)
         self.dbus_object.attach_app(self)
         self.activated_by_dbus.connect(self.win.activated_by_dbus)
         self.crash_report()
@@ -2159,4 +2210,3 @@ class Khweeteur(QApplication):
         
 if __name__ == '__main__':
     sys.exit(Khweeteur().exec_())
-

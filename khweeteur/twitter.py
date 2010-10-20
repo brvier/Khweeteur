@@ -1805,7 +1805,7 @@ class Api(object):
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
-  def PostUpdate(self, status, in_reply_to_status_id=None):
+  def PostUpdate(self, status, in_reply_to_status_id=None, latitude=None, longitude=None):
     '''Post a twitter status message from the authenticated user.
 
     The twitter.Api instance must be authenticated.
@@ -1836,6 +1836,14 @@ class Api(object):
     data = {'status': status}
     if in_reply_to_status_id:
       data['in_reply_to_status_id'] = in_reply_to_status_id
+    if latitude is not None:
+      data['lat'] = latitude
+      data['display_coordinates'] = 'true'
+      data['geo_enabled'] = True
+    if longitude is not None:
+      data['long'] = longitude
+
+    print data
     json = self._FetchUrl(url, post_data=data)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -1873,6 +1881,7 @@ class Api(object):
         lines = textwrap.wrap(status, line_length)        
     counter = 1
     tot = len(lines)
+    print kwargs
     if len(lines)==1:
           results.append(self.PostUpdate(lines[0], **kwargs))        
     else:
@@ -2735,8 +2744,8 @@ class Api(object):
     else:
       http_method = "GET"
 
-    http_handler  = self._urllib.HTTPHandler(debuglevel=0)
-    https_handler = self._urllib.HTTPSHandler(debuglevel=0)
+    http_handler  = self._urllib.HTTPHandler(debuglevel=1)
+    https_handler = self._urllib.HTTPSHandler(debuglevel=1)
 
     opener = self._urllib.OpenerDirector()
     opener.add_handler(http_handler)
