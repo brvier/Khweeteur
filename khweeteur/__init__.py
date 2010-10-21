@@ -599,14 +599,21 @@ class KhweeteurWorker(QThread):
               # (self.refresh_dm_worker.isRunning()==True) or \
               # (self.refresh_mention_worker.isRunning()==True):
             # self.sleep(2)
-            
-        return [refresh_timeline_worker,
-                refresh_retweetedbyme_worker,
-                refresh_retweetsofme_worker,
-                refresh_replies_worker,
-                refresh_dm_worker,
-                refresh_mention_worker]
-        
+
+        if 'twitter' in api.base_url:
+            return [refresh_timeline_worker,
+                    refresh_retweetedbyme_worker,
+                    refresh_retweetsofme_worker,
+                    refresh_replies_worker,
+                    refresh_dm_worker,
+                    refresh_mention_worker]
+        else:        
+            return [refresh_timeline_worker,
+                    refresh_retweetsofme_worker,
+                    refresh_replies_worker,
+                    refresh_dm_worker,
+                    refresh_mention_worker]
+
     def refresh(self):
         self.error = None
         threads = []
