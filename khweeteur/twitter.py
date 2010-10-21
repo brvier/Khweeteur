@@ -2744,8 +2744,8 @@ class Api(object):
     else:
       http_method = "GET"
 
-    http_handler  = self._urllib.HTTPHandler(debuglevel=1)
-    https_handler = self._urllib.HTTPSHandler(debuglevel=1)
+    http_handler  = self._urllib.HTTPHandler(debuglevel=0)
+    https_handler = self._urllib.HTTPSHandler(debuglevel=0)
 
     opener = self._urllib.OpenerDirector()
     opener.add_handler(http_handler)
