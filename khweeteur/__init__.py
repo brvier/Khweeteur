@@ -542,10 +542,10 @@ class KhweeteurWorker(QThread):
                   (self.refresh_search_worker2.isRunning()==True):
                 self.sleep(2)
         elif (self.settings.value("twitter_access_token_key").toString()!=''):        
-            while (self.refresh_search_worker1.isRunning()==True)):
+            while (self.refresh_search_worker1.isRunning()==True):
                 self.sleep(2)
         elif (self.settings.value("identica_access_token_key").toString()!=''):        
-            while (self.refresh_search_worker2.isRunning()==True)):
+            while (self.refresh_search_worker2.isRunning()==True):
                 self.sleep(2)
                 
         if self.error != None:
