@@ -529,7 +529,7 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker1.start()
                 
 
-        if (self.settings.value("twitter_access_token_key").toString()!=''): 
+        if (self.settings.value("identica_access_token_key").toString()!=''): 
             api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key").toString()), access_token_secret=str(self.settings.value("identica_access_token_secret").toString()))
             api.SetUserAgent('Khweeteur/%s' % (__version__))
             self.refresh_search_worker2 = KhweeteurSearchWorker(self,api,self.search_keyword)
@@ -537,9 +537,16 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker2.newStatuses.connect(self.newStatuses)
             self.refresh_search_worker2.start()
 
-        while (self.refresh_search_worker1.isRunning()==True) or \
-              (self.refresh_search_worker2.isRunning()==True):
-            self.sleep(2)
+        if (self.settings.value("twitter_access_token_key").toString()!='') and (self.settings.value("identica_access_token_key").toString()!=''):        
+            while (self.refresh_search_worker1.isRunning()==True) or \
+                  (self.refresh_search_worker2.isRunning()==True):
+                self.sleep(2)
+        elif (self.settings.value("twitter_access_token_key").toString()!=''):        
+            while (self.refresh_search_worker1.isRunning()==True)):
+                self.sleep(2)
+        elif (self.settings.value("identica_access_token_key").toString()!=''):        
+            while (self.refresh_search_worker2.isRunning()==True)):
+                self.sleep(2)
                 
         if self.error != None:
             raise self.error
