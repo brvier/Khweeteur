@@ -1838,7 +1838,7 @@ class Api(object):
       data['in_reply_to_status_id'] = in_reply_to_status_id
     if latitude is not None:
       data['lat'] = latitude
-      data['display_coordinates'] = 'true'
+      data['display_coordinates'] = True
       data['geo_enabled'] = True
     if longitude is not None:
       data['long'] = longitude

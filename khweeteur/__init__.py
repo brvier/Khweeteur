@@ -39,7 +39,13 @@ def write_report(error):
     output = open(filename, 'wb')
     pickle.dump(error, output)
     output.close()
-        
+
+def write_log(log):
+    filename = os.path.join('/tmp/khweeteur_log')
+    output = open(filename, 'a')
+    output.write(str(datetime.datetime.now())+':'+log+'\n')
+    output.close()
+            
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
 def install_excepthook():
@@ -1397,7 +1403,8 @@ class KhweeteurPref(QMainWindow):
                 oauth_client               = oauth.Client(oauth_consumer)
                 
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
-                
+                write_log(resp)
+                write_log(content)
                 if resp['status'] != '200':
                     KhweeteurNotification().warn('Invalid respond from Identi.ca requesting temp token: %s' % resp['status'])
                 else:
@@ -1415,6 +1422,8 @@ class KhweeteurPref(QMainWindow):
     
                         oauth_client  = oauth.Client(oauth_consumer, token)
                         resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        write_log(resp)
+                        write_log(content)
                         access_token  = dict(parse_qsl(content))
     
                         if resp['status'] != '200':
@@ -1602,7 +1611,8 @@ class KhweeteurWin(QMainWindow):
         self.settings = QSettings()
 
         if self.settings.value('useGPS').toInt()[0]:
-            self.parent.positionStart()
+            if self.parent != None :
+                self.parent.positionStart()
 
         if isMAEMO:            
             if self.settings.value('useAutoRotation').toInt()[0]:
