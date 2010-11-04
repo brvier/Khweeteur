@@ -107,28 +107,38 @@ class KhweeteurNotification(QObject):
     def warn(self, message):
         '''Display an Hildon banner'''
         if isMAEMO:
-            self.iface.SystemNoteDialog(message,0, 'Nothing')
+            try:
+                self.iface.SystemNoteDialog(message,0, 'Nothing')
+            except:
+                pass
         
     def info(self, message):
         '''Display an information banner'''
         if isMAEMO:
-            self.iface.SystemNoteInfoprint('Khweeteur : '+message)
+            try:
+                self.iface.SystemNoteInfoprint('Khweeteur : '+message)
+            except:
+                pass
         
     def notify(self,title, message,category='im.received', icon='khweeteur',count=1):
         '''Create a notification in the style of email one'''
-        self.m_id = self.iface.Notify('Khweeteur',
-                          self.m_id,
-                          icon,
-                          title,
-                          message,
-                          ['default','call'],
-                          {'category':category,
-                          'desktop-entry':'khweeteur',
-                          'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
-                          'count':count,
-                          'amount':count},
-                          -1
-                          )
+        try:
+            self.m_id = self.iface.Notify('Khweeteur',
+                              self.m_id,
+                              icon,
+                              title,
+                              message,
+                              ['default','call'],
+                              {'category':category,
+                              'desktop-entry':'khweeteur',
+                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                              'count':count,
+                              'amount':count},
+                              -1
+                              )
+        except:
+            pass
+
                                                     
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
@@ -1557,17 +1567,8 @@ class KhweeteurPref(QMainWindow):
         self._main_layout.addWidget(self.identica_value,1,1)
         self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
 
-        if self.settings.value('statusnet_access_token').toBool():
-            self.statusnet_value = QPushButton('Clear Status.net Auth')
-        else:
-            self.statusnet_value = QPushButton('Auth on Status.net')
-        self._main_layout.addWidget(self.statusnet_value,2,1)
-        self.connect(self.statusnet_value, SIGNAL('clicked()'), self.request_statusnet_access_or_clear)
-        
-        # self._main_layout.addWidget(QLabel('Password :'),1,0)
-        # self.password_value = QLineEdit()
-        # self.password_value.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        # self._main_layout.addWidget(self.password_value,1,1)
+        #Remove statusnet oauth as it didn't support subdomain
+        #and require app keys for each subdomain
 
         self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),3,0)
         self.refresh_value = QSpinBox()
@@ -1603,6 +1604,7 @@ class KhweeteurPref(QMainWindow):
         self._main_layout.addWidget(self.useGPS_value,12,1)
  
         self._main_layout.addWidget(QLabel('Theme :'),13,0)
+
         self.theme_value = QComboBox()
         self._main_layout.addWidget(self.theme_value,13,1)
         for theme in self.THEMES:

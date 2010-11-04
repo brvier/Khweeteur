@@ -14,7 +14,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-setup(name='khweeteur-experimental',
+setup(name='khweeteur-experimental2',
       version=khweeteur.__version__,
       license='GNU GPLv3',
       description="A twitter client for Maemo and MeeGo.",
@@ -38,6 +38,7 @@ setup(name='khweeteur-experimental',
       options = { 'sdist_maemo':{
       'buildversion':'8',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'conflicts':'khweeteur, khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
