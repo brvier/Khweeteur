@@ -47,7 +47,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.40'
+__version__ = '0.0.41'
 
 def write_report(error):
     '''Function to write error to a report file'''
@@ -702,12 +702,15 @@ class KhweetsModel(QAbstractListModel):
         self._avatars = {}
         self._new_counter = 0
         self.now = time.time()
-        self.khweets_limit = 30
+        self.khweets_limit = 50
         self.keyword = keyword
 
     # def flags(self, index):
         # return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable | Qt.ItemIsDragEnabled
 
+    def setLimit(self,limit):
+        self.khweets_limit = limit
+        
     def GetRelativeCreatedAt(self,timestamp):
         '''Get a human redable string representing the posting time
 
@@ -743,6 +746,8 @@ class KhweetsModel(QAbstractListModel):
     def refreshTimestamp(self):
         self.now = time.time()
         for index, item in enumerate(self._items):
+            if index>self.khweets_limit:
+                break
             try:
                 self._items[index] = (item[0],
                                       item[1],
@@ -752,7 +757,7 @@ class KhweetsModel(QAbstractListModel):
                                       self.GetRelativeCreatedAt(item[0]),
                                       item[6],
                                       item[7],
-                                      item[8])
+                                      item[8])            
             except StandardError,e:
                 print e, ':', item
 
@@ -862,6 +867,7 @@ class KhweetsModel(QAbstractListModel):
             else:
                 filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
             output = open(filename, 'wb')
+            self._items = self._items[:self.khweets_limit]
             pickle.dump(self._items, output,pickle.HIGHEST_PROTOCOL)
             output.close()
 
@@ -896,6 +902,7 @@ class KhweetsModel(QAbstractListModel):
                 if item[0] < current_dt:
                     self._items = self._items[:index]
                     break
+            self._items = self._items[:self.khweets_limit]
             for item in self._items:
                 try:
                     if item[4]!=None:
@@ -1316,8 +1323,12 @@ class KhweeteurPref(QMainWindow):
     def loadPrefs(self):
         if self.settings.value("refreshInterval"):
             self.refresh_value.setValue(int(self.settings.value("refreshInterval")))
+        else:
+            self.refresh_value.setValue(10)
         if self.settings.value("displayUser"):
             self.displayUser_value.setCheckState(int(self.settings.value("displayUser")))
+        else:
+            self.displayUser_value.setCheckState(2)
         if self.settings.value("displayAvatar"):
             self.displayAvatar_value.setCheckState(int(self.settings.value("displayAvatar")))
         if self.settings.value("displayTimestamp"):
@@ -1341,6 +1352,10 @@ class KhweeteurPref(QMainWindow):
             self.useAutoRotation_value.setCheckState(int(self.settings.value("useAutoRotation")))
         if self.settings.value("useGPS"):
             self.useGPS_value.setCheckState(int(self.settings.value("useGPS")))
+        if self.settings.value("tweetHistory"):
+            self.history_value.setValue(int(self.settings.value("tweetHistory")))
+        else:
+            self.history_value.setValue(30)
 
     def savePrefs(self):
         self.settings.setValue('refreshInterval', self.refresh_value.value())
@@ -1354,6 +1369,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useAutoRotation', self.useAutoRotation_value.checkState())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
+        self.settings.setValue('tweetHistory', self.history_value.value())        
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -1608,39 +1624,43 @@ class KhweeteurPref(QMainWindow):
         self.refresh_value = QSpinBox()
         self._main_layout.addWidget(self.refresh_value,3,1)
 
-        self._main_layout.addWidget(QLabel('Display preferences :'),4,0)
+        self._main_layout.addWidget(QLabel('Number of tweet to keep in the view (History) :'),4,0)
+        self.history_value = QSpinBox()
+        self._main_layout.addWidget(self.history_value,4,1)
+        
+        self._main_layout.addWidget(QLabel('Display preferences :'),5,0)
         self.displayUser_value = QCheckBox('Display username')
-        self._main_layout.addWidget(self.displayUser_value,4,1)
+        self._main_layout.addWidget(self.displayUser_value,5,1)
 
         self.displayAvatar_value = QCheckBox('Display avatar')
-        self._main_layout.addWidget(self.displayAvatar_value,5,1)
+        self._main_layout.addWidget(self.displayAvatar_value,6,1)
 
         self.displayTimestamp_value = QCheckBox('Display timestamp')
-        self._main_layout.addWidget(self.displayTimestamp_value,6,1)
+        self._main_layout.addWidget(self.displayTimestamp_value,7,1)
 
         self.displayReplyTo_value = QCheckBox('Display reply to')
-        self._main_layout.addWidget(self.displayReplyTo_value,7,1)
+        self._main_layout.addWidget(self.displayReplyTo_value,8,1)
 
         self.useAutoRotation_value = QCheckBox('Use AutoRotation')
-        self._main_layout.addWidget(self.useAutoRotation_value,8,1)
+        self._main_layout.addWidget(self.useAutoRotation_value,9,1)
 
-        self._main_layout.addWidget(QLabel('Other preferences :'),8,0)
+        self._main_layout.addWidget(QLabel('Other preferences :'),9,0)
         self.useNotification_value = QCheckBox('Use Notification')
-        self._main_layout.addWidget(self.useNotification_value,9,1)
+        self._main_layout.addWidget(self.useNotification_value,10,1)
 
         self.useSerialization_value = QCheckBox('Use Serialization')
-        self._main_layout.addWidget(self.useSerialization_value,10,1)
+        self._main_layout.addWidget(self.useSerialization_value,11,1)
 
         self.useBitly_value = QCheckBox('Use Bit.ly')
-        self._main_layout.addWidget(self.useBitly_value,11,1)
+        self._main_layout.addWidget(self.useBitly_value,12,1)
 
         self.useGPS_value = QCheckBox('Use GPS Geopositionning')
-        self._main_layout.addWidget(self.useGPS_value,12,1)
+        self._main_layout.addWidget(self.useGPS_value,13,1)
 
-        self._main_layout.addWidget(QLabel('Theme :'),13,0)
+        self._main_layout.addWidget(QLabel('Theme :'),14,0)
 
         self.theme_value = QComboBox()
-        self._main_layout.addWidget(self.theme_value,13,1)
+        self._main_layout.addWidget(self.theme_value,14,1)
         for theme in self.THEMES:
             self.theme_value.addItem(theme)
 
@@ -1732,6 +1752,10 @@ class KhweeteurWin(QMainWindow):
 
         self.connect(self.tweetsView, SIGNAL('doubleClicked(const QModelIndex&)'), self.tweet_do_ask_action)
         self.tweetsModel = KhweetsModel([], self.search_keyword)
+        try: #If pref didn't exist
+            self.tweetsModel.setLimit(int(self.settings.value("tweetHistory")))
+        except: 
+            self.tweetsModel.setLimit(50)
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
 
