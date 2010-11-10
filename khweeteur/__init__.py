@@ -186,7 +186,6 @@ class KhweeteurActionWorker(QThread):
                 self.tb_text_reply = ''
                 self.tb_text_replysource =''
 
-            print 'test'
             if self.geolocation:
                 latitude,longitude = self.geolocation
             else:
@@ -793,8 +792,8 @@ class KhweetsModel(QAbstractListModel):
                                         if not path.endswith('.png'):
                                             path = os.path.splitext(path)[0] + '.png'
                                         pix = QPixmap(path) #.scaled(50,50)
-                                        if pix.isNull():
-                                            print path
+#                                        if pix.isNull():
+#                                            print path
                                         self._avatars[variant.user.profile_image_url] = (pix)
                                 except StandardError, err:
                                     print 'error on loading avatar :',err
@@ -999,7 +998,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 raise StandardError('')
             return(self.memoized_size[index.row()])
         except:
-            print 'sizeHint',index.row()
+#            print 'sizeHint',index.row()
             self.memoized_width[index.row()] = option.rect.width() 
             
             size = QStyledItemDelegate.sizeHint(self, option, index)
@@ -1164,7 +1163,7 @@ class KhweetsView(QListView):
 #        return r
 
     def keyPressEvent(self,event):
-        print event.key(),Qt.Key_Up, Qt.Key_Down
+#        print event.key(),Qt.Key_Up, Qt.Key_Down
         if event.key() not in (Qt.Key_Up, Qt.Key_Down):
             self.parent().tb_text.setFocus()
             self.parent().tb_text.keyPressEvent(event)
@@ -1711,7 +1710,7 @@ class KhweeteurWin(QMainWindow):
         self.setupMain()
 
         self.worker = None
-        print 'DEBUG:',self.settings.value("displayUser"),type(self.settings.value("displayUser"))
+#        print 'DEBUG:',self.settings.value("displayUser"),type(self.settings.value("displayUser"))
         self.tweetsModel.display_screenname = self.settings.value("displayUser")=='2'
         self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp")=='2'
         self.tweetsModel.display_avatar = self.settings.value("displayAvatar")=='2'
@@ -2060,11 +2059,11 @@ class KhweeteurWin(QMainWindow):
         else:
             self.tb_text.setDisabled(True)
             self.tb_tweet.setDisabled(True)
-            print 'test0'
+#            print 'test0'
             if self.parent.coordinates:
-                print 'test1'
+#                print 'test1'
                 geoposition = (self.parent.coordinates)
-                print 'test2'
+#                print 'test2'
             else:
                 geoposition = None
             self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource,geoposition)
@@ -2115,7 +2114,7 @@ class KhweeteurWin(QMainWindow):
             if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
         self.tweetsView.refreshCustomDelegate()
-        print 'DEBUG2:',(self.settings.value("displayUser")),type((self.settings.value("displayUser")))
+#        print 'DEBUG2:',(self.settings.value("displayUser")),type((self.settings.value("displayUser")))
 
         self.tweetsView.custom_delegate.show_screenname = int(self.settings.value("displayUser")) == 2
         self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp")) == 2
@@ -2264,7 +2263,7 @@ class Khweeteur(QApplication):
     def positionUpdated(self,update):
         if update.isValid():
             self.coordinates = (update.coordinate().latitude(),update.coordinate().longitude())
-            print 'Position Updated:',self.coordinates
+#            print 'Position Updated:',self.coordinates
 
     def handle_signal(self,*args):
         print 'received signal:', args
