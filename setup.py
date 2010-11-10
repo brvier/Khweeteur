@@ -36,7 +36,7 @@ setup(name='khweeteur-experimental',
       scripts=['khweeteur_launch.py'],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'2',
+      'buildversion':'3',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur, khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
@@ -47,7 +47,7 @@ setup(name='khweeteur-experimental',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
-python -m compileall /usr/lib/python2.5/site-packages/khweeteur
+python -m compileall /usr/lib/python2.5/site-packages/khweeteur_experimental
 rm -rf /home/user/.khweeteur/""",
       'copyright':'gpl'}}
      )
