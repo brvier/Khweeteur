@@ -14,7 +14,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-setup(name='khweeteur-experimental2',
+setup(name='khweeteur-experimental',
       version=khweeteur.__version__,
       license='GNU GPLv3',
       description="A twitter client for Maemo and MeeGo.",
@@ -30,13 +30,13 @@ setup(name='khweeteur-experimental2',
       data_files=[('/usr/share/dbus-1/services', ['khweeteur.service']),
                   ('/usr/share/applications/hildon/', ['khweeteur.desktop']),
                   ('/usr/share/pixmaps', ['khweeteur.png','khweeteur_64.png','khweeteur_32.png']),
-                  ('/usr/share/icons/hicolors/128x128/apps', ['khweeteur.png']),
-                  ('/usr/share/icons/hicolors/64x64/apps', ['icons/hicolor/64x64/apps/khweeteur.png']),
-                  ('/usr/share/icons/hicolors/32x32/apps', ['icons/hicolor/32x32/apps/khweeteur.png']),],
+                  ('/usr/share/icons/hicolor/128x128/apps', ['khweeteur.png']),
+                  ('/usr/share/icons/hicolor/64x64/apps', ['icons/hicolor/64x64/apps/khweeteur.png']),
+                  ('/usr/share/icons/hicolor/32x32/apps', ['icons/hicolor/32x32/apps/khweeteur.png']),],
       scripts=['khweeteur_launch.py'],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'8',
+      'buildversion':'1',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur, khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
