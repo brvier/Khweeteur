@@ -59,7 +59,7 @@ def write_report(error):
 def write_log(log):
     filename = os.path.join('/tmp/khweeteur_log')
     output = open(filename, 'a')
-    output.write(str(datetime.datetime.now())+':'+log+'\n')
+    output.write(str(datetime.datetime.now())+':'+str(log)+'\n')
     output.close()
 
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
@@ -1427,7 +1427,7 @@ class KhweeteurPref(QMainWindow):
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def request_identica_access_or_clear(self):
-
+        import urllib
         if self.settings.value('identica_access_token'):
             self.settings.setValue('identica_access_token_key','')
             self.settings.setValue('identica_access_token_secret','')
@@ -1455,8 +1455,9 @@ class KhweeteurPref(QMainWindow):
                 signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
                 oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
                 oauth_client               = oauth.Client(oauth_consumer)
-
-                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+                oauth_callback_uri = 'oob'
+                #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'POST', body=urllib.urlencode(dict(oauth_callback=oauth_callback_uri)))
                 write_log(resp)
                 write_log(content)
                 if resp['status'] != '200':
