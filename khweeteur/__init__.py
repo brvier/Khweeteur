@@ -47,8 +47,8 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.41'
-
+__version__ = '0.0.42'
+    
 def write_report(error):
     '''Function to write error to a report file'''
     filename = os.path.join(CACHE_PATH, 'crash_report')
@@ -964,7 +964,9 @@ class WhiteCustomDelegate(QStyledItemDelegate):
 
 class DefaultCustomDelegate(QStyledItemDelegate):
     '''Delegate to do custom draw of the items'''
-
+    memoized_size = {}
+    memoized_width = {}    
+    
     def __init__(self, parent):
         '''Initialization'''
         QStyledItemDelegate.__init__(self, parent)
@@ -990,43 +992,51 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.miniFont = None
 
     def sizeHint (self, option, index):
-        '''Custom size calculation of our items'''
-        size = QStyledItemDelegate.sizeHint(self, option, index)
-        tweet = index.data(Qt.DisplayRole)
-#        height = size.height()
+        '''Custom size calculation of our items'''        
+        
+        try:
+            if (option.rect.width() != self.memoized_width[index.row()]):
+                raise StandardError('')
+            return(self.memoized_size[index.row()])
+        except:
+            print 'sizeHint',index.row()
+            self.memoized_width[index.row()] = option.rect.width() 
+            
+            size = QStyledItemDelegate.sizeHint(self, option, index)
+            tweet = index.data(Qt.DisplayRole)
 
-        #One time is enought sizeHint need to be fast
-        if self.fm == None:
-            self.fm = QFontMetrics(option.font)
-        height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()+40
+            #One time is enought sizeHint need to be fast
+            if not self.fm:
+                self.fm = QFontMetrics(option.font)
+            height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()+40
 
-        if self.show_replyto:
-            if (index.data(REPLYTOSCREENNAMEROLE)!=None) and (index.data(REPLYTOSCREENNAMEROLE) != ''):
-                #One time is enought sizeHint need to be fast
-                reply = 'In reply to @'+index.data(REPLYTOSCREENNAMEROLE)+' : '+index.data(REPLYTEXTROLE)
-                if self.minifm == None:
-                    if self.miniFont == None:
-                        self.miniFont = QFont(option.font)
-                        self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
-                self.minifm = QFontMetrics(self.miniFont)
-                height += self.minifm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply).height()
+            if self.show_replyto:
+                if (index.data(REPLYTOSCREENNAMEROLE)!=None) and (index.data(REPLYTOSCREENNAMEROLE) != ''):
+                    #One time is enought sizeHint need to be fast
+                    reply = 'In reply to @'+index.data(REPLYTOSCREENNAMEROLE)+' : '+index.data(REPLYTEXTROLE)
+                    if not self.minifm:
+                        if not self.miniFont:
+                            self.miniFont = QFont(option.font)
+                            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
+                        self.minifm = QFontMetrics(self.miniFont)
+                    height += self.minifm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply).height()
 
-        if height < 70:
-            height = 70
+            if height < 70:
+                height = 70
 
-        return QSize(size.width(), height)
-
+            self.memoized_size[index.row()] = QSize(size.width(), height)
+            return self.memoized_size[index.row()]
 
     def paint(self, painter, option, index):
         '''Paint our tweet'''
-        if self.fm == None:
+        if not self.fm:
             self.fm = QFontMetrics(option.font)
 
         model = index.model()
         tweet = index.data(Qt.DisplayRole)
 
         #Instantiate font only one time !
-        if self.normFont == None:
+        if not self.normFont:
             self.normFont = QFont(option.font)
             self.miniFont = QFont(option.font)
             self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
@@ -1680,10 +1690,13 @@ class KhweeteurWin(QMainWindow):
 
         self.settings = QSettings()
 
-        if int(self.settings.value("useGPS")) == 2:
-            if self.parent != None :
-                self.parent.positionStart()
-
+        try:
+            if int(self.settings.value("useGPS")) == 2:
+                if self.parent != None :
+                    self.parent.positionStart()
+        except:
+            pass
+            
         if isMAEMO:
             if self.settings.value('useAutoRotation')=='2':
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
@@ -1744,10 +1757,13 @@ class KhweeteurWin(QMainWindow):
     def setupMain(self):
 
         self.tweetsView = KhweetsView(self)
-        self.tweetsView.custom_delegate.show_screenname = int(self.settings.value("displayUser"))==2
-        self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp"))==2
-        self.tweetsView.custom_delegate.show_avatar = int(self.settings.value("displayAvatar"))==2
-        self.tweetsView.custom_delegate.show_replyto = int(self.settings.value("displayReplyTo"))==2
+        try:
+            self.tweetsView.custom_delegate.show_screenname = int(self.settings.value("displayUser"))==2
+            self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp"))==2
+            self.tweetsView.custom_delegate.show_avatar = int(self.settings.value("displayAvatar"))==2
+            self.tweetsView.custom_delegate.show_replyto = int(self.settings.value("displayReplyTo"))==2
+        except:
+            pass
 #        self.connect(self.tweetsView, SIGNAL('Clicked(const QModelIndex&)'), self.tweet_do_ask_action)
 
         self.connect(self.tweetsView, SIGNAL('doubleClicked(const QModelIndex&)'), self.tweet_do_ask_action)
