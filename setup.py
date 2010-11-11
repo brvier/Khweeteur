@@ -43,7 +43,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Implement geo positionning * Improve speed * Fix some network error * Fix a identi.ca bug due to oauth change, Add limiting tweets preferences, First stable release made with python-sdist-maemo',
+      'changelog':'* Fix sizeHint glitches',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

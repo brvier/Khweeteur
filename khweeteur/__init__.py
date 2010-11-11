@@ -47,7 +47,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.42'
+__version__ = '0.0.43'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -92,6 +92,7 @@ KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 SCREENNAMEROLE = 20
 REPLYTOSCREENNAMEROLE = 21
 REPLYTEXTROLE = 22
+IDROLE = 23
 #....
 
 class KhweeteurNotification(QObject):
@@ -818,7 +819,6 @@ class KhweetsModel(QAbstractListModel):
         if len(listVariant)>0:
             self._items.sort()
             self._items.reverse()
-#            self._items = self._items[:(self.khweets_limit-1)]
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             self.serialize()
 
@@ -924,6 +924,8 @@ class KhweetsModel(QAbstractListModel):
             return self._items[index.row()][3]
         elif role == SCREENNAMEROLE:
             return self._items[index.row()][2]
+        elif role == IDROLE:
+            return self._items[index.row()][1]
         elif role == REPLYTOSCREENNAMEROLE:
             return self._items[index.row()][6]
         elif role == REPLYTEXTROLE:
@@ -991,16 +993,11 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.miniFont = None
 
     def sizeHint (self, option, index):
-        '''Custom size calculation of our items'''        
-        
+        '''Custom size calculation of our items'''         
+        uid = str(index.data(role=IDROLE)) + 'x' + str(option.rect.width())
         try:
-            if (option.rect.width() != self.memoized_width[index.row()]):
-                raise StandardError('')
-            return(self.memoized_size[index.row()])
+            return(self.memoized_size[uid])
         except:
-#            print 'sizeHint',index.row()
-            self.memoized_width[index.row()] = option.rect.width() 
-            
             size = QStyledItemDelegate.sizeHint(self, option, index)
             tweet = index.data(Qt.DisplayRole)
 
@@ -1023,8 +1020,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             if height < 70:
                 height = 70
 
-            self.memoized_size[index.row()] = QSize(size.width(), height)
-            return self.memoized_size[index.row()]
+            self.memoized_size[uid] = QSize(size.width(), height)
+            return self.memoized_size[uid]
 
     def paint(self, painter, option, index):
         '''Paint our tweet'''
