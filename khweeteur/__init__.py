@@ -11,14 +11,19 @@ sip.setapi('QVariant', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+#from PySide.QtCore import *
+#from PySide.QtGui import *
+
 try:
     from PyQt4.QtMobility.QtLocation import *
+#    from PySide.QtMobility.QtLocation import *
     noQtLocation = False
 except:
     noQtLocation = True
 
 try:
     from PyQt4.QtMaemo5 import *
+#    from PySide.QtMaemo5 import *
     isMAEMO = True
 except:
     isMAEMO = False
@@ -47,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.43'
+__version__ = '0.0.44'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -254,7 +259,9 @@ class KhweeteurRefreshWorker(QThread):
 
     #Signal
     errors = pyqtSignal(Exception)
+#    errors = Signal(Exception)
     newStatuses = pyqtSignal(list)
+#    newStatuses = Signal(list)
 
     def __init__(self, parent = None, api=None):
         QThread.__init__(self, None)
@@ -295,7 +302,7 @@ class KhweeteurRefreshWorker(QThread):
                         #Verify in reply of new statuses
                         if status.in_reply_to_status_id == tw.in_reply_to_status_id:
                             if tw.in_reply_to_status_text not in (None,''):
-                                status.in_reply_to_status_text = tw.in_reply_to_status_id
+                                status.in_reply_to_status_text = tw.in_reply_to_status_text
                                 break
 
                     #Verify in all cache
@@ -317,8 +324,8 @@ class KhweeteurRefreshWorker(QThread):
                                 status.in_reply_to_status_text = item[3]
                                 break
                             if item[7] == status.in_reply_to_status_id:
-                                if item[8] not in (None,''):
-                                    status.in_reply_to_status_text = item[8]
+                                if item[7] not in (None,''):
+                                    status.in_reply_to_status_text = item[7]
                                     break
 
                     #Else get the tweet from the api
@@ -1009,6 +1016,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             if self.show_replyto:
                 if (index.data(REPLYTOSCREENNAMEROLE)!=None) and (index.data(REPLYTOSCREENNAMEROLE) != ''):
                     #One time is enought sizeHint need to be fast
+#                    print 'index.data(REPLYTOSCREENNAMEROLE):',index.data(REPLYTOSCREENNAMEROLE)
+#                    print 'index.data(REPLYTEXTROLE):',index.data(REPLYTEXTROLE)
                     reply = 'In reply to @'+index.data(REPLYTOSCREENNAMEROLE)+' : '+index.data(REPLYTEXTROLE)
                     if not self.minifm:
                         if not self.miniFont:
@@ -2209,6 +2218,7 @@ class KhweeteurWin(QMainWindow):
         self.aboutWin = KhweeteurAbout(self)
 
     @pyqtSlot()
+#    @Slot()
     def activated_by_dbus(self):
         self.tweetsModel.getNewAndReset()
         self.activateWindow()
@@ -2216,6 +2226,7 @@ class KhweeteurWin(QMainWindow):
 class Khweeteur(QApplication):
 
     activated_by_dbus = pyqtSignal()
+#    activated_by_dbus = Signal()
 
     def __init__(self):
 
