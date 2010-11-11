@@ -14,7 +14,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-setup(name='khweeteur-experimental',
+setup(name='khweeteur',
       version=khweeteur.__version__,
       license='GNU GPLv3',
       description="A twitter client for Maemo and MeeGo.",
@@ -36,18 +36,18 @@ setup(name='khweeteur-experimental',
       scripts=['khweeteur_launch.py'],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'3',
+      'buildversion':'1',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
-      'conflicts':'khweeteur, khweeteur-experimental',
+      'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix a identi.ca bug due to oauth change, Add limiting tweets preferences',
+      'changelog':'* Implement geo positionning * Improve speed * Fix some network error * Fix a identi.ca bug due to oauth change, Add limiting tweets preferences, First stable release made with python-sdist-maemo',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
-python -m compileall /usr/lib/python2.5/site-packages/khweeteur_experimental
+python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/""",
       'copyright':'gpl'}}
      )
