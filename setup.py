@@ -43,7 +43,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix sizeHint glitches',
+      'changelog':'* Fix serilization settings',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

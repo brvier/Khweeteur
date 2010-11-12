@@ -204,7 +204,7 @@ class KhweeteurActionWorker(QThread):
                                       access_token_key=str(self.settings.value("twitter_access_token_key")),
                                       access_token_secret=str(self.settings.value("twitter_access_token_secret")))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if self.settings.value('useSerialization'):
+                    if int(self.settings.value('useSerialization'))==2:
                         status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     else:
@@ -219,7 +219,7 @@ class KhweeteurActionWorker(QThread):
                                       access_token_key=str(self.settings.value("identica_access_token_key")),
                                       access_token_secret=str(self.settings.value("identica_access_token_secret")))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if self.settings.value('useSerialization'):
+                    if int(self.settings.value('useSerialization'))==2:
                         status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     else:
@@ -234,7 +234,7 @@ class KhweeteurActionWorker(QThread):
                                       access_token_key=str(self.settings.value("statusnet_access_token_key")),
                                       access_token_secret=str(self.settings.value("statutsnet_access_token_secret")))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if self.settings.value('useSerialization'):
+                    if int(self.settings.value('useSerialization'))==2:
                         status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     else:
