@@ -52,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.44'
+__version__ = '0.0.46'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -694,8 +694,8 @@ class KhweeteurWorker(QThread):
 
         if self.error != None:
             if type(self.error) == twitter.TwitterError:
-                print 'Error during twitter refresh : ',error.message
-                self.emit(SIGNAL("info(PyQt_PyObject)"),error.message)
+                print 'Error during twitter refresh : ',self.error.message
+                self.emit(SIGNAL("info(PyQt_PyObject)"),self.error.message) #fix bug#404
             else:
                 self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
 
@@ -1282,7 +1282,10 @@ class KhweetAction(QDialog):
         self.settings = QSettings()
 
         if isMAEMO:
-            if int(self.settings.value('useAutoRotation'))==2:
+            try:
+                if int(self.settings.value('useAutoRotation'))==2:
+                    self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            except:#No pref yet default is true
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
 
         _layout = QGridLayout(self)
@@ -2064,13 +2067,10 @@ class KhweeteurWin(QMainWindow):
             self.nw.request_connection_with_tmp_callback(self.tweet)
         else:
             self.tb_text.setDisabled(True)
-            self.tb_tweet.setDisabled(True)
-#            print 'test0'
-            if self.parent.coordinates:
-#                print 'test1'
+            self.tb_tweet.setDisabled(True)            
+            try:
                 geoposition = (self.parent.coordinates)
-#                print 'test2'
-            else:
+            except:
                 geoposition = None
             self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource,geoposition)
             self.connect(self.tweetAction, SIGNAL("tweetSent()"), self.tweetSent)
@@ -2131,10 +2131,11 @@ class KhweeteurWin(QMainWindow):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
         else:
             self.timer.stop()
-        if int(self.settings.value("useGPS")) == 2:
-            self.parent.positionStart()
-        else:
-            self.parent.positionStop()
+        if self.parent != None: #We are in a search so no need to start gps #Fix bug#399
+            if int(self.settings.value("useGPS")) == 2:
+                self.parent.positionStart()
+            else:
+                self.parent.positionStop()
         for search_win in self.search_win:
             search_win.restartTimer()
 
