@@ -1571,7 +1571,11 @@ class Api(object):
       parameters['geocode'] = ','.join(map(str, geocode))
 
     # Make and send requests
-    url  = 'http://search.twitter.com/search.json'
+    if 'twitter' in self.base_url:
+        url  = 'http://search.twitter.com/search.json'
+    else:
+        url  = '%s/search.json' % self.base_url
+   
     json = self._FetchUrl(url, post_data=parameters)
     data = simplejson.loads(json)
 

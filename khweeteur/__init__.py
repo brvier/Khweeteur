@@ -196,7 +196,9 @@ class KhweeteurActionWorker(QThread):
                 latitude,longitude = self.geolocation
             else:
                 latitude,longitude = (None,None)
-
+                
+            print self.settings.value("twitter_access_token_key")
+            print self.tb_text_replysource
             if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("twitter_access_token_key")!=None:
                     api = twitter.Api(
@@ -212,7 +214,7 @@ class KhweeteurActionWorker(QThread):
                                                            latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Twitter')
 
-            if ('http:/identi.ca/api/' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
+            if ('http://identi.ca/api/' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("identica_access_token_key")!=None:
                     api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                       password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
@@ -350,6 +352,7 @@ class KhweeteurRefreshWorker(QThread):
     def applyOrigin(self, api, statuses):
         for status in statuses:
             status.origin = api.base_url
+            print status.origin, status.id
 
 class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -489,6 +492,7 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None, keywords=None):
         KhweeteurRefreshWorker.__init__(self, None, api)
         self.keywords = keywords
+        print 'SearchWorker:',self.api.base_url
 
     def run(self):
         try:
@@ -551,9 +555,9 @@ class KhweeteurWorker(QThread):
 
 
         if (self.settings.value("identica_access_token_key")!=None):
-            api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key")), access_token_secret=str(self.settings.value("identica_access_token_secret")))
-            api.SetUserAgent('Khweeteur/%s' % (__version__))
-            self.refresh_search_worker2 = KhweeteurSearchWorker(self,api,self.search_keyword)
+            api2 = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key")), access_token_secret=str(self.settings.value("identica_access_token_secret")))
+            api2.SetUserAgent('Khweeteur/%s' % (__version__))
+            self.refresh_search_worker2 = KhweeteurSearchWorker(self,api2,self.search_keyword)
             self.refresh_search_worker2.errors.connect(self.errors)
             self.refresh_search_worker2.newStatuses.connect(self.newStatuses)
             self.refresh_search_worker2.start()
@@ -1856,7 +1860,8 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_replytext = '@'+user+' '
             self.tb_text.setText('@'+user+' ')
             self.tb_text_replysource = self.tweetsModel._items[index.row()][8]
-
+            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
+            
     def open_url(self):
         import re
         self.tweetActionDialog.accept()

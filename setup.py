@@ -43,7 +43,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix serilization settings * Fix bug#399 Gps Start/Stop on search win error * Fix error in an except bug#404',
+      'changelog':'* Fix identi.ca reply * Fix identi.ca search',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
