@@ -52,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.47'
+__version__ = '0.0.48'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -249,9 +249,9 @@ class KhweeteurActionWorker(QThread):
             print e.message
         except:
             self.emit(SIGNAL("warn(PyQt_PyObject)"), 'A network error occur')
-            print 'A network error occur'
-#            import traceback
-#            traceback.print_exc()
+            print 'A network error occur'            
+            import traceback
+            traceback.print_exc()
 
 
 class KhweeteurRefreshWorker(QThread):
@@ -417,7 +417,7 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
-            self.errors.emit(StandardError('A network error occurs'))
+            self.errors.emit(StandardError(self.tr('A network error occurs')))
 #            import traceback
 #            traceback.print_exc()
 
@@ -440,7 +440,7 @@ class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
-            self.errors.emit(StandardError('A network error occurs'))
+            self.errors.emit(StandardError(self.tr('A network error occurs')))
 #            import traceback
 #            traceback.print_exc()
 
@@ -460,7 +460,7 @@ class KhweeteurDMWorker(KhweeteurRefreshWorker):
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
-            self.errors.emit(StandardError('A network error occurs'))
+            self.errors.emit(StandardError(self.tr('A network error occurs')))
 #            import traceback
 #            traceback.print_exc()
 
@@ -481,18 +481,21 @@ class KhweeteurMentionWorker(KhweeteurRefreshWorker):
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
-            self.errors.emit(StandardError('A network error occurs'))
+            self.errors.emit(StandardError(self.tr('A network error occurs')))
 #            import traceback
 #            traceback.print_exc()
 
 class KhweeteurSearchWorker(KhweeteurRefreshWorker):
-    def __init__(self, parent = None, api=None, keywords=None):
+    def __init__(self, parent = None, api=None, keywords=None, geocode=None):
         KhweeteurRefreshWorker.__init__(self, None, api)
         self.keywords = keywords
-
+        self.geocode = geocode
     def run(self):
         try:
-            statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
+            if self.geocode:
+                statuses = self.api.GetSearch('',geocode=self.geocode)                
+            else:
+                statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api,statuses)
             self.getRepliesContent(self.api,statuses)
@@ -500,24 +503,26 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
             statuses.reverse()
             if len(statuses)>0:
                 self.newStatuses.emit(statuses)
-                self.settings.setValue(self.keywords+'/last_id/'+self.api.base_url, statuses[0].id)
+                if not self.geocode:
+                    self.settings.setValue(self.keywords+'/last_id/'+self.api.base_url, statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
-            self.errors.emit(StandardError('A network error occurs'))
-#            import traceback
-#            traceback.print_exc()
+            self.errors.emit(StandardError(self.tr('A network error occurs')))
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurWorker(QThread):
     ''' Thread to Refresh in background '''
-    def __init__(self, parent = None, search_keyword=None):
+    def __init__(self, parent = None, search_keyword=None, geocode=None):
         QThread.__init__(self, parent)
         self.settings = QSettings()
         self.search_keyword = search_keyword
+        self.geocode = geocode
 
     def run(self):
         self.testCacheFolders()
-        if self.search_keyword==None:
+        if (self.search_keyword==None) and (not self.geocode):
             self.refresh()
         else:
             self.refresh_search()
@@ -544,7 +549,7 @@ class KhweeteurWorker(QThread):
                 access_token_key=str(self.settings.value("twitter_access_token_key")), \
                 access_token_secret=str(self.settings.value("twitter_access_token_secret")))
             api.SetUserAgent('Khweeteur/%s' % (__version__))
-            self.refresh_search_worker1 = KhweeteurSearchWorker(self,api,self.search_keyword)
+            self.refresh_search_worker1 = KhweeteurSearchWorker(self,api,self.search_keyword,self.geocode)
             self.refresh_search_worker1.errors.connect(self.errors)
             self.refresh_search_worker1.newStatuses.connect(self.newStatuses)
             self.refresh_search_worker1.start()
@@ -553,7 +558,7 @@ class KhweeteurWorker(QThread):
         if (self.settings.value("identica_access_token_key")!=None):
             api2 = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, access_token_key=str(self.settings.value("identica_access_token_key")), access_token_secret=str(self.settings.value("identica_access_token_secret")))
             api2.SetUserAgent('Khweeteur/%s' % (__version__))
-            self.refresh_search_worker2 = KhweeteurSearchWorker(self,api2,self.search_keyword)
+            self.refresh_search_worker2 = KhweeteurSearchWorker(self,api2,self.search_keyword,self.geocode)
             self.refresh_search_worker2.errors.connect(self.errors)
             self.refresh_search_worker2.newStatuses.connect(self.newStatuses)
             self.refresh_search_worker2.start()
@@ -574,7 +579,7 @@ class KhweeteurWorker(QThread):
                 print 'Error during twitter refresh : ',self.error.message
                 self.emit(SIGNAL("info(PyQt_PyObject)"),self.error.message) #fix bug#404
             else:
-                self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+                self.emit(SIGNAL("info(PyQt_PyObject)"), self.tr('A network error occur'))
                 
     def errors(self,error):
         self.error = error
@@ -865,7 +870,7 @@ class KhweetsModel(QAbstractListModel):
                  #       write_report("%s Version %s\nOld cache format : %s\n" % ('Khweeteur', __version__, ''))
                  #       KhweeteurNotification().info('Old cache format. Reinit cache.')
         except StandardError,err:
-            KhweeteurNotification().info('Wrong cache format. Reinit cache.')
+            KhweeteurNotification().info(self.tr('Wrong cache format. Reinit cache.'))
             write_report("%s Version %s\nWrong cache format : %s\n" % ('Khweeteur', __version__, err))
             print 'Wrong cache format'
         return False
@@ -882,7 +887,7 @@ class KhweetsModel(QAbstractListModel):
             output.close()
 
         except StandardError,e:
-            KhweeteurNotification().info('An error occurs while saving cache : '+str(e))
+            KhweeteurNotification().info(self.tr('An error occurs while saving cache : ')+str(e))
 
     def unSerialize(self):
         try:
@@ -1207,7 +1212,7 @@ class KhweeteurAbout(QMainWindow):
             if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
-        self.setWindowTitle("Khweeteur About")
+        self.setWindowTitle(self.tr("Khweeteur About"))
 
         aboutScrollArea = QScrollArea(self)
         aboutScrollArea.setWidgetResizable(True)
@@ -1230,7 +1235,7 @@ class KhweeteurAbout(QMainWindow):
         aboutIcon.resize(128,128)
         aboutLayout.addWidget(aboutIcon)
 
-        aboutLabel = QLabel('''<center><b>Khweeteur</b> %s
+        aboutLabel = QLabel(self.tr('''<center><b>Khweeteur</b> %s
                                    <br><br>A Simple twitter client with follower status, reply,
                                    <br>and direct message in a unified view
                                    <br><br>Licenced under GPLv3
@@ -1254,11 +1259,11 @@ class KhweeteurAbout(QMainWindow):
                                    <br>moubaildotcom on twitter
                                    <br>teotwaki on twitter
                                    <br>Jaffa on maemo.org
-                                   </center>''' % __version__)
+                                   </center>''') % __version__)
         aboutLayout.addWidget(aboutLabel)
-        self.bugtracker_button = QPushButton('BugTracker')
+        self.bugtracker_button = QPushButton(self.tr('BugTracker'))
         self.bugtracker_button.clicked.connect(self.open_bugtracker)
-        self.website_button = QPushButton('Website')
+        self.website_button = QPushButton(self.tr('Website'))
         self.website_button.clicked.connect(self.open_website)
         awidget2 = QWidget()
         buttonLayout = QHBoxLayout(awidget2)
@@ -1402,14 +1407,14 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('twitter_access_token_key','')
             self.settings.setValue('twitter_access_token_secret','')
             self.settings.setValue('twitter_access_token',False)
-            self.twitter_value.setText('Auth on Twitter')
+            self.twitter_value.setText(self.tr('Auth on Twitter'))
         else:
 
             try:
                 if not self.parent.nw.device_has_networking:
                     self.parent.nw.request_connection_with_tmp_callback(self.request_twitter_access_or_clear)
                 else:
-                    raise StandardError('No network control')
+                    raise StandardError(self.tr('No network control'))
             except:
                 import os
                 import sys
@@ -1430,13 +1435,13 @@ class KhweeteurPref(QMainWindow):
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
 
                 if resp['status'] != '200':
-                    KhweeteurNotification().warn('Invalid respond from Twitter requesting temp token: %s' % resp['status'])
+                    KhweeteurNotification().warn(self.tr('Invalid respond from Twitter requesting temp token: %s') % resp['status'])
                 else:
                     request_token = dict(parse_qsl(content))
 
                     QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
 
-                    pincode, ok = QInputDialog.getText(self, 'Twitter Authentification', 'Enter the pincode :')
+                    pincode, ok = QInputDialog.getText(self, self.tr('Twitter Authentification'), self.tr('Enter the pincode :'))
 
                     if ok:
                         if isMAEMO:
@@ -1449,7 +1454,7 @@ class KhweeteurPref(QMainWindow):
                         access_token  = dict(parse_qsl(content))
 
                         if resp['status'] != '200':
-                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('twitter_access_token_key','')
                             self.settings.setValue('twitter_access_token_secret','')
                             self.settings.setValue('twitter_access_token',False)
@@ -1459,8 +1464,8 @@ class KhweeteurPref(QMainWindow):
                             self.settings.setValue('twitter_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('twitter_access_token_secret',access_token['oauth_token_secret'])
                             self.settings.setValue('twitter_access_token',True)
-                            self.twitter_value.setText('Clear Twitter Auth')
-                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                            self.twitter_value.setText(self.tr('Clear Twitter Auth'))
+                            KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
@@ -1470,13 +1475,13 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('identica_access_token_key','')
             self.settings.setValue('identica_access_token_secret','')
             self.settings.setValue('identica_access_token',False)
-            self.identica_value.setText('Auth on Identi.ca')
+            self.identica_value.setText(self.tr('Auth on Identi.ca'))
         else:
             try:
                 if not self.parent.nw.device_has_networking:
                     self.parent.nw.request_connection_with_tmp_callback(self.request_identica_access_or_clear)
                 else:
-                    raise StandardError('No network control')
+                    raise StandardError(self.tr('No network control'))
             except:
                 import os
                 import sys
@@ -1499,13 +1504,13 @@ class KhweeteurPref(QMainWindow):
                 write_log(resp)
                 write_log(content)
                 if resp['status'] != '200':
-                    KhweeteurNotification().warn('Invalid respond from Identi.ca requesting temp token: %s' % resp['status'])
+                    KhweeteurNotification().warn(self.tr('Invalid respond from Identi.ca requesting temp token: %s') % resp['status'])
                 else:
                     request_token = dict(parse_qsl(content))
 
                     QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
 
-                    pincode, ok = QInputDialog.getText(self, 'Identi.ca Authentification', 'Enter the token :')
+                    pincode, ok = QInputDialog.getText(self, self.tr('Identi.ca Authentification'), self.tr('Enter the token :'))
 
                     if ok:
                         if isMAEMO:
@@ -1520,7 +1525,7 @@ class KhweeteurPref(QMainWindow):
                         access_token  = dict(parse_qsl(content))
 
                         if resp['status'] != '200':
-                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('identica_access_token_key','')
                             self.settings.setValue('identica_access_token_secret','')
                             self.settings.setValue('identica_access_token',False)
@@ -1530,8 +1535,8 @@ class KhweeteurPref(QMainWindow):
                             self.settings.setValue('identica_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('identica_access_token_secret',access_token['oauth_token_secret'])
                             self.settings.setValue('identica_access_token',True)
-                            self.identica_value.setText('Clear Identi.ca Auth')
-                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                            self.identica_value.setText(self.tr('Clear Identi.ca Auth'))
+                            KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
@@ -1546,13 +1551,13 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('statusnet_access_token_key','')
             self.settings.setValue('statusnet_access_token_secret','')
             self.settings.setValue('statusnet_access_token',False)
-            self.status_value.setText('Auth on Status.net')
+            self.status_value.setText(self.tr('Auth on Status.net'))
         else:
             try:
                 if not self.parent.nw.device_has_networking:
                     self.parent.nw.request_connection_with_tmp_callback(self.request_identica_access_or_clear)
                 else:
-                    raise StandardError('No network control')
+                    raise StandardError(self.tr('No network control'))
             except:
                 import os
                 import sys
@@ -1573,13 +1578,13 @@ class KhweeteurPref(QMainWindow):
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
 
                 if resp['status'] != '200':
-                    KhweeteurNotification().warn('Invalid respond from Status.net requesting temp token: %s' % resp['status'])
+                    KhweeteurNotification().warn(self.tr('Invalid respond from Status.net requesting temp token: %s') % resp['status'])
                 else:
                     request_token = dict(parse_qsl(content))
 
                     QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
 
-                    pincode, ok = QInputDialog.getText(self, 'Status.net Authentification', 'Enter the token :')
+                    pincode, ok = QInputDialog.getText(self, self.tr('Status.net Authentification'), self.tr('Enter the token :'))
 
                     if ok:
                         if isMAEMO:
@@ -1592,7 +1597,7 @@ class KhweeteurPref(QMainWindow):
                         access_token  = dict(parse_qsl(content))
 
                         if resp['status'] != '200':
-                            KhweeteurNotification().warn('The request for a Token did not succeed: %s' % resp['status'])
+                            KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('statusnet_access_token_key','')
                             self.settings.setValue('statusnet_access_token_secret','')
                             self.settings.setValue('statusnet_access_token',False)
@@ -1602,8 +1607,8 @@ class KhweeteurPref(QMainWindow):
                             self.settings.setValue('statusnet_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('statusnet_access_token_secret',access_token['oauth_token_secret'])
                             self.settings.setValue('statusnet_access_token',True)
-                            self.statusnet_value.setText('Clear Status.net Auth')
-                            KhweeteurNotification().info('Khweeteur is now authorized to connect')
+                            self.statusnet_value.setText(self.tr('Clear Status.net Auth'))
+                            KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
@@ -1624,62 +1629,62 @@ class KhweeteurPref(QMainWindow):
             pass
         self._main_layout = QGridLayout(self.aWidget)
 
-        self._main_layout.addWidget(QLabel('Authorizations :'),0,0)
-        if self.settings.value('twitter_access_token'):
-            self.twitter_value = QPushButton('Clear Twitter Auth')
+        self._main_layout.addWidget(QLabel(self.tr('Authorizations :')),0,0)
+        if self.settings.value(self.tr('twitter_access_token')):
+            self.twitter_value = QPushButton(self.tr('Clear Twitter Auth'))
         else:
-            self.twitter_value = QPushButton('Auth on Twitter')
+            self.twitter_value = QPushButton(self.tr('Auth on Twitter'))
         self._main_layout.addWidget(self.twitter_value,0,1)
         self.connect(self.twitter_value, SIGNAL('clicked()'), self.request_twitter_access_or_clear)
 
         if self.settings.value('identica_access_token'):
-            self.identica_value = QPushButton('Clear Identi.ca Auth')
+            self.identica_value = QPushButton(self.tr('Clear Identi.ca Auth'))
         else:
-            self.identica_value = QPushButton('Auth on Identi.ca')
+            self.identica_value = QPushButton(self.tr('Auth on Identi.ca'))
         self._main_layout.addWidget(self.identica_value,1,1)
         self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
 
         #Remove statusnet oauth as it didn't support subdomain
         #and require app keys for each subdomain
 
-        self._main_layout.addWidget(QLabel('Refresh Interval (Minutes) :'),3,0)
+        self._main_layout.addWidget(QLabel(self.tr('Refresh Interval (Minutes) :')),3,0)
         self.refresh_value = QSpinBox()
         self._main_layout.addWidget(self.refresh_value,3,1)
 
-        self._main_layout.addWidget(QLabel('Number of tweet to keep in the view (History) :'),4,0)
+        self._main_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view (History) :')),4,0)
         self.history_value = QSpinBox()
         self._main_layout.addWidget(self.history_value,4,1)
         
-        self._main_layout.addWidget(QLabel('Display preferences :'),5,0)
-        self.displayUser_value = QCheckBox('Display username')
+        self._main_layout.addWidget(QLabel(self.tr('Display preferences :')),5,0)
+        self.displayUser_value = QCheckBox(self.tr('Display username'))
         self._main_layout.addWidget(self.displayUser_value,5,1)
 
-        self.displayAvatar_value = QCheckBox('Display avatar')
+        self.displayAvatar_value = QCheckBox(self.tr('Display avatar'))
         self._main_layout.addWidget(self.displayAvatar_value,6,1)
 
-        self.displayTimestamp_value = QCheckBox('Display timestamp')
+        self.displayTimestamp_value = QCheckBox(self.tr('Display timestamp'))
         self._main_layout.addWidget(self.displayTimestamp_value,7,1)
 
-        self.displayReplyTo_value = QCheckBox('Display reply to')
+        self.displayReplyTo_value = QCheckBox(self.tr('Display reply to'))
         self._main_layout.addWidget(self.displayReplyTo_value,8,1)
 
-        self.useAutoRotation_value = QCheckBox('Use AutoRotation')
+        self.useAutoRotation_value = QCheckBox(self.tr('Use AutoRotation'))
         self._main_layout.addWidget(self.useAutoRotation_value,9,1)
 
-        self._main_layout.addWidget(QLabel('Other preferences :'),9,0)
-        self.useNotification_value = QCheckBox('Use Notification')
+        self._main_layout.addWidget(QLabel(self.tr('Other preferences :')),9,0)
+        self.useNotification_value = QCheckBox(self.tr('Use Notification'))
         self._main_layout.addWidget(self.useNotification_value,10,1)
 
-        self.useSerialization_value = QCheckBox('Use Serialization')
+        self.useSerialization_value = QCheckBox(self.tr('Use Serialization'))
         self._main_layout.addWidget(self.useSerialization_value,11,1)
 
-        self.useBitly_value = QCheckBox('Use Bit.ly')
+        self.useBitly_value = QCheckBox(self.tr('Use Bit.ly'))
         self._main_layout.addWidget(self.useBitly_value,12,1)
 
-        self.useGPS_value = QCheckBox('Use GPS Geopositionning')
+        self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
         self._main_layout.addWidget(self.useGPS_value,13,1)
 
-        self._main_layout.addWidget(QLabel('Theme :'),14,0)
+        self._main_layout.addWidget(QLabel(self.tr('Theme :')),14,0)
 
         self.theme_value = QComboBox()
         self._main_layout.addWidget(self.theme_value,14,1)
@@ -1884,7 +1889,7 @@ class KhweeteurWin(QMainWindow):
             for index in self.tweetsView.selectedIndexes():
                 if ((QMessageBox.question(self,
                            "Khweeteur",
-                           "Follow : %s ?" % self.tweetsModel._items[index.row()][2],
+                           self.tr("Follow : %s ?") % self.tweetsModel._items[index.row()][2],
                            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                     user_screenname = self.tweetsModel._items[index.row()][2]
                     #print 'DEBUG Follow:', user_screenname
@@ -1896,13 +1901,13 @@ class KhweeteurWin(QMainWindow):
                                                   access_token_secret=str(self.settings.value("twitter_access_token_secret")))
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                                 api.CreateFriendship(user_screenname)
-                                self.notifications.info('You are now following %s on Twitter' % (user_screenname))
+                                self.notifications.info(self.tr('You are now following %s on Twitter') % (user_screenname))
                         except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
-                                self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
+                                self.notifications.warn(self.tr('Add %s to friendship failed on Twitter : %s') %(user_screenname,e.message))
                                 print e.message
                             else:
-                                self.notifications.warn('Add %s to friendship failed on Twitter : %s' %(user_screenname, str(e)))
+                                self.notifications.warn(self.tr('Add %s to friendship failed on Twitter : %s') %(user_screenname, str(e)))
                                 print e
 
                     if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
@@ -1914,13 +1919,13 @@ class KhweeteurWin(QMainWindow):
                                                   access_token_secret=str(self.settings.value("identica_access_token_secret")))
                                 api.SetUserAgent('Khweeteur/%s' % (__version__))
                                 api.CreateFriendship(user_screenname)
-                                self.notifications.info('You are now following %s on Identi.ca' % (user_screenname))
+                                self.notifications.info(self.tr('You are now following %s on Identi.ca') % (user_screenname))
                         except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
-                                self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
+                                self.notifications.warn(self.tr('Add %s to friendship failed on Identi.ca : %s') %(user_screenname,e.message))
                                 print e.message
                             else:
-                                self.notifications.warn('Add %s to friendship failed on Identi.ca : %s' %(user_screenname, str(e)))
+                                self.notifications.warn(self.tr('Add %s to friendship failed on Identi.ca : %s') %(user_screenname, str(e)))
                                 print e
 
     def unfollow(self):
@@ -1931,7 +1936,7 @@ class KhweeteurWin(QMainWindow):
             for index in self.tweetsView.selectedIndexes():
                 if ((QMessageBox.question(self,
                            "Khweeteur",
-                           "Unfollow : %s ?" % self.tweetsModel._items[index.row()][2],
+                           self.tr("Unfollow : %s ?") % self.tweetsModel._items[index.row()][2],
                            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                     user_screenname = self.tweetsModel._items[index.row()][2]
                     #print 'DEBUG Follow:', user_screenname
@@ -1946,10 +1951,10 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.info('You didn\'t follow %s anymore on Twitter' % (user_screenname))
                         except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
-                                self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname,e.message))
+                                self.notifications.warn(self.tr('Remove %s to friendship failed on Twitter : %s') %(user_screenname,e.message))
                                 print e.message
                             else:
-                                self.notifications.warn('Remove %s to friendship failed on Twitter : %s' %(user_screenname, str(e)))
+                                self.notifications.warn(self.tr('Remove %s to friendship failed on Twitter : %s') %(user_screenname, str(e)))
                                 print e
 
                     if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
@@ -1964,10 +1969,10 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.info('You didn\'t follow %s anymore on Identi.ca' % (user_screenname))
                         except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                             if type(e)==twitter.TwitterError:
-                                self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname,e.message))
+                                self.notifications.warn(self.tr('Remove %s to friendship failed on Identi.ca : %s') %(user_screenname,e.message))
                                 print e.message
                             else:
-                                self.notifications.warn('Remove %s to friendship failed on Identi.ca : %s' %(user_screenname, str(e)))
+                                self.notifications.warn(self.tr('Remove %s to friendship failed on Identi.ca : %s') %(user_screenname, str(e)))
                                 print e
 
     def retweet(self):
@@ -1986,13 +1991,13 @@ class KhweeteurWin(QMainWindow):
                                               access_token_secret=str(self.settings.value("twitter_access_token_secret")))
                             api.SetUserAgent('Khweeteur/%s' % (__version__))
                             api.PostRetweet(tweetid)
-                            self.notifications.info('Retweet sent to Twitter')
+                            self.notifications.info(self.tr('Retweet sent to Twitter'))
                     except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
-                            self.notifications.warn('Retweet to twitter failed : '+(e.message))
+                            self.notifications.warn(self.tr('Retweet to twitter failed : ')+(e.message))
                             print e.message
                         else:
-                            self.notifications.warn('Retweet to twitter failed : '+str(e))
+                            self.notifications.warn(self.tr('Retweet to twitter failed : ')+str(e))
                             print e
 
                 if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
@@ -2004,13 +2009,13 @@ class KhweeteurWin(QMainWindow):
                                               access_token_secret=str(self.settings.value("identica_access_token_secret")))
                             api.SetUserAgent('Khweeteur/%s' % (__version__))
                             api.PostRetweet(tweetid)
-                            self.notifications.info('Retweet sent to Identi.ca')
+                            self.notifications.info(self.tr('Retweet sent to Identi.ca'))
                     except (twitter.TwitterError, StandardError, urllib2.HTTPError, urllib2.httplib.BadStatusLine, socket.timeout, socket.sslerror),e:
                         if type(e)==twitter.TwitterError:
-                            self.notifications.warn('Retweet to identi.ca failed : '+(e.message))
+                            self.notifications.warn(self.tr('Retweet to identi.ca failed : ')+(e.message))
                             print e.message
                         else:
-                            self.notifications.warn('Retweet to identi.ca failed : '+str(e))
+                            self.notifications.warn(self.tr('Retweet to identi.ca failed : ')+str(e))
                             print e
 
     def destroy_tweet(self):
@@ -2018,7 +2023,7 @@ class KhweeteurWin(QMainWindow):
         for index in self.tweetsView.selectedIndexes():
             if ((QMessageBox.question(self,
                        "Khweeteur",
-                       "Destroy this : %s ?" % self.tweetsModel._items[index.row()][3],
+                       self.tr("Destroy this : %s ?") % self.tweetsModel._items[index.row()][3],
                        QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                 tweetid = self.tweetsModel._items[index.row()][1]
                 #print 'DEBUG Retweet:',tweetid
@@ -2098,7 +2103,14 @@ class KhweeteurWin(QMainWindow):
         #print type(self.settings.value('useNotification')), self.settings.value('useNotification')
         if isMAEMO:
             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-        self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword)
+        if self.search_keyword=='GeOSearH':
+            if self.parent.coordinates:           
+                geocode = '%f,%f,1Km' %(self.parent.coordinates[0],self.parent.coordinates[1]) #FIXME
+            else:
+                geocode = None
+        else:
+            geocode = None            
+        self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
         self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
@@ -2208,12 +2220,12 @@ class KhweeteurWin(QMainWindow):
         self.activateWindow()
 
     def open_search(self):
-        search_keyword, ok = QInputDialog.getText(self, 'Search', 'Enter the search keyword(s) :')
+        search_keyword, ok = QInputDialog.getText(self, self.tr('Search'), self.tr('Enter the search keyword(s) :'))
         if ok==1:
             self.do_search(search_keyword)
 
     def do_search(self, search_keyword):
-        swin = KhweeteurWin(search_keyword=unicode(search_keyword))
+        swin = KhweeteurWin(search_keyword=unicode(search_keyword),parent=self.parent)
         self.search_win.append(swin)
         swin.show()
 
@@ -2288,8 +2300,8 @@ class Khweeteur(QApplication):
         if os.path.isfile(os.path.join(CACHE_PATH, 'crash_report')):
             import urllib
             if ((QMessageBox.question(None,
-                "Khweeteur Crash Report",
-                "An error occur on khweeteur in the previous launch. Report this bug on the bug tracker ?",
+                self.tr("Khweeteur Crash Report"),
+                self.tr("An error occur on khweeteur in the previous launch. Report this bug on the bug tracker ?"),
                 QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                 url = 'http://khertan.net/report.php' # write ur URL here
                 try:
@@ -2310,20 +2322,20 @@ class Khweeteur(QApplication):
                     the_page = response.read()
                 except Exception, detail:
                     QMessageBox.question(None,
-                    "Khweeteur Crash Report",
-                    "An error occur during the report : %s" % detail,
+                    self.tr("Khweeteur Crash Report"),
+                    self.tr("An error occur during the report : %s") % detail,
                     QMessageBox.Close)
                     return False
 
                 if 'Your report have been successfully stored' in the_page:
                     QMessageBox.question(None,
-                    "Khweeteur Crash Report",
+                    self.tr("Khweeteur Crash Report"),
                     "%s" % the_page,
                     QMessageBox.Close)
                     return True
                 else:
                     QMessageBox.question(None,
-                    "Khweeteur Crash Report",
+                    self.tr("Khweeteur Crash Report"),
                     QMessageBox.Close)
                     return False
             try:
