@@ -570,8 +570,12 @@ class KhweeteurWorker(QThread):
                 self.sleep(2)
 
         if self.error != None:
-            raise StandardError(self.error)
-
+            if type(self.error) == twitter.TwitterError:
+                print 'Error during twitter refresh : ',self.error.message
+                self.emit(SIGNAL("info(PyQt_PyObject)"),self.error.message) #fix bug#404
+            else:
+                self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+                
     def errors(self,error):
         self.error = error
 
@@ -1856,7 +1860,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_replytext = '@'+user+' '
             self.tb_text.setText('@'+user+' ')
             self.tb_text_replysource = self.tweetsModel._items[index.row()][8]
-            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
+#            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
             
     def open_url(self):
         import re
