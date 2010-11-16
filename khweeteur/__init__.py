@@ -1837,16 +1837,18 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.scrollToBottom()
 
     def tweet_do_ask_action(self):
+        user = None
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel._items[index.row()][2]
-        self.tweetActionDialog = KhweetAction(self, user)
-        self.connect(self.tweetActionDialog.reply, SIGNAL('clicked()'), self.reply)
-        self.connect(self.tweetActionDialog.openurl, SIGNAL('clicked()'), self.open_url)
-        self.connect(self.tweetActionDialog.retweet, SIGNAL('clicked()'), self.retweet)
-        self.connect(self.tweetActionDialog.follow, SIGNAL('clicked()'), self.follow)
-        self.connect(self.tweetActionDialog.unfollow, SIGNAL('clicked()'), self.unfollow)
-        self.connect(self.tweetActionDialog.destroy_tweet, SIGNAL('clicked()'), self.destroy_tweet)
-        self.tweetActionDialog.exec_()
+        if user:
+            self.tweetActionDialog = KhweetAction(self, user)
+            self.connect(self.tweetActionDialog.reply, SIGNAL('clicked()'), self.reply)
+            self.connect(self.tweetActionDialog.openurl, SIGNAL('clicked()'), self.open_url)
+            self.connect(self.tweetActionDialog.retweet, SIGNAL('clicked()'), self.retweet)
+            self.connect(self.tweetActionDialog.follow, SIGNAL('clicked()'), self.follow)
+            self.connect(self.tweetActionDialog.unfollow, SIGNAL('clicked()'), self.unfollow)
+            self.connect(self.tweetActionDialog.destroy_tweet, SIGNAL('clicked()'), self.destroy_tweet)
+            self.tweetActionDialog.exec_()
 
     def countChar(self,text):
         self.tb_charCounter.setText(unicode(140-len(text)))
