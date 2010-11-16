@@ -1043,6 +1043,14 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         '''Paint our tweet'''
+
+        #FIXME
+        #print option.rect.getCoords()
+        #Ugly hack ?        
+        x1,y1,x2,y2 = option.rect.getCoords()
+        if (y1<0) and (y2<0):
+            return
+                    
         if not self.fm:
             self.fm = QFontMetrics(option.font)
 
