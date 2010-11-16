@@ -36,14 +36,14 @@ setup(name='khweeteur',
       scripts=['khweeteur_launch.py'],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'1',
+      'buildversion':'2',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix identi.ca reply * Fix identi.ca search',
+      'changelog':'* Fix preferences for shorten url, auto rotation, and notifications',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

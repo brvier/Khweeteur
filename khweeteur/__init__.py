@@ -52,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.46'
+__version__ = '0.0.47'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -174,7 +174,7 @@ class KhweeteurActionWorker(QThread):
         try:
             status_text = self.data
 
-            if self.settings.value("useBitly"):
+            if int(self.settings.value("useBitly"))==2:
                 urls = re.findall("(?P<url>https?://[^\s]+)", status_text)
                 if len(urls)>0:
                     import bitly
@@ -197,8 +197,6 @@ class KhweeteurActionWorker(QThread):
             else:
                 latitude,longitude = (None,None)
                 
-            print self.settings.value("twitter_access_token_key")
-            print self.tb_text_replysource
             if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("twitter_access_token_key")!=None:
                     api = twitter.Api(
@@ -352,7 +350,6 @@ class KhweeteurRefreshWorker(QThread):
     def applyOrigin(self, api, statuses):
         for status in statuses:
             status.origin = api.base_url
-            print status.origin, status.id
 
 class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -492,7 +489,6 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None, keywords=None):
         KhweeteurRefreshWorker.__init__(self, None, api)
         self.keywords = keywords
-        print 'SearchWorker:',self.api.base_url
 
     def run(self):
         try:
@@ -1204,7 +1200,7 @@ class KhweeteurAbout(QMainWindow):
         self.settings = QSettings()
 
         if isMAEMO:
-            if self.settings.value('useAutoRotation'):
+            if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur About")
@@ -1334,7 +1330,7 @@ class KhweeteurPref(QMainWindow):
         self.settings = QSettings()
 
         if isMAEMO:
-            if self.settings.value('useAutoRotation')=='2':
+            if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
@@ -1710,7 +1706,7 @@ class KhweeteurWin(QMainWindow):
             pass
             
         if isMAEMO:
-            if self.settings.value('useAutoRotation')=='2':
+            if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
@@ -1747,7 +1743,7 @@ class KhweeteurWin(QMainWindow):
 
         self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
-        if (self.settings.value("refreshInterval")>0):
+        if int(self.settings.value("refreshInterval")>0):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
 
         if self.search_keyword == None:
@@ -1888,7 +1884,7 @@ class KhweeteurWin(QMainWindow):
                     #print 'DEBUG Follow:', user_screenname
                     if 'twitter' in self.tweetsModel._items[index.row()][8]:
                         try:
-                            if self.settings.value("twitter_access_token_key")!='':
+                            if self.settings.value("twitter_access_token_key")!=None:
                                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
                                                   access_token_key=str(self.settings.value("twitter_access_token_key")),
                                                   access_token_secret=str(self.settings.value("twitter_access_token_secret")))
@@ -1905,7 +1901,7 @@ class KhweeteurWin(QMainWindow):
 
                     if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
                         try:
-                            if self.settings.value("identica_access_token_key")!='':
+                            if self.settings.value("identica_access_token_key")!=None:
                                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                                   password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                                   access_token_key=str(self.settings.value("identica_access_token_key")),
@@ -1935,7 +1931,7 @@ class KhweeteurWin(QMainWindow):
                     #print 'DEBUG Follow:', user_screenname
                     if 'twitter' in self.tweetsModel._items[index.row()][8]:
                         try:
-                            if self.settings.value("twitter_access_token_key")!='':
+                            if self.settings.value("twitter_access_token_key")!=None:
                                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
                                                   access_token_key=str(self.settings.value("twitter_access_token_key")),
                                                   access_token_secret=str(self.settings.value("twitter_access_token_secret")))
@@ -1952,7 +1948,7 @@ class KhweeteurWin(QMainWindow):
 
                     if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
                         try:
-                            if self.settings.value("identica_access_token_key")!='':
+                            if self.settings.value("identica_access_token_key")!=None:
                                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                                   password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                                   access_token_key=str(self.settings.value("identica_access_token_key")),
@@ -1978,7 +1974,7 @@ class KhweeteurWin(QMainWindow):
                 tweetid = self.tweetsModel._items[index.row()][1]
                 if 'twitter' in self.tweetsModel._items[index.row()][8]:
                     try:
-                        if self.settings.value("twitter_access_token_key")!='':
+                        if self.settings.value("twitter_access_token_key")!=None:
                             api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
                                               access_token_key=str(self.settings.value("twitter_access_token_key")),
                                               access_token_secret=str(self.settings.value("twitter_access_token_secret")))
@@ -1995,7 +1991,7 @@ class KhweeteurWin(QMainWindow):
 
                 if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
                     try:
-                        if self.settings.value("identica_access_token_key")!='':
+                        if self.settings.value("identica_access_token_key")!=None:
                             api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                               password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                               access_token_key=str(self.settings.value("identica_access_token_key")),
@@ -2022,7 +2018,7 @@ class KhweeteurWin(QMainWindow):
                 #print 'DEBUG Retweet:',tweetid
                 if 'twitter' in self.tweetsModel._items[index.row()][8]:
                     try:
-                        if self.settings.value("twitter_access_token_key")!='':
+                        if self.settings.value("twitter_access_token_key")!=None:
                             api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
                                               access_token_key=str(self.settings.value("twitter_access_token_key")),
                                               access_token_secret=str(self.settings.value("twitter_access_token_secret")))
@@ -2040,7 +2036,7 @@ class KhweeteurWin(QMainWindow):
 
                 if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
                     try:
-                        if self.settings.value("identica_access_token_key")!='':
+                        if self.settings.value("identica_access_token_key")!=None:
                             api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                               password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                               access_token_key=str(self.settings.value("identica_access_token_key")),
@@ -2087,7 +2083,7 @@ class KhweeteurWin(QMainWindow):
     def refreshEnded(self):
         counter=self.tweetsModel.getNew()
 
-        if (counter>0) and (self.settings.value('useNotification')) and not (self.isActiveWindow()):
+        if (counter>0) and (int(self.settings.value('useNotification'))==2) and not (self.isActiveWindow()):
             if self.search_keyword == None:
                 self.notifications.notify('Khweeteur', str(counter)+' new tweet(s)',count=counter)
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
