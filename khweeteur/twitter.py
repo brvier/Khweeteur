@@ -1557,7 +1557,7 @@ class Api(object):
     if since_id:
       parameters['since_id'] = since_id
 
-    if not term:
+    if (not term) and (not geocode):
       return []
 
     parameters['q'] = term #urllib.quote_plus(term)
@@ -1568,7 +1568,7 @@ class Api(object):
     parameters['page'] = page
 
     if geocode is not None:
-      parameters['geocode'] = ','.join(map(str, geocode))
+      parameters['geocode'] = ','.join(map(unicode, geocode))
 
     # Make and send requests
     if 'twitter' in self.base_url:

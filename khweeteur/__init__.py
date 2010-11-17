@@ -308,7 +308,7 @@ class KhweeteurRefreshWorker(QThread):
                     #Verify in all cache
                     #print '1-<api base_url', api.base_url, ':',status.in_reply_to_status_text,':'
                     if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
-                        if items == None:
+                        if not items:
                             items = []
                             for path in glob.glob(CACHE_PATH+'/*.cache'):
                                 filename = os.path.join(path)
@@ -493,7 +493,8 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def run(self):
         try:
             if self.geocode:
-                statuses = self.api.GetSearch('',geocode=self.geocode)                
+                print 'DEBUG',self.geocode
+                statuses = self.api.GetSearch('',geocode=self.geocode)              
             else:
                 statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
             self.downloadProfilesImage(statuses)
@@ -522,9 +523,10 @@ class KhweeteurWorker(QThread):
 
     def run(self):
         self.testCacheFolders()
-        if (self.search_keyword==None) and (not self.geocode):
+        if (not self.search_keyword) and (not self.geocode):
             self.refresh()
         else:
+            print 'Refresh search',self.search_keyword
             self.refresh_search()
 
     def testCacheFolders(self):
@@ -784,6 +786,9 @@ class KhweetsModel(QAbstractListModel):
         #print 'Debug addstatuses count:',len(listVariant)
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
 
+        new_ids = []
+        
+        print 'Counter ',self._new_counter
         for variant in listVariant:
             try:
 #                if not variant in self._items:
@@ -826,7 +831,9 @@ class KhweetsModel(QAbstractListModel):
                                   None,
                                   variant.origin))
 
-                        self._new_counter += 1
+
+                        new_ids.append(variant.id)
+#                        self._new_counter += 1
 #                    self.now = time.time()
                     #self.endInsertRows()
             except StandardError, e:
@@ -835,6 +842,11 @@ class KhweetsModel(QAbstractListModel):
         if len(listVariant)>0:
             self._items.sort()
             self._items.reverse()
+            self._items = self._items[:self.khweets_limit]
+            for new_id in new_ids:
+                if all(item[1]==variant.id for item in self._items):
+                    self._new_counter += 1
+                    
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             self.serialize()
 
@@ -877,12 +889,11 @@ class KhweetsModel(QAbstractListModel):
 
     def serialize(self):
         try:
-            if self.keyword==None:
+            if not self.keyword:
                 filename = os.path.join(CACHE_PATH, 'tweets.cache')
             else:
                 filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
-            output = open(filename, 'wb')
-            self._items = self._items[:self.khweets_limit]
+            output = open(filename, 'wb')            
             pickle.dump(self._items, output,pickle.HIGHEST_PROTOCOL)
             output.close()
 
@@ -891,7 +902,7 @@ class KhweetsModel(QAbstractListModel):
 
     def unSerialize(self):
         try:
-            if self.keyword==None:
+            if not self.keyword:
                 filename = os.path.join(CACHE_PATH, 'tweets.cache')
             else:
                 filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
@@ -902,7 +913,7 @@ class KhweetsModel(QAbstractListModel):
         except StandardError,e:
             print 'unSerialize : ',e
             self.settings = QSettings()
-            if self.keyword == None:
+            if not self.keyword:
                 print 'Cache cleared'
                 self.settings.remove('last_id')
             else:
@@ -1045,7 +1056,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         '''Paint our tweet'''
 
         #FIXME
-        #print option.rect.getCoords()
+#        print option.rect.getCoords()
+
         #Ugly hack ?        
         x1,y1,x2,y2 = option.rect.getCoords()
         if (y1<0) and (y2<0):
@@ -1079,7 +1091,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         if self.show_avatar:
             icon = index.data(Qt.DecorationRole)
             if icon != None:
-                x1,y1,x2,y2 = option.rect.getCoords()
+#                x1,y1,x2,y2 = option.rect.getCoords()
                 painter.drawPixmap(x1+10,y1+10,50,50, icon)
 
         # Draw tweet
@@ -1110,7 +1122,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         # Draw line
         painter.setPen(self.separator_color)
-        x1,y1,x2,y2 = option.rect.getCoords()
+#        x1,y1,x2,y2 = option.rect.getCoords()
         painter.drawLine(x1,y2,x2,y2)
 
         painter.restore()
@@ -1217,8 +1229,12 @@ class KhweeteurAbout(QMainWindow):
         self.settings = QSettings()
 
         if isMAEMO:
-            if int(self.settings.value('useAutoRotation'))==2:
-                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            try: #Preferences not set yet
+                if int(self.settings.value('useAutoRotation'))==2:
+                    self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            except:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True) 
+
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle(self.tr("Khweeteur About"))
 
@@ -1293,7 +1309,7 @@ class KhweeteurAbout(QMainWindow):
 class KhweetAction(QDialog):
     def __init__(self,parent = None,title = ''):
         QDialog.__init__(self,parent)
-        #if name == None:
+
         self.setWindowTitle('Khweeteur : '+title)
 
         self.settings = QSettings()
@@ -1347,8 +1363,12 @@ class KhweeteurPref(QMainWindow):
         self.settings = QSettings()
 
         if isMAEMO:
-            if int(self.settings.value('useAutoRotation'))==2:
-                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            try: #Preferences not set yet
+                if int(self.settings.value('useAutoRotation'))==2:
+                    self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            except:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True) 
+
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
 
@@ -1723,12 +1743,18 @@ class KhweeteurWin(QMainWindow):
             pass
             
         if isMAEMO:
-            if int(self.settings.value('useAutoRotation'))==2:
+            try: #Pref not set yet
+                if int(self.settings.value('useAutoRotation'))==2:
+                    self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            except:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
         if self.search_keyword != None:
-            self.setWindowTitle("Khweeteur:"+unicode(self.search_keyword))
+            if self.search_keyword != 'GeOSearH':
+                self.setWindowTitle("Khweeteur:"+unicode(self.search_keyword))
+            else:
+                self.setWindowTitle("Khweeteur: Near Tweets")
         else:
             self.setWindowTitle("Khweeteur")
 
@@ -1763,7 +1789,7 @@ class KhweeteurWin(QMainWindow):
         if int(self.settings.value("refreshInterval")>0):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
 
-        if self.search_keyword == None:
+        if not self.search_keyword:
             self.open_saved_search()
 
     def enterEvent(self,event):
@@ -2101,7 +2127,6 @@ class KhweeteurWin(QMainWindow):
 
     def refreshEnded(self):
         counter=self.tweetsModel.getNew()
-
         if (counter>0) and (int(self.settings.value('useNotification'))==2) and not (self.isActiveWindow()):
             if self.search_keyword == None:
                 self.notifications.notify('Khweeteur', str(counter)+' new tweet(s)',count=counter)
@@ -2113,11 +2138,12 @@ class KhweeteurWin(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         if self.search_keyword=='GeOSearH':
             if self.parent.coordinates:           
-                geocode = '%f,%f,1Km' %(self.parent.coordinates[0],self.parent.coordinates[1]) #FIXME
+                geocode = (self.parent.coordinates[0],self.parent.coordinates[1],'1km') #FIXME
             else:
                 geocode = None
         else:
             geocode = None            
+        print 'geocode:',self.parent.coordinates,':',geocode
         self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
@@ -2137,7 +2163,7 @@ class KhweeteurWin(QMainWindow):
         self.request_refresh()
 
     def refresh_timeline(self):
-        if self.worker == None:
+        if not self.worker:
             self.do_refresh_now()
         elif self.worker.isFinished() == True:
             self.do_refresh_now()
@@ -2175,6 +2201,8 @@ class KhweeteurWin(QMainWindow):
                 QKeySequence(self.tr("Ctrl+P", "Preferences")))
 #        fileMenu.addAction(self.tr("&Update"), self.request_refresh,
 #                QKeySequence(self.tr("Ctrl+R", "Update")))
+        fileMenu.addAction(self.tr("&Near Tweets"), self.near_search,
+                QKeySequence(self.tr("Ctrl+N", "Near Tweets")))
         fileMenu.addAction(self.tr("&Search"), self.open_search,
                 QKeySequence(self.tr("Ctrl+S", "Search")))
 #        fileMenu.addAction(self.tr("&Retweet"), self.retweet,
@@ -2194,7 +2222,7 @@ class KhweeteurWin(QMainWindow):
 
     def del_search(self):
         keywords = self.settings.value('savedSearch')
-        if (keywords == None):
+        if not keywords:
             keywords = []
         elif (type(keywords)==str):
             if (self.search_keyword==keywords):
@@ -2210,7 +2238,7 @@ class KhweeteurWin(QMainWindow):
 
     def save_search(self):
         keywords = self.settings.value('savedSearch')
-        if (keywords == None):
+        if not keywords:
             keywords = []
         elif (type(keywords)==str):
             keywords = [keywords,]
@@ -2232,6 +2260,17 @@ class KhweeteurWin(QMainWindow):
         if ok==1:
             self.do_search(search_keyword)
 
+    def near_search(self):
+        if not self.parent.geoposition:
+            if ((QMessageBox.question(self,
+                   "Khweeteur",
+                   self.tr("This feature require activation of the gps, did you want to continue ?"),
+                   QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+                self.parent.positionStart() #FIXME
+            else:
+                return
+        self.do_search('GeOSearH')
+
     def do_search(self, search_keyword):
         swin = KhweeteurWin(search_keyword=unicode(search_keyword),parent=self.parent)
         self.search_win.append(swin)
@@ -2248,6 +2287,8 @@ class KhweeteurWin(QMainWindow):
     @pyqtSlot()
 #    @Slot()
     def activated_by_dbus(self):
+#        print 'activated_by_dbus called'
+#        print type(self),self
         self.tweetsModel.getNewAndReset()
         self.activateWindow()
 
