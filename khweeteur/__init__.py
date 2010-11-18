@@ -1907,7 +1907,6 @@ class KhweeteurWin(QMainWindow):
             self.tweetActionDialog.exec_()
 
     def countCharsAndResize(self):
-        print 'called'
         local_self = self.tb_text
         self.tb_charCounter.setText(unicode(140-len(local_self.toPlainText())))
         doc = local_self.document()
@@ -1916,7 +1915,7 @@ class KhweeteurWin(QMainWindow):
         s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing() + 1) - 21)
         fr = local_self.frameRect()
         cr = local_self.contentsRect()
-        local_self.setFixedHeight(min(400,s.height() + (fr.height() - cr.height() - 1)))
+        local_self.setFixedHeight(min(370,s.height() + (fr.height() - cr.height() - 1)))
 
     def reply(self):
         if self.tweetActionDialog != None:
