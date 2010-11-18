@@ -99,7 +99,7 @@ REPLYTOSCREENNAMEROLE = 21
 REPLYTEXTROLE = 22
 IDROLE = 23
 #....
-
+                        
 class KhweeteurNotification(QObject):
     '''Notification class interface'''
     def __init__(self):
@@ -1269,6 +1269,7 @@ class KhweeteurAbout(QMainWindow):
                                    <br>moubaildotcom on twitter
                                    <br>teotwaki on twitter
                                    <br>Jaffa on maemo.org
+                                   <br>creip on Twitter
                                    </center>''') % __version__)
         aboutLayout.addWidget(aboutLabel)
         self.bugtracker_button = QPushButton(self.tr('BugTracker'))
@@ -1832,16 +1833,21 @@ class KhweeteurWin(QMainWindow):
         self.connect(self.tb_update, SIGNAL('triggered()'), self.request_refresh)
         self.toolbar.addAction(self.tb_update)
 
-        self.tb_text = QLineEdit()
+#        self.tb_text = QLineEdit()
+        self.tb_text = QPlainTextEdit()
+#        self.tb_text = QMultiLineEdit()
+#        self.tb_text.textChanged.connect(self.textEditChanged)
+#        self.textEditChanged()
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
         self.tb_text_replysource = ''
         self.tb_text.enabledChange(True)
+        self.tb_text.setFixedHeight(70)
         self.toolbar.addWidget(self.tb_text)
 
         self.tb_charCounter = QLabel('140')
         self.toolbar.addWidget(self.tb_charCounter)
-        self.connect(self.tb_text, SIGNAL('textChanged(const QString&)'), self.countChar)
+        self.connect(self.tb_text, SIGNAL('textChanged()'), self.countCharsAndResize)
 
         self.tb_tweet = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
         self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
@@ -1868,6 +1874,18 @@ class KhweeteurWin(QMainWindow):
 
         QTimer.singleShot(200, self.timedUnserialize)
 
+#    def textEditChanged(self):
+#        #Resize
+#        doc = self.tb_text.document()
+#        cursor = self.tb_text.cursorRect()
+#        s = doc.size()
+#        s.setHeight((s.height() + 1) * (self.tb_text.fontMetrics().lineSpacing() + 1))
+#        fr = self.tb_text.frameRect()
+#        cr = self.tb_text.contentsRect()
+#        self.tb_text.setMinimumHeight(max(s.height(), s.height() + (fr.height() - cr.height() - 1)))
+#        self.tb_text.setHeight(max(s.height(), s.height() + (fr.height() - cr.height() - 1)))
+        #self.setMinimumWidth(max(s.width(),s.width() + (fr.width()-cr.width()) - 1))
+        
     def scrolltop(self):
         self.tweetsView.scrollToTop()
 
@@ -1888,8 +1906,17 @@ class KhweeteurWin(QMainWindow):
             self.connect(self.tweetActionDialog.destroy_tweet, SIGNAL('clicked()'), self.destroy_tweet)
             self.tweetActionDialog.exec_()
 
-    def countChar(self,text):
-        self.tb_charCounter.setText(unicode(140-len(text)))
+    def countCharsAndResize(self):
+        print 'called'
+        local_self = self.tb_text
+        self.tb_charCounter.setText(unicode(140-len(local_self.toPlainText())))
+        doc = local_self.document()
+        cursor = local_self.cursorRect()
+        s = doc.size()
+        s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing() + 1) - 21)
+        fr = local_self.frameRect()
+        cr = local_self.contentsRect()
+        local_self.setFixedHeight(min(400,s.height() + (fr.height() - cr.height() - 1)))
 
     def reply(self):
         if self.tweetActionDialog != None:
@@ -1898,7 +1925,7 @@ class KhweeteurWin(QMainWindow):
             user = self.tweetsModel._items[index.row()][2]
             self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
             self.tb_text_replytext = '@'+user+' '
-            self.tb_text.setText('@'+user+' ')
+            self.tb_text.setPlainText('@'+user+' ')
             self.tb_text_replysource = self.tweetsModel._items[index.row()][8]
 #            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
             
@@ -2097,7 +2124,7 @@ class KhweeteurWin(QMainWindow):
                             print e
 
     def tweetSent(self):
-        self.tb_text.setText('')
+        self.tb_text.setPlainText('')
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
         self.request_refresh() #Feature Request : 201
@@ -2116,7 +2143,7 @@ class KhweeteurWin(QMainWindow):
                 geoposition = (self.parent.coordinates)
             except:
                 geoposition = None
-            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.text()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource,geoposition)
+            self.tweetAction = KhweeteurActionWorker(self, 'tweet', unicode(self.tb_text.toPlainText()).encode('utf-8'), self.tb_text_replyid, self.tb_text_replytext, self.tb_text_replysource,geoposition)
             self.connect(self.tweetAction, SIGNAL("tweetSent()"), self.tweetSent)
             self.connect(self.tweetAction, SIGNAL("finished()"), self.tweetSentFinished)
             self.notifications.connect(self.tweetAction, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
