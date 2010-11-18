@@ -1756,16 +1756,12 @@ class KhweeteurWin(QMainWindow):
         self.tweetActionDialog = None
 
         QTimer.singleShot(200, self.justAfterInit)
-
-#    def do_close(self):
-#        self.close()
                 
     def closeEvent(self,widget,*args):
         for win in self.search_win:
             win.close()
 
     def justAfterInit(self):
-        print self.search_keyword
         if self.search_keyword != None:
             if self.search_keyword == 'GeOSearH':
                 if int(self.settings.value("useGPS"))!=2: #FIX446
