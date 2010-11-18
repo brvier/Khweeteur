@@ -52,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.49'
+__version__ = '0.0.50'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -283,7 +283,6 @@ class KhweeteurRefreshWorker(QThread):
                         im.save(os.path.splitext(cache)[0]+'.png', 'PNG')
                     except:
                         pass
-#                        print 'DownloadProfileImage Error : ',e
 
     def getRepliesContent(self, api, statuses):
         items = None
@@ -306,7 +305,6 @@ class KhweeteurRefreshWorker(QThread):
                                 break
 
                     #Verify in all cache
-                    #print '1-<api base_url', api.base_url, ':',status.in_reply_to_status_text,':'
                     if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
                         if not items:
                             items = []
@@ -328,18 +326,13 @@ class KhweeteurRefreshWorker(QThread):
                                     status.in_reply_to_status_text = item[7]
                                     break
 
-                    #Else get the tweet from the api
-                    #print '2-<api base_url', api.base_url, '==',status.origin,':',status.in_reply_to_status_text,':'
                     if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
-                        #in_reply_to_status = api.GetStatus(status.in_reply_to_status_id)
-#                        print 'Get Status ',status.in_reply_to_status_id,':',status.origin
                         try:
                             status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
                         except:
                             pass
 #                            import traceback
 #                            traceback.print_exc()
-#                    print status.in_reply_to_status_text
                 else:
                     status.in_reply_to_status_text = None
             except:
@@ -493,7 +486,6 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def run(self):
         try:
             if self.geocode:
-                print 'DEBUG',self.geocode
                 statuses = self.api.GetSearch('',geocode=self.geocode)              
             else:
                 statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
@@ -526,7 +518,6 @@ class KhweeteurWorker(QThread):
         if (not self.search_keyword) and (not self.geocode):
             self.refresh()
         else:
-            print 'Refresh search',self.search_keyword
             self.refresh_search()
 
     def testCacheFolders(self):
@@ -783,12 +774,10 @@ class KhweetsModel(QAbstractListModel):
 
     def addStatuses(self,listVariant):
         GetRelativeCreatedAt = self.GetRelativeCreatedAt
-        #print 'Debug addstatuses count:',len(listVariant)
         current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
 
         new_ids = []
         
-        print 'Counter ',self._new_counter
         for variant in listVariant:
             try:
 #                if not variant in self._items:
@@ -936,14 +925,11 @@ class KhweetsModel(QAbstractListModel):
                         if not path.endswith('.png'):
                             path = os.path.splitext(path)[0]+'.png'
                         pix = (QPixmap(path)) #.scaled(50,50)
-#                        if pix.isNull():
-#                            print path
                         self._avatars[item[4]] = (pix)
                 except StandardError, err:
                     print 'error on loading avatar :',err
             self._items.sort()
             self._items.reverse()
-#            self._items = self._items[:(self.khweets_limit-1)]
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
 
     def data(self, index, role = Qt.DisplayRole):
@@ -2077,7 +2063,6 @@ class KhweeteurWin(QMainWindow):
                        self.tr("Destroy this : %s ?") % self.tweetsModel._items[index.row()][3],
                        QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
                 tweetid = self.tweetsModel._items[index.row()][1]
-                #print 'DEBUG Retweet:',tweetid
                 if 'twitter' in self.tweetsModel._items[index.row()][8]:
                     try:
                         if self.settings.value("twitter_access_token_key")!=None:
@@ -2150,7 +2135,6 @@ class KhweeteurWin(QMainWindow):
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
-        #print type(self.settings.value('useNotification')), self.settings.value('useNotification')
         if isMAEMO:
             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         if self.search_keyword=='GeOSearH':
@@ -2160,7 +2144,6 @@ class KhweeteurWin(QMainWindow):
                 geocode = None
         else:
             geocode = None            
-        print 'geocode:',self.parent.coordinates,':',geocode
         self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
         self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
         self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
@@ -2190,7 +2173,6 @@ class KhweeteurWin(QMainWindow):
             if int(self.settings.value('useAutoRotation'))==2:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
         self.tweetsView.refreshCustomDelegate()
-#        print 'DEBUG2:',(self.settings.value("displayUser")),type((self.settings.value("displayUser")))
 
         self.tweetsView.custom_delegate.show_screenname = int(self.settings.value("displayUser")) == 2
         self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp")) == 2
@@ -2296,8 +2278,6 @@ class KhweeteurWin(QMainWindow):
     @pyqtSlot()
 #    @Slot()
     def activated_by_dbus(self):
-#        print 'activated_by_dbus called'
-#        print type(self),self
         self.tweetsModel.getNewAndReset()
         self.activateWindow()
 
@@ -2332,27 +2312,27 @@ class Khweeteur(QApplication):
         self.run()
 
     def positionStart(self):
+        '''Start the GPS with a 50000 refresh_rate'''
         if self.source is None:
             self.source = QGeoPositionInfoSource.createDefaultSource(None)
             if self.source is not None:
                 self.source.setUpdateInterval(50000)
                 self.source.positionUpdated.connect(self.positionUpdated)
-#                if QSettings().
                 self.source.startUpdates()
-                print "Waiting for a fix..."
 
     def positionStop(self):
+        '''Stop the GPS'''
         if self.source is not None:
             self.source.stopUpdates()
             self.source = None
 
     def positionUpdated(self,update):
+        '''GPS Callback on update'''
         if update.isValid():
             self.coordinates = (update.coordinate().latitude(),update.coordinate().longitude())
-#            print 'Position Updated:',self.coordinates
 
     def handle_signal(self,*args):
-        print 'received signal:', args
+        pass #print 'received signal:', args
 
     def crash_report(self):
         if os.path.isfile(os.path.join(CACHE_PATH, 'crash_report')):
