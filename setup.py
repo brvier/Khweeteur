@@ -43,7 +43,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix preferences for shorten url, auto rotation, and notifications * Fix bug#439 unicode print error * Fix bug#433 * Fix bug#426',
+      'changelog':'* Fix a notification bug * Fix bug#446 when NearSearch is asked but gps not activated',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

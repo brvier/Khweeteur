@@ -52,7 +52,7 @@ import urllib2
 import socket
 import glob
 
-__version__ = '0.0.48'
+__version__ = '0.0.49'
     
 def write_report(error):
     '''Function to write error to a report file'''
@@ -1771,11 +1771,28 @@ class KhweeteurWin(QMainWindow):
 
         QTimer.singleShot(200, self.justAfterInit)
 
+#    def do_close(self):
+#        self.close()
+                
     def closeEvent(self,widget,*args):
         for win in self.search_win:
             win.close()
 
     def justAfterInit(self):
+        print self.search_keyword
+        if self.search_keyword != None:
+            if self.search_keyword == 'GeOSearH':
+                if int(self.settings.value("useGPS"))!=2: #FIX446
+                    if ((QMessageBox.question(self,
+                           "Khweeteur",
+                           self.tr("This feature require activation of the gps, did you want to continue ?"),
+                           QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
+                        self.settings.setValue("useGPS",2)
+                        self.parent.positionStart()
+                    else:
+                         self.close()
+                         return
+
         if not noDBUS:
             from nwmanager import NetworkManager
             self.nw = NetworkManager(self.refresh_timeline)
@@ -2261,14 +2278,6 @@ class KhweeteurWin(QMainWindow):
             self.do_search(search_keyword)
 
     def near_search(self):
-        if not self.parent.geoposition:
-            if ((QMessageBox.question(self,
-                   "Khweeteur",
-                   self.tr("This feature require activation of the gps, did you want to continue ?"),
-                   QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                self.parent.positionStart() #FIXME
-            else:
-                return
         self.do_search('GeOSearH')
 
     def do_search(self, search_keyword):
