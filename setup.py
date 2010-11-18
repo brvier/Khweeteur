@@ -53,7 +53,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix a notification bug * Fix bug#446 when NearSearch is asked but gps not activated',
+      'changelog':'* Fix Implement multi line input * Fix bug#452 about timer not assigned',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

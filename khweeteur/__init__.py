@@ -582,7 +582,6 @@ class KhweeteurWorker(QThread):
 
     def refresh_unified(self, api):
 
-
         #print 'Ideal number of thread : ',QThread.idealThreadCount()
 
         refresh_timeline_worker = KhweeteurHomeTimelineWorker(self,api)
@@ -1714,6 +1713,7 @@ class KhweeteurWin(QMainWindow):
     def __init__(self, parent=None, search_keyword=None):
         QMainWindow.__init__(self,None)
         self.parent = parent
+        self.timer = QTimer() #Fix bug #451
 
         self.search_keyword = search_keyword
 
@@ -1784,7 +1784,6 @@ class KhweeteurWin(QMainWindow):
 
         self.notifications = KhweeteurNotification()
 
-        self.timer = QTimer()
         self.connect(self.timer, SIGNAL("timeout()"), self.timed_refresh)
         if int(self.settings.value("refreshInterval")>0):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
