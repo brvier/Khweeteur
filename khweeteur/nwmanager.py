@@ -1,3 +1,9 @@
+#!/usr/bin/env python2.5
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2010 Benoît HERVIER
+# Licenced under GPLv3
+
 try:
     import conic
     isAVAILABLE = True

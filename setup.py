@@ -4,6 +4,8 @@
 #Khweeteur Setup File
 
 import imp
+import sys
+reload(sys).setdefaultencoding("UTF-8")
 
 from sdist_maemo import sdist_maemo as _sdist_maemo
 from distutils.core import setup
@@ -53,12 +55,17 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix Implement multi line input * Fix bug#452 about timer not assigned',
+      'changelog':'* Fixes for desktop * Fix removing saved search * Fix QMessageBox called twice',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/""",
-      'copyright':'gpl'}}
+      'copyright':'gpl'},
+      'bdist_rpm':{
+      'requires':'python, python-setuptools, python-mobility-location, python-qt4-gui,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'conflicts':'khweeteur-experimental',
+      'icon':'khweeteur.png',
+      'group':'Network',}}
      )
 
