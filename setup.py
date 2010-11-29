@@ -55,7 +55,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fixes for desktop * Fix removing saved search * Fix QMessageBox called twice',
+      'changelog':'* Fixes error on first authentification, fix error on refreshEnded introduce in previous version',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
