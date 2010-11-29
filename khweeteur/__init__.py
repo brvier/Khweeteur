@@ -53,61 +53,12 @@ import socket
 import glob
 
 from settings import KhweeteurPref
+from utils import *
+from notifications import KhweeteurNotification
 
 #import pynotify
 
-__version__ = '0.0.51'
-    
-def write_report(error):
-    '''Function to write error to a report file'''
-    try:
-        os.path.makedirs(CACHE_PATH)
-    except:
-        pass
-        
-    filename = os.path.join(CACHE_PATH, 'crash_report')
-    output = open(filename, 'wb')
-    pickle.dump(error, output)
-    output.close()
-
-def write_log(log):
-    filename = os.path.join('/tmp/khweeteur_log')
-    output = open(filename, 'a')
-    output.write(str(datetime.datetime.now())+':'+str(log)+'\n')
-    output.close()
-
-#Here is the installation of the hook. Each time a untrapped/unmanaged exception will
-#happen my_excepthook will be called.
-def install_excepthook():
-    '''Install an excepthook called at each unexcepted error'''
-
-    def my_excepthook(exctype, value, tb):
-        '''Method which replace the native excepthook'''
-        #traceback give us all the errors information message like the method, file line ... everything like
-        #we have in the python interpreter
-        import traceback
-        trace_s = ''.join(traceback.format_exception(exctype, value, tb))
-        print 'Except hook called : %s' % (trace_s)
-        formatted_text = "%s Version %s\nTrace : %s" % ('Khweeteur', __version__, trace_s)
-        write_report(formatted_text)
-
-    sys.excepthook = my_excepthook
-
-AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),  '.khweeteur', 'cache')
-CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur')
-
-#Close your eyes ... it s a secret !
-KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
-KHWEETEUR_TWITTER_CONSUMER_SECRET = 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU'
-KHWEETEUR_IDENTICA_CONSUMER_KEY = 'c7e86efd4cb951871200440ad1774413'
-KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
-KHWEETEUR_STATUSNET_CONSUMER_KEY = '84e768bba2b6625f459a9a19f5d57bd1'
-KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
-SCREENNAMEROLE = 20
-REPLYTOSCREENNAMEROLE = 21
-REPLYTEXTROLE = 22
-IDROLE = 23
-#....
+__version__ = '0.0.52'
 
 #~ class KhweeteurSingleNotify(QObject):
      #~ def __init__(self,title,message,iconpath):
@@ -116,59 +67,7 @@ IDROLE = 23
         #~ n = pynotify.Notification(title, message, "khweeteur")
         #~ n.set_icon_from_pixbuf(icon)
      
-class KhweeteurNotification(QObject):
-    '''Notification class interface'''
-    def __init__(self):
-        global noDBUS
-        QObject.__init__(self)
-        if not noDBUS:
-	    try:
-		    self.m_bus = dbus.SystemBus()
-		    self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
-							  '/org/freedesktop/Notifications')
-		    self.iface = dbus.Interface(self.m_notify, 'org.freedesktop.Notifications')
-		    self.m_id = 0
-	    except:            
-             noDBUS = True 
-
-    def warn(self, message):
-        '''Display an Hildon banner'''
-        if not noDBUS:
-            if isMAEMO:
-                try:
-                    self.iface.SystemNoteDialog(message,0, 'Nothing')
-                except:
-                    pass
-
-    def info(self, message):
-        '''Display an information banner'''
-        if not noDBUS:
-            if isMAEMO:
-                try:
-                    self.iface.SystemNoteInfoprint('Khweeteur : '+message)
-                except:
-                    pass
-
-    def notify(self,title, message,category='im.received', icon='khweeteur',count=1):
-        '''Create a notification in the style of email one'''
-        if not noDBUS:
-            try:
-                self.m_id = self.iface.Notify('Khweeteur',
-                                  self.m_id,
-                                  icon,
-                                  title,
-                                  message,
-                                  ['default','call'],
-                                  {'category':category,
-                                  'desktop-entry':'khweeteur',
-                                  'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
-                                  'count':count,
-                                  'amount':count},
-                                  -1
-                                  )
-            except:
-                pass
-
+  
 
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
@@ -1814,8 +1713,8 @@ class KhweeteurWin(QMainWindow):
         if (counter>0) and (int(self.settings.value('useNotification'))==2) and not (self.isActiveWindow()):
             if self.search_keyword == None:
                 self.notifications.notify('Khweeteur', str(counter)+' new tweet(s)',count=counter)
-	    if isMaemo:
-             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+        if isMAEMO:
+            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def do_refresh_now(self):
         if isMAEMO:
@@ -1988,7 +1887,7 @@ class Khweeteur(QApplication):
             except:
                 pass
 
-        install_excepthook()
+        install_excepthook(__version__)
 
         if not noDBUS:
             self.dbus_object = KhweeteurDBus()
