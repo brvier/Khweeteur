@@ -811,7 +811,6 @@ class KhweetsModel(QAbstractListModel):
         return False
 
     def serialize(self):
-        KhweeteurRepliesCacheCleaner().start()
         try:
             if not self.keyword:
                 filename = os.path.join(CACHE_PATH, 'tweets.cache')
@@ -1341,7 +1340,8 @@ class KhweeteurWin(QMainWindow):
             win.close()
 
     def justAfterInit(self):
-        pass
+        self.cachecleanerworker =KhweeteurRepliesCacheCleaner()
+        self.cachecleanerworker.start()
 
         if not noDBUS:
             from nwmanager import NetworkManager
