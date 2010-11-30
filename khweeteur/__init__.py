@@ -58,7 +58,7 @@ from notifications import KhweeteurNotification
 
 #import pynotify
 
-__version__ = '0.0.52'
+__version__ = '0.0.53'
 
 #~ class KhweeteurSingleNotify(QObject):
      #~ def __init__(self,title,message,iconpath):
@@ -172,6 +172,17 @@ class KhweeteurActionWorker(QThread):
             import traceback
             traceback.print_exc()
 
+class KhweeteurRepliesCacheCleaner(QThread):
+    ''' Thread class to remove old replies cached'''
+    def __init__(self, parent = None, api=None):
+        QThread.__init__(self, None)
+
+    def run(self):
+        now = datetime.datetime.now()
+        for filepath in glob.glob(REPLY_PATH+'/*'):
+            filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+            if (now - filecdate).days > 30:
+                os.remove(filepath)
 
 class KhweeteurRefreshWorker(QThread):
     ''' Common Abstract class for the refresh thread '''
@@ -203,61 +214,53 @@ class KhweeteurRefreshWorker(QThread):
                     except:
                         pass
 
-    def getRepliesContent(self, api, statuses):
-        items = None
-        for status in statuses:
+    def removeAlreadyInCache(self,statuses):
+        #Load cached statuses
+        try:
+            if not hasattr(self, 'keywords'):
+                filename = os.path.join(CACHE_PATH, 'tweets.cache')
+            else:
+                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keywords.replace('/', '_'))+u'.cache'))).encode('UTF-8')
+            pkl_file = open(filename, 'rb')
+            items = pickle.load(pkl_file)
+            pkl_file.close()
+            statuses_to_remove = []
+            for status in statuses:
+                for item in items:
+                    if item[1]==status.id:
+                        statuses_to_remove.append(status)
+                        break
+            for status_to_remove in statuses_to_remove:
+                statuses_to_remove.remove(status_to_remove)
+        except StandardError,e:
+            print 'error',e                                
+
+    def getOneReplyContent(self,api,tid):
+        rpath = os.path.join(REPLY_PATH,unicode(tid))
+        if os.path.exists(rpath):
+            fhandle = open(rpath,'rb')
+            text = fhandle.read()
+            fhandle.close()
+        else:        
             try:
-                if not hasattr(status, 'in_reply_to_status_id'):
-                    status.in_reply_to_status_text = None
-                elif status.in_reply_to_status_id not in (None,''):
-                    status.in_reply_to_status_text = ''
-                    #Verify in the new statuses
-                    for tw in statuses:
-                        #Verify in id of the new statuses
-                        if status.in_reply_to_status_id == tw.id:
-                            status.in_reply_to_status_text = tw.text
-                            break
-                        #Verify in reply of new statuses
-                        if status.in_reply_to_status_id == tw.in_reply_to_status_id:
-                            if tw.in_reply_to_status_text not in (None,''):
-                                status.in_reply_to_status_text = tw.in_reply_to_status_text
-                                break
-
-                    #Verify in all cache
-                    if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
-                        if not items:
-                            items = []
-                            for path in glob.glob(CACHE_PATH+'/*.cache'):
-                                filename = os.path.join(path)
-                                try:
-                                    pkl_file = open(filename, 'rb')
-                                    items_ = pickle.load(pkl_file)
-                                    pkl_file.close()
-                                    items.extend(items_)
-                                except StandardError,e:
-                                    pass #print 'getRepliesContent:',e
-                        for item in items:
-                            if item[1] == status.in_reply_to_status_id:
-                                status.in_reply_to_status_text = item[3]
-                                break
-                            if item[7] == status.in_reply_to_status_id:
-                                if item[7] not in (None,''):
-                                    status.in_reply_to_status_text = item[7]
-                                    break
-
-                    if (status.in_reply_to_status_text == '') and (status.origin == api.base_url):
-                        try:
-                            status.in_reply_to_status_text = api.GetStatus(status.in_reply_to_status_id).text
-                        except:
-                            pass
-#                            import traceback
-#                            traceback.print_exc()
-                else:
-                    status.in_reply_to_status_text = None
+                text = api.GetStatus(tid).text
+                fhandle = open(rpath,'wb')
+                text = fhandle.write(text)
+                fhandle.close()
             except:
-                pass
-#                import traceback
-#                traceback.print_exc()
+                import traceback
+                traceback.print_exc()
+
+        return text
+        
+    def getRepliesContent(self, api, statuses):
+        for status in statuses:
+            if not hasattr(status, 'in_reply_to_status_id'):
+                status.in_reply_to_status_text = None
+            elif (not status.in_reply_to_status_text) and (status.in_reply_to_status_id):
+                status.in_reply_to_status_text = self.getOneReplyContent(api, status.in_reply_to_status_id)
+            else:
+                status.in_reply_to_status_text = None
 
     def applyOrigin(self, api, statuses):
         for status in statuses:
@@ -271,6 +274,7 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
         #Get Home TimeLine
         try:
             statuses = self.api.GetFriendsTimeline(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetFriendsTimeline'), retweets=True)
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
@@ -284,8 +288,8 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
             print e
         except:
             self.errors.emit(StandardError('A network error occurs'))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -294,6 +298,7 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
         #Get Retweeted by me
         try:
             statuses = self.api.GetRetweetedByMe(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetRetweetedByMe_last_id'))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
@@ -306,8 +311,8 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError('A network error occurs'))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -319,6 +324,7 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
             mystatuses = self.api.GetRetweetsOfMe(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetRetweetsOfMe_last_id'))
             for mystatus in mystatuses:
                 statuses.extend(self.api.GetRetweetsForStatus(mystatus.id))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             statuses.sort()
@@ -341,6 +347,7 @@ class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
         #Get Retweeted by me
         try:
             statuses = self.api.GetReplies(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetReplies'))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
@@ -362,6 +369,7 @@ class KhweeteurDMWorker(KhweeteurRefreshWorker):
     def run(self):
         try:
             statuses = self.api.GetDirectMessages(since_id=self.settings.value('last_id/'+self.api.base_url+'_DirectMessages'))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             statuses.sort()
@@ -382,6 +390,7 @@ class KhweeteurMentionWorker(KhweeteurRefreshWorker):
     def run(self):
         try:
             statuses = self.api.GetMentions(since_id=self.settings.value('last_id/'+self.api.base_url+'_GetMentions'))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
@@ -408,6 +417,7 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
                 statuses = self.api.GetSearch('',geocode=self.geocode)              
             else:
                 statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
+            self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api,statuses)
             self.getRepliesContent(self.api,statuses)
@@ -450,6 +460,11 @@ class KhweeteurWorker(QThread):
                 os.mkdir(AVATAR_CACHE_FOLDER)
         except:
             pass
+        try:
+            if not os.path.isdir(REPLY_PATH):
+                os.mkdir(REPLY_PATH)
+        except:
+            pass            
 
     def refresh_search(self):
         self.error = None
@@ -495,6 +510,7 @@ class KhweeteurWorker(QThread):
                 
     def errors(self,error):
         self.error = error
+        print error       
 
     def newStatuses(self,list):
         self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), list)
@@ -795,6 +811,7 @@ class KhweetsModel(QAbstractListModel):
         return False
 
     def serialize(self):
+        KhweeteurRepliesCacheCleaner().start()
         try:
             if not self.keyword:
                 filename = os.path.join(CACHE_PATH, 'tweets.cache')
@@ -1965,7 +1982,9 @@ class Khweeteur(QApplication):
             try:
                 os.remove(os.path.join(CACHE_PATH, 'crash_report'))
             except:
-                pass
+                import traceback
+                traceback.print_exc()
+
 
     def run(self):
         self.win = KhweeteurWin(self)
