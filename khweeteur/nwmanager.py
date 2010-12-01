@@ -9,7 +9,7 @@ try:
     isAVAILABLE = True
 except:
     isAVAILABLE = False
-        
+
 import dbus
 import dbus.glib
 import gobject
@@ -20,13 +20,13 @@ from PyQt4.QtCore import QObject
     most code taken from PyMaemo conic examples http://pymaemo.garage.maemo.org/conic.html """
 
 class NetworkManager(QObject):
-    
+
     def __init__(self, callback_if_connected=None):
         QObject.__init__(self)
         self.device_has_networking = not isAVAILABLE
         self.connection = None
         self.bearer = None
-        
+
         self.callback_if_connected = callback_if_connected
         self.tmp_callback_if_connected = None
 
@@ -37,17 +37,17 @@ class NetworkManager(QObject):
         self.gmainloop = gobject.MainLoop()
         self.mainloop_context = self.gmainloop.get_context()
         self.bus = dbus.SystemBus(private=True)
-        
+
         gobject.threads_init()
-        self.start_monitoring() 
+        self.start_monitoring()
         self.startTimer(250)
-        
+
     def timer_event(self, q_timer_event):
         self.iteration()
-                
+
     def iteration(self):
         self.mainloop_context.iteration(True)
-        
+
     def request_connection(self):
         if not self.device_has_networking:
             self.connection.request_connection(conic.CONNECT_FLAG_NONE)
@@ -64,7 +64,7 @@ class NetworkManager(QObject):
         self.connection.connect("connection-event", self.connection_callback, 0xAA55)
         self.connection.set_property("automatic-connection-events", True)
         return False
-        
+
     def stop_monitoring(self):
         self.connection.set_property("automatic-connection-events", False)
 
@@ -73,8 +73,8 @@ class NetworkManager(QObject):
         status = event.get_status()
         error = event.get_error()
         iap_id = event.get_iap_id()
-        bearer = event.get_bearer_type()    
-        
+        bearer = event.get_bearer_type()
+
         if status == conic.STATUS_CONNECTED:
             if self.device_has_networking:
                 return
@@ -97,7 +97,7 @@ class NetworkManager(QObject):
             return
 #        if message != None:
 #            self.logger.network(message)
-        
+
         self.bearer = bearer
         if (self.device_has_networking):
             if self.tmp_callback_if_connected:

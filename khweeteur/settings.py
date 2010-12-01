@@ -35,8 +35,8 @@ try:
 except:
     isMAEMO = False
 
-import oauth2 as oauth    
-    
+import oauth2 as oauth
+
 class KhweeteurPref(QMainWindow):
     DEFAULTTHEME = 'Default'
     WHITETHEME = 'White'
@@ -55,7 +55,7 @@ class KhweeteurPref(QMainWindow):
                 if int(self.settings.value('useAutoRotation'))==2:
                     self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             except:
-                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True) 
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
 
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
@@ -112,7 +112,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useAutoRotation', self.useAutoRotation_value.checkState())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
-        self.settings.setValue('tweetHistory', self.history_value.value())        
+        self.settings.setValue('tweetHistory', self.history_value.value())
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
@@ -367,7 +367,7 @@ class KhweeteurPref(QMainWindow):
         self._main_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view (History) :')),4,0)
         self.history_value = QSpinBox()
         self._main_layout.addWidget(self.history_value,4,1)
-        
+
         self._main_layout.addWidget(QLabel(self.tr('Display preferences :')),5,0)
         self.displayUser_value = QCheckBox(self.tr('Display username'))
         self._main_layout.addWidget(self.displayUser_value,5,1)

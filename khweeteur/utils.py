@@ -6,7 +6,6 @@
 
 import pickle
 import os.path
-import shutil
 import sys
 import datetime
 
@@ -34,10 +33,10 @@ ORIGINROLE = 24
 def write_report(error):
     '''Function to write error to a report file'''
     try:
-        shutil.makedirs(CACHE_PATH)
+        os.makedirs(CACHE_PATH)
     except:
         pass
-        
+
     filename = os.path.join(CACHE_PATH, 'crash_report')
     output = open(filename, 'wb')
     pickle.dump(error, output)
@@ -54,7 +53,7 @@ def write_log(log):
 def install_excepthook(version):
     '''Install an excepthook called at each unexcepted error'''
     __version__ = version
-    
+
     def my_excepthook(exctype, value, tb):
         '''Method which replace the native excepthook'''
         #traceback give us all the errors information message like the method, file line ... everything like

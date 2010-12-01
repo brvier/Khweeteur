@@ -39,7 +39,7 @@ import gzip
 import StringIO
 
 import oauth2 as oauth
-    
+
 import socket
 socket.setdefaulttimeout(120)
 
@@ -388,11 +388,11 @@ class Status(object):
 
   def __ge__(self,other):
     return other and self.created_at >= other.created_at
-    
+
   def __ne__(self, other):
     return not self.__eq__(other)
 
-    
+
   def __eq__(self, other):
     try:
       return other and self.id == other.id
@@ -435,7 +435,7 @@ class Status(object):
     if self.text:
       data['text'] = self.text
     if self.location:
-      data['location'] = self.location  
+      data['location'] = self.location
     if self.user:
       data['user'] = self.user.AsDict()
     if self.in_reply_to_screen_name:
@@ -798,7 +798,7 @@ class User(object):
 
   def GetFriendsCount(self):
     '''Get the friend count for this user.
-    
+
     Returns:
       The number of users this user has befriended.
     '''
@@ -817,7 +817,7 @@ class User(object):
 
   def GetFollowersCount(self):
     '''Get the follower count for this user.
-    
+
     Returns:
       The number of users following this user.
     '''
@@ -836,7 +836,7 @@ class User(object):
 
   def GetStatusesCount(self):
     '''Get the number of status updates for this user.
-    
+
     Returns:
       The number of status updates for this user.
     '''
@@ -855,7 +855,7 @@ class User(object):
 
   def GetFavouritesCount(self):
     '''Get the number of favourites for this user.
-    
+
     Returns:
       The number of favourites for this user.
     '''
@@ -1204,7 +1204,7 @@ class DirectMessage(object):
     if self.created_at < other.created_at:
         return -1
     return 1
-                 
+
   def __ne__(self, other):
     return not self.__eq__(other)
 
@@ -1412,7 +1412,7 @@ class Api(object):
     else:
       self.base_url = base_url
 
-    if username is not None and (access_token_key is None or 
+    if username is not None and (access_token_key is None or
                                  access_token_secret is None):
       print >> sys.stderr, 'Twitter now requires an oAuth Access Token for API calls.'
       print >> sys.stderr, 'If your using this library from a command line utility, please'
@@ -1576,7 +1576,7 @@ class Api(object):
         url  = 'http://search.twitter.com/search.json'
     else:
         url  = '%s/search.json' % self.base_url
-   
+
     json = self._FetchUrl(url, post_data=parameters)
     data = simplejson.loads(json)
 
@@ -1613,7 +1613,7 @@ class Api(object):
         Specifies the ID or screen name of the user for whom to return
         the friends_timeline.  If unspecified, the username and password
         must be set in the twitter.Api instance.  [Optional]
-      count: 
+      count:
         Specifies the number of statuses to retrieve. May not be
         greater than 200. [Optional]
       since:
@@ -1752,7 +1752,7 @@ class Api(object):
       A sequence of Status instances, one for each retweet
     '''
     if id == None:
-      raise TwitterError("A status id must be specified.")        
+      raise TwitterError("A status id must be specified.")
     elif not self._oauth_consumer:
       raise TwitterError("User must be specified if API is not authenticated.")
 
@@ -1762,7 +1762,7 @@ class Api(object):
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return [Status.NewFromJsonDict(x) for x in data]
-    
+
   def GetStatus(self, id):
     '''Returns a single status message.
 
@@ -1833,7 +1833,7 @@ class Api(object):
 
     url = '%s/statuses/update.json' % self.base_url
 
-    #тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест 
+    #тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест
     if len(status.decode('utf-8')) > CHARACTER_LIMIT:
       raise TwitterError("Text must be less than or equal to %d characters. "
                          "Consider using PostUpdates." % CHARACTER_LIMIT)
@@ -1875,20 +1875,20 @@ class Api(object):
     Returns:
       A of list twitter.Status instance representing the messages posted.
     '''
-    results = list()    
+    results = list()
     line_length = CHARACTER_LIMIT
-    lines = textwrap.wrap(status, line_length)    
+    lines = textwrap.wrap(status, line_length)
     if len(lines) > 9:
         line_length = CHARACTER_LIMIT - 6
-        lines = textwrap.wrap(status, line_length)                
+        lines = textwrap.wrap(status, line_length)
     elif len(lines) > 1:
         line_length = CHARACTER_LIMIT - 4
-        lines = textwrap.wrap(status, line_length)        
+        lines = textwrap.wrap(status, line_length)
     counter = 1
     tot = len(lines)
     print kwargs
     if len(lines)==1:
-          results.append(self.PostUpdate(lines[0], **kwargs))        
+          results.append(self.PostUpdate(lines[0], **kwargs))
     else:
         for line in lines:
           #print 'line',type(unicode(line,'utf-8').encode('utf-8')),line
@@ -1901,7 +1901,7 @@ class Api(object):
           results.append(r)
           counter = counter + 1
     return results
-    
+
   def PostUpdates(self, status, continuation=None, **kwargs):
     '''Post one or more twitter status messages from the authenticated user.
 
@@ -1940,7 +1940,7 @@ class Api(object):
 
     Args:
       id: The numerical ID of the tweet you are retweeting
-      
+
     Returns:
       A twitter.Status instance representing the retweet posted
     '''
@@ -1951,7 +1951,7 @@ class Api(object):
             raise TwitterError("'id' must be a positive number")
     except ValueError:
         raise TwitterError("'id' must be an integer")
-        
+
     data = {'id': tweet_id}
     url = '%s/statuses/retweet/%s.json' % (self.base_url,tweet_id)
 #    url = 'http://api.twitter.com/1/statuses/retweet/%s.json' % tweet_id
@@ -1960,13 +1960,13 @@ class Api(object):
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
-  def GetReplies(self, since=None, since_id=None, page=None): 
+  def GetReplies(self, since=None, since_id=None, page=None):
     '''Get a sequence of status messages representing the 20 most recent
     replies (status updates prefixed with @username) to the authenticating
     user.
 
     Args:
-      page: 
+      page:
       since:
         Narrows the returned results to just those statuses created
         after the specified HTTP-formatted date. [optional]
@@ -2135,7 +2135,7 @@ class Api(object):
     if since_id:
       parameters['since_id'] = since_id
     if page:
-      parameters['page'] = page 
+      parameters['page'] = page
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
@@ -2253,12 +2253,12 @@ class Api(object):
     '''Return a list of Status objects representing favorited tweets.
     By default, returns the (up to) 20 most recent tweets for the
     authenticated user.
-    
+
     Args:
       user:
         The username or id of the user whose favorites you are fetching.
         If not specified, defaults to the authenticated user. [optional]
-    
+
       page:
         Retrieves the 20 next most recent favorite statuses. [optional]
     '''
@@ -2287,19 +2287,19 @@ class Api(object):
                   page=None):
     '''Returns the 20 most recent mentions (status containing @username)
     for the authenticating user.
-    
+
     Args:
       since_id:
         Returns only public statuses with an ID greater than
         (that is, more recent than) the specified ID. [optional]
-    
+
       max_id:
         Returns only statuses with an ID less than
         (that is, older than) the specified ID.  [optional]
-    
+
       page:
         Retrieves the 20 next most recent replies. [optional]
-    
+
     Returns:
       A sequence of twitter.Status instances, one for each mention of the user.
       see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
@@ -2332,19 +2332,19 @@ class Api(object):
                   page=None):
     '''Returns the 20 most recent retweet made by user (status containing @username)
     for the authenticating user.
-    
+
     Args:
       since_id:
         Returns only public statuses with an ID greater than
         (that is, more recent than) the specified ID. [optional]
-    
+
       max_id:
         Returns only statuses with an ID less than
         (that is, older than) the specified ID.  [optional]
-    
+
       page:
         Retrieves the 20 next most recent replies. [optional]
-    
+
     Returns:
       A sequence of twitter.Status instances, one for each retweet of the user.
       see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
@@ -2377,19 +2377,19 @@ class Api(object):
                   page=None):
     '''Returns the 20 most recent retweet of tweet made by the user (status containing @username)
     for the authenticating user.
-    
+
     Args:
       since_id:
         Returns only public statuses with an ID greater than
         (that is, more recent than) the specified ID. [optional]
-    
+
       max_id:
         Returns only statuses with an ID less than
         (that is, older than) the specified ID.  [optional]
-    
+
       page:
         Retrieves the 20 next most recent replies. [optional]
-    
+
     Returns:
       A sequence of twitter.Status instances, one for each retweet of the user.
       see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
@@ -2409,7 +2409,7 @@ class Api(object):
     if page:
       parameters['page'] = page
     parameters['trim_user'] = 'false'
-    
+
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
 
@@ -2423,19 +2423,19 @@ class Api(object):
                   page=None):
     '''Returns the 20 most recent retweet to the user (status containing @username)
     for the authenticating user.
-    
+
     Args:
       since_id:
         Returns only public statuses with an ID greater than
         (that is, more recent than) the specified ID. [optional]
-    
+
       max_id:
         Returns only statuses with an ID less than
         (that is, older than) the specified ID.  [optional]
-    
+
       page:
         Retrieves the 20 next most recent replies. [optional]
-    
+
     Returns:
       A sequence of twitter.Status instances, one for each retweet of the user.
       see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
@@ -2461,7 +2461,7 @@ class Api(object):
     self._CheckForTwitterError(data)
 
     return [Status.NewFromJsonDict(x) for x in data]
-    
+
   def GetUserByEmail(self, email):
     '''Returns a single user by email address.
 
@@ -2479,7 +2479,7 @@ class Api(object):
   def VerifyCredentials(self):
     '''Returns a twitter.User instance if the authenticating user is valid.
 
-    Returns: 
+    Returns:
       A twitter.User instance representing that user if the
       credentials are valid, None otherwise.
     '''
@@ -2566,7 +2566,7 @@ class Api(object):
 
   def GetRateLimitStatus(self):
     '''Fetch the rate limit status for the currently authorized user.
-    
+
     Returns:
       A dictionary containing the time the limit will reset (reset_time),
       the number of remaining hits allowed before the reset (remaining_hits),
@@ -2585,7 +2585,7 @@ class Api(object):
     '''Determines the minimum number of seconds that a program must wait before
     hitting the server again without exceeding the rate_limit imposed for the
     currently authenticated user.
-    
+
     Returns:
       The minimum second interval that a program must use so as to not exceed
       the rate_limit imposed for the user.
@@ -2899,14 +2899,14 @@ class _FileCache(object):
         hashed_key = md5(key).hexdigest()
     except TypeError:
         hashed_key = md5.new(key).hexdigest()
-        
+
     return os.path.join(self._root_directory,
                         self._GetPrefix(hashed_key),
                         hashed_key)
 
   def _GetPrefix(self,hashed_key):
     return os.path.sep.join(hashed_key[0:_FileCache.DEPTH])
-    
+
 if __name__ == '__main__':
     print 'test'
     s=(u'''тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест  тест ''').encode('utf-8')

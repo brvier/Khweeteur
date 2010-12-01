@@ -38,14 +38,14 @@ class KhweeteurNotification(QObject):
         global noDBUS
         QObject.__init__(self)
         if not noDBUS:
-	    try:
-		    self.m_bus = dbus.SystemBus()
-		    self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
-							  '/org/freedesktop/Notifications')
-		    self.iface = dbus.Interface(self.m_notify, 'org.freedesktop.Notifications')
-		    self.m_id = 0
-	    except:            
-             noDBUS = True 
+            try:
+                self.m_bus = dbus.SystemBus()
+                self.m_notify = self.m_bus.get_object('org.freedesktop.Notifications',
+                                  '/org/freedesktop/Notifications')
+                self.iface = dbus.Interface(self.m_notify, 'org.freedesktop.Notifications')
+                self.m_id = 0
+            except:
+                 noDBUS = True
 
     def warn(self, message):
         '''Display an Hildon banner'''

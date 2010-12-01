@@ -11,19 +11,19 @@ sip.setapi('QVariant', 2)
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-#from PySide.QtCore import *
-#from PySide.QtGui import *
+#from PySide.QtCore import * #PySide
+#from PySide.QtGui import * #PySide
 
 try:
     from PyQt4.QtMobility.QtLocation import *
-#    from PySide.QtMobility.QtLocation import *
+#    from PySide.QtMobility.QtLocation import * #PySide
     noQtLocation = False
 except:
     noQtLocation = True
 
 try:
     from PyQt4.QtMaemo5 import *
-#    from PySide.QtMaemo5 import *
+#    from PySide.QtMaemo5 import * #PySide
     isMAEMO = True
 except:
     isMAEMO = False
@@ -58,16 +58,16 @@ from notifications import KhweeteurNotification
 
 #import pynotify
 
-__version__ = '0.0.60'
+__version__ = '0.0.61'
 
 #~ class KhweeteurSingleNotify(QObject):
      #~ def __init__(self,title,message,iconpath):
         #~ QObject.__init__(self)
-        
+
         #~ n = pynotify.Notification(title, message, "khweeteur")
         #~ n.set_icon_from_pixbuf(icon)
-     
-  
+
+
 
 class KhweeteurActionWorker(QThread):
     '''ActionWorker : Post tweet in background'''
@@ -116,10 +116,6 @@ class KhweeteurActionWorker(QThread):
             else:
                 latitude,longitude = (None,None)
 
-#            print self.tb_text_replyid,self.tb_text_replytext,self.tb_text_replysource
-#            print type(self.tb_text_replyid)
-#            return #DEBUG
-                
             if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("twitter_access_token_key")!=None:
                     api = twitter.Api(
@@ -128,10 +124,10 @@ class KhweeteurActionWorker(QThread):
                                       access_token_secret=str(self.settings.value("twitter_access_token_secret")))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if int(self.settings.value('useSerialization'))==2:
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                        api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                        api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Twitter')
 
@@ -143,25 +139,10 @@ class KhweeteurActionWorker(QThread):
                                       access_token_secret=str(self.settings.value("identica_access_token_secret")))
                     api.SetUserAgent('Khweeteur/%s' % (__version__))
                     if int(self.settings.value('useSerialization'))==2:
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                        api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
-                                                           latitude=latitude,longitude=longitude)
-                    self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
-
-            if ('http://khertan.status.net' == self.tb_text_replysource) or (self.tb_text_replyid == 0):
-                if self.settings.value("statusnet_access_token_key")!=None:
-                    api = twitter.Api(base_url='http://khertan.status.net/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
-                                      password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
-                                      access_token_key=str(self.settings.value("statusnet_access_token_key")),
-                                      access_token_secret=str(self.settings.value("statutsnet_access_token_secret")))
-                    api.SetUserAgent('Khweeteur/%s' % (__version__))
-                    if int(self.settings.value('useSerialization'))==2:
-                        status = api.PostSerializedUpdates(status_text, in_reply_to_status_id=self.tb_text_replyid,
-                                                           latitude=latitude,longitude=longitude)
-                    else:
-                        status = api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
+                        api.PostUpdate(status_text, in_reply_to_status_id=self.tb_text_replyid,
                                                            latitude=latitude,longitude=longitude)
                     self.emit(SIGNAL("info(PyQt_PyObject)"), 'Tweet sent to Identica')
 
@@ -172,7 +153,7 @@ class KhweeteurActionWorker(QThread):
             print e.message
         except:
             self.emit(SIGNAL("warn(PyQt_PyObject)"), 'A network error occur')
-            print 'A network error occur'            
+            print 'A network error occur'
             import traceback
             traceback.print_exc()
 
@@ -188,7 +169,7 @@ class KhweeteurCacheCleaner(QThread):
             for filepath in glob.glob(os.path.join(CACHE_PATH,os.path.normcase(unicode(self.keyword.replace('/', '_'))).encode('UTF-8'))+'/*'): #FIXME
                 filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
                 if (now - filecdate).days > 45:
-                    os.remove(filepath)            
+                    os.remove(filepath)
         else:
             for filepath in glob.glob(REPLY_PATH+'/*'):
                 filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
@@ -198,15 +179,15 @@ class KhweeteurCacheCleaner(QThread):
                 filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
                 if (now - filecdate).days > 45:
                     os.remove(filepath)
-                
+
 class KhweeteurRefreshWorker(QThread):
     ''' Common Abstract class for the refresh thread '''
 
     #Signal
     errors = pyqtSignal(Exception)
-#    errors = Signal(Exception)
+#    errors = Signal(Exception)  #PySide
     newStatuses = pyqtSignal(list)
-#    newStatuses = Signal(list)
+#    newStatuses = Signal(list)  #PySide
 
     def __init__(self, parent = None, api=None):
         QThread.__init__(self, None)
@@ -221,7 +202,7 @@ class KhweeteurRefreshWorker(QThread):
             folder_path = TIMELINE_PATH
         else:
             folder_path = os.path.join(CACHE_PATH,os.path.normcase(unicode(self.keywords.replace('/', '_'))).encode('UTF-8'))
-            
+
         if not os.path.isdir(folder_path):
             try:
                 os.makedirs(folder_path)
@@ -229,11 +210,11 @@ class KhweeteurRefreshWorker(QThread):
                 print 'getCacheFolder:',e
 
         return folder_path
-        
+
     def serialize(self,statuses):
 
         folder_path = self.getCacheFolder()
-                        
+
         for status in statuses:
             pkl_file = open(os.path.join(folder_path,str(status.id)), 'wb')
             pickle.dump(status, pkl_file,pickle.HIGHEST_PROTOCOL)
@@ -263,7 +244,7 @@ class KhweeteurRefreshWorker(QThread):
                     #print 'Remove status already in cache:',status.text
 
         except StandardError,e:
-            print e                                
+            print e
 
     def getOneReplyContent(self,api,tid):
         rpath = os.path.join(self.getCacheFolder(),unicode(tid))
@@ -281,7 +262,7 @@ class KhweeteurRefreshWorker(QThread):
                 fhandle.close()
                 return status.text
             raise StandardError("Need to get it")
-        except:        
+        except:
             try:
                 status = api.GetStatus(tid)
                 pkl_file = open(os.path.join(REPLY_PATH,unicode(status.id)), 'wb')
@@ -293,10 +274,10 @@ class KhweeteurRefreshWorker(QThread):
                 traceback.print_exc()
 
         return None
-        
+
     def getRepliesContent(self, api, statuses):
         for status in statuses:
-            if not hasattr(status, 'in_reply_to_status_id'):                
+            if not hasattr(status, 'in_reply_to_status_id'):
                 status.in_reply_to_status_text = None
             elif (not status.in_reply_to_status_text) and (status.in_reply_to_status_id):
                 status.in_reply_to_status_text = self.getOneReplyContent(api, status.in_reply_to_status_id)
@@ -461,7 +442,7 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def run(self):
         try:
             if self.geocode:
-                statuses = self.api.GetSearch('',geocode=self.geocode)              
+                statuses = self.api.GetSearch('',geocode=self.geocode)
             else:
                 statuses = self.api.GetSearch(unicode(self.keywords).encode('UTF-8'), since_id=self.settings.value(self.keywords+'/last_id/'+self.api.base_url))
             self.removeAlreadyInCache(statuses)
@@ -512,7 +493,7 @@ class KhweeteurWorker(QThread):
             if not os.path.isdir(REPLY_PATH):
                 os.mkdir(REPLY_PATH)
         except:
-            pass            
+            pass
 
     def refresh_search(self):
         self.error = None
@@ -555,10 +536,10 @@ class KhweeteurWorker(QThread):
                 self.emit(SIGNAL("info(PyQt_PyObject)"),self.error.message) #fix bug#404
             else:
                 self.emit(SIGNAL("info(PyQt_PyObject)"), self.tr('A network error occur'))
-                
+
     def errors(self,error):
         self.error = error
-        print 'errors : ',error       
+        print 'errors : ',error
 
     def newStatuses(self,list):
         self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), list)
@@ -598,13 +579,6 @@ class KhweeteurWorker(QThread):
         refresh_mention_worker.newStatuses.connect(self.newStatuses)
         refresh_mention_worker.start()
 
-        # while (self.refresh_timeline_worker.isRunning()==True) or \
-              # (self.refresh_retweetedbyme_worker.isRunning()==True) or \
-              # (self.refresh_replies_worker.isRunning()==True) or \
-              # (self.refresh_dm_worker.isRunning()==True) or \
-              # (self.refresh_mention_worker.isRunning()==True):
-            # self.sleep(2)
-
         if 'twitter' in api.base_url:
             return [refresh_timeline_worker,
                     refresh_retweetedbyme_worker,
@@ -630,8 +604,8 @@ class KhweeteurWorker(QThread):
                     self.twitter_api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
                             password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
                             access_token_key=str(self.settings.value("twitter_access_token_key")), \
-                            access_token_secret=str(self.settings.value("twitter_access_token_secret")))               
-                    self.twitter_api.SetUserAgent('Khweeteur/%s' % (__version__))                    
+                            access_token_secret=str(self.settings.value("twitter_access_token_secret")))
+                    self.twitter_api.SetUserAgent('Khweeteur/%s' % (__version__))
                 threads.extend(self.refresh_unified(self.twitter_api))
 
         except twitter.TwitterError,e:
@@ -658,25 +632,9 @@ class KhweeteurWorker(QThread):
         except:
             self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
 
-        # try:
-            # if (self.settings.value("statusnet_access_token_key")!=None):
-                # api = twitter.Api(base_url='http://khertan.status.net/api/', \
-                        # username=KHWEETEUR_STATUSNET_CONSUMER_KEY, \
-                        # password=KHWEETEUR_STATUSNET_CONSUMER_SECRET, \
-                        # access_token_key=str(self.settings.value("statusnet_access_token_key")), \
-                        # access_token_secret=str(self.settings.value("statusnet_access_token_secret")))
-                # api.SetUserAgent('Khweeteur/%s' % (__version__))
-                # threads.extend(self.refresh_unified(api))
-        # except twitter.TwitterError,e:
-            # print 'Error during status.net refresh: ',e.message
-            # self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        # except:
-            # self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
 
         while any(thread.isRunning()==True for thread in threads):
-#            for thread in threads:
-#                print type(thread)
-            self.sleep(2)            
+            self.sleep(2)
 
         del threads
 
@@ -690,24 +648,21 @@ class KhweeteurWorker(QThread):
 class KhweetsModel(QAbstractListModel):
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
 
-    def __init__(self, mlist=[],keyword=None):
+    def __init__(self,keyword=None):
         QAbstractListModel.__init__(self)
         # Cache the passed data list as a class member.
         self._items = [] #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text
         self._uids = []
-        
+
         self._avatars = {}
         self._new_counter = 0
         self.now = time.time()
         self.khweets_limit = 50
         self.keyword = keyword
 
-    # def flags(self, index):
-        # return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEditable | Qt.ItemIsDragEnabled
-
     def setLimit(self,limit):
         self.khweets_limit = limit
-        
+
     def GetRelativeCreatedAt(self,timestamp):
         '''Get a human redable string representing the posting time
 
@@ -746,7 +701,7 @@ class KhweetsModel(QAbstractListModel):
             if index>self.khweets_limit:
                 break
             try:
-                #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text 
+                #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text
                 self._items[index] = (item[0],
                                         item[1],
                                         item[2],
@@ -757,7 +712,7 @@ class KhweetsModel(QAbstractListModel):
                                         item[7],
                                         item[8],
                                         item[9],)
-                                        
+
             except StandardError,e:
                 print e
 
@@ -771,30 +726,29 @@ class KhweetsModel(QAbstractListModel):
                     pkl_file = open(os.path.join(TIMELINE_PATH,str(uid)), 'rb')
                     status = pickle.load(pkl_file)
                     pkl_file.close()
-                    
+
                     self._appendStatusInList(status)
 
                     keys.append(status.id)
                 except IOError,e:
                     print e
-                
-            
+
+
         except StandardError, e:
             print "We shouldn't got this error here :",e
             import traceback
             traceback.print_exc()
-            
+
         if len(keys)>0:
             self._items.sort()
             self._items.reverse()
             self._items = self._items[:self.khweets_limit]
             self._new_counter += len(keys)
-                    
+
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
             #self.serialize()
 
     def destroyStatus(self, index):
-        return #DEBUG
         self._items.pop(index.row())
         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
 
@@ -809,27 +763,13 @@ class KhweetsModel(QAbstractListModel):
     def setData(self, index,variant,role):
         return True
 
-    def serialize(self):
-        return #DEBUG
-        try:
-            if not self.keyword:
-                filename = os.path.join(CACHE_PATH, 'tweets.cache')
-            else:
-                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
-            output = open(filename, 'wb')            
-            pickle.dump(self._items, output,pickle.HIGHEST_PROTOCOL)
-            output.close()
-
-        except StandardError,e:
-            KhweeteurNotification().info(self.tr('An error occurs while saving cache : ')+str(e))
-
     def _appendStatusInList(self,status):
         if status.id in self._uids:
             return
-            
-        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text          
+
+        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text
         status.rel_created_at = self.GetRelativeCreatedAt(status.created_at_in_seconds)
-            
+
         if hasattr(status,'user'):
             screen_name = status.user.screen_name
             profile_image = os.path.basename(status.user.profile_image_url.replace('/', '_'))
@@ -843,17 +783,17 @@ class KhweetsModel(QAbstractListModel):
         else:
             screen_name = status.sender_screen_name
             profile_image = None
-            
+
         if not hasattr(status,'in_reply_to_status_id'):
             status.in_reply_to_status_id = None
-            
+
         if not hasattr(status,'in_reply_to_screen_name'):
             status.in_reply_to_screen_name = None
-            
+
         if not hasattr(status,'in_reply_to_status_text'):
-            status.in_reply_to_status_text = None        
-        
-        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text, Origin                   
+            status.in_reply_to_status_text = None
+
+        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text, Origin
         self._items.append((    status.created_at_in_seconds, #0
                             status.id, #1
                             screen_name,  #2
@@ -866,7 +806,7 @@ class KhweetsModel(QAbstractListModel):
                             status.origin))  #9
 
         self._uids.append(status.id)
-                                    
+
     def _createCacheList(self,cach_path,uids):
         for uid in uids:
             uid = os.path.basename(uid)
@@ -874,24 +814,23 @@ class KhweetsModel(QAbstractListModel):
                 pkl_file = open(os.path.join(cach_path,uid), 'rb')
                 status = pickle.load(pkl_file)
                 pkl_file.close()
-                              
+
                 self._appendStatusInList(status)
 
             except StandardError,e:
                 KhweeteurNotification().info(self.tr('An error occurs while loading tweet : ')+str(uid))
                 os.remove(os.path.join(cach_path,uid))
-                
+
     def unSerialize(self):
         try:
             if not self.keyword:
-#                filename = os.path.join(CACHE_PATH, 'tweets.cache')
                 cach_path = TIMELINE_PATH
                 uids = glob.glob(cach_path + '/*')
                 self.cachecleanerworker =KhweeteurCacheCleaner()
                 self.cachecleanerworker.start()
             else:
                 self.cachecleanerworker =KhweeteurCacheCleaner(keyword=self.keyword)
-                self.cachecleanerworker.start()            
+                self.cachecleanerworker.start()
                 cach_path = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_')))))
                 uids = glob.glob(cach_path+u'/*')
 
@@ -901,7 +840,7 @@ class KhweetsModel(QAbstractListModel):
                 if not self.keyword:
                     self.settings.remove('last_id')
                 else:
-                    self.settings.remove(self.keyword+'/last_id')                
+                    self.settings.remove(self.keyword+'/last_id')
             else:
                 self._createCacheList(cach_path,uids)
                 self._items.sort()
@@ -947,16 +886,16 @@ class KhweetsModel(QAbstractListModel):
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
 
     def data(self, index, role = Qt.DisplayRole):
-        #0 -> Created_at, 
-        #1 -> Status.id, 
-        #2 -> ScreenName, 
+        #0 -> Created_at,
+        #1 -> Status.id,
+        #2 -> ScreenName,
         #3 -> Text,
         #4 -> Rel_Created_at,
-        #5 -> Profile Image,        
+        #5 -> Profile Image,
         #6 -> Reply_ID,
         #7 -> Reply_ScreenName,
         #8 -> Reply_Text
-        #9 -> Origine 
+        #9 -> Origine
         if role == Qt.DisplayRole:
             return self._items[index.row()][3]
         elif role == SCREENNAMEROLE:
@@ -973,7 +912,7 @@ class KhweetsModel(QAbstractListModel):
             return self._items[index.row()][9]
         elif role == Qt.ToolTipRole:
             return self._items[index.row()][4]
-        elif role == Qt.DecorationRole:            
+        elif role == Qt.DecorationRole:
             try:
                 return self._avatars[self._items[index.row()][5]]
             except KeyError,keye:
@@ -1004,8 +943,8 @@ class WhiteCustomDelegate(QStyledItemDelegate):
 class DefaultCustomDelegate(QStyledItemDelegate):
     '''Delegate to do custom draw of the items'''
     memoized_size = {}
-    memoized_width = {}    
-    
+    memoized_width = {}
+
     def __init__(self, parent):
         '''Initialization'''
         QStyledItemDelegate.__init__(self, parent)
@@ -1031,7 +970,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.miniFont = None
 
     def sizeHint (self, option, index):
-        '''Custom size calculation of our items'''         
+        '''Custom size calculation of our items'''
         uid = str(index.data(role=IDROLE)) + 'x' + str(option.rect.width())
         try:
             return(self.memoized_size[uid])
@@ -1046,7 +985,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
             if self.show_replyto:
                 reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
-                reply_text = index.data(role=REPLYTEXTROLE)            
+                reply_text = index.data(role=REPLYTEXTROLE)
                 if (reply_name) and (reply_text):
                     #One time is enought sizeHint need to be fast
 #                    print 'index.data(REPLYTOSCREENNAMEROLE):',index.data(REPLYTOSCREENNAMEROLE)
@@ -1066,8 +1005,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                             self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
                         self.minifm = QFontMetrics(self.miniFont)
                     height += self.minifm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply).height()
-                
-                
+
+
             if height < 70:
                 height = 70
 
@@ -1080,11 +1019,11 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         #FIXME
 #        print option.rect.getCoords()
 
-        #Ugly hack ?        
+        #Ugly hack ?
         x1,y1,x2,y2 = option.rect.getCoords()
         if (y1<0) and (y2<0):
             return
-                    
+
         if not self.fm:
             self.fm = QFontMetrics(option.font)
 
@@ -1148,8 +1087,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
                 new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,new_rect.height()+5,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply)
-                
-          
+
+
         # Draw line
         painter.setPen(self.separator_color)
 #        x1,y1,x2,y2 = option.rect.getCoords()
@@ -1263,7 +1202,7 @@ class KhweeteurAbout(QMainWindow):
                 if int(self.settings.value('useAutoRotation'))==2:
                     self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             except:
-                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True) 
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
 
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle(self.tr("Khweeteur About"))
@@ -1402,7 +1341,7 @@ class KhweeteurWin(QMainWindow):
                     self.parent.positionStart()
         except:
             pass
-            
+
         if isMAEMO:
             try: #Pref not set yet
                 if int(self.settings.value('useAutoRotation'))==2:
@@ -1440,11 +1379,11 @@ class KhweeteurWin(QMainWindow):
                         self.settings.setValue("useGPS",2)
                         self.parent.positionStart()
                     else:
-                         self.close()
-                         return
-                         
+                        self.close()
+                        return
+
         QTimer.singleShot(200, self.justAfterInit)
-                
+
     def closeEvent(self,widget,*args):
         for win in self.search_win:
             win.close()
@@ -1492,10 +1431,10 @@ class KhweeteurWin(QMainWindow):
 #        self.connect(self.tweetsView, SIGNAL('Clicked(const QModelIndex&)'), self.tweet_do_ask_action)
 
         self.connect(self.tweetsView, SIGNAL('doubleClicked(const QModelIndex&)'), self.tweet_do_ask_action)
-        self.tweetsModel = KhweetsModel([], self.search_keyword)
+        self.tweetsModel = KhweetsModel(self.search_keyword)
         try: #If pref didn't exist
             self.tweetsModel.setLimit(int(self.settings.value("tweetHistory")))
-        except: 
+        except:
             self.tweetsModel.setLimit(50)
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
@@ -1551,7 +1490,7 @@ class KhweeteurWin(QMainWindow):
         self.addAction(self.tb_scrollbottom)
 
         QTimer.singleShot(200, self.timedUnserialize)
-        
+
     def scrolltop(self):
         self.tweetsView.scrollToTop()
 
@@ -1581,7 +1520,7 @@ class KhweeteurWin(QMainWindow):
         if isMAEMO:
             s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing() + 1) - 21)
         else:
-            s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing() + 1) - 10)            
+            s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing() + 1) - 10)
         fr = local_self.frameRect()
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(370,s.height() + (fr.height() - cr.height() - 1)))
@@ -1596,7 +1535,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text.setPlainText('@'+user+' ')
             self.tb_text_replysource = self.tweetsModel.data(index,role=ORIGINROLE)
 #            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
-            
+
     def open_url(self):
         import re
         self.tweetActionDialog.accept()
@@ -1808,7 +1747,7 @@ class KhweeteurWin(QMainWindow):
                 raise StandardError('No network control')
         except:
             self.tb_text.setDisabled(True)
-            self.tb_tweet.setDisabled(True)            
+            self.tb_tweet.setDisabled(True)
             try:
                 geoposition = (self.parent.coordinates)
             except:
@@ -1832,12 +1771,12 @@ class KhweeteurWin(QMainWindow):
         if isMAEMO:
             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
         if self.search_keyword=='GeOSearH':
-            if self.parent.coordinates:           
+            if self.parent.coordinates:
                 geocode = (self.parent.coordinates[0],self.parent.coordinates[1],'1km') #FIXME
             else:
                 geocode = None
         else:
-            geocode = None            
+            geocode = None
         if not self.worker:
             self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
             self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
