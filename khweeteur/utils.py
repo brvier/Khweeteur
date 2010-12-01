@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.5
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010 Beno�t HERVIER
+# Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 
 import pickle
@@ -12,6 +12,7 @@ import datetime
 
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),  '.khweeteur', 'cache')
 CACHE_PATH = os.path.join(os.path.expanduser("~"), '.khweeteur')
+TIMELINE_PATH = os.path.join(CACHE_PATH,'timeline')
 REPLY_PATH = os.path.join(CACHE_PATH,'replies')
 
 #Close your eyes ... it s a secret !
@@ -26,7 +27,9 @@ KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 SCREENNAMEROLE = 20
 REPLYTOSCREENNAMEROLE = 21
 REPLYTEXTROLE = 22
+REPLYIDROLE = 25
 IDROLE = 23
+ORIGINROLE = 24
 
 def write_report(error):
     '''Function to write error to a report file'''

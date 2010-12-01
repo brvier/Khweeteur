@@ -144,6 +144,7 @@ class Status(object):
     self.truncated = truncated
     self.source = source
     self.origin = origin
+    self.rel_created_at = None
 
   def GetCreatedAt(self):
     '''Get the time this status message was posted.
@@ -1847,7 +1848,7 @@ class Api(object):
     if longitude is not None:
       data['long'] = longitude
 
-    print data
+#    print data
     json = self._FetchUrl(url, post_data=data)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)

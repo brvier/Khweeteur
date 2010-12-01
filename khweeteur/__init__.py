@@ -58,7 +58,7 @@ from notifications import KhweeteurNotification
 
 #import pynotify
 
-__version__ = '0.0.53'
+__version__ = '0.0.60'
 
 #~ class KhweeteurSingleNotify(QObject):
      #~ def __init__(self,title,message,iconpath):
@@ -108,13 +108,17 @@ class KhweeteurActionWorker(QThread):
 
             if not status_text.startswith(self.tb_text_replytext):
                 self.tb_text_replyid = 0
-                self.tb_text_reply = ''
+                self.tb_text_replytext = ''
                 self.tb_text_replysource =''
 
             if self.geolocation:
                 latitude,longitude = self.geolocation
             else:
                 latitude,longitude = (None,None)
+
+#            print self.tb_text_replyid,self.tb_text_replytext,self.tb_text_replysource
+#            print type(self.tb_text_replyid)
+#            return #DEBUG
                 
             if ('twitter' in self.tb_text_replysource) or (self.tb_text_replyid == 0):
                 if self.settings.value("twitter_access_token_key")!=None:
@@ -172,18 +176,29 @@ class KhweeteurActionWorker(QThread):
             import traceback
             traceback.print_exc()
 
-class KhweeteurRepliesCacheCleaner(QThread):
+class KhweeteurCacheCleaner(QThread):
     ''' Thread class to remove old replies cached'''
-    def __init__(self, parent = None, api=None):
+    def __init__(self, parent = None, keyword=None):
         QThread.__init__(self, None)
+        self.keyword = keyword
 
     def run(self):
         now = datetime.datetime.now()
-        for filepath in glob.glob(REPLY_PATH+'/*'):
-            filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
-            if (now - filecdate).days > 30:
-                os.remove(filepath)
-
+        if self.keyword:
+            for filepath in glob.glob(os.path.join(CACHE_PATH,os.path.normcase(unicode(self.keyword.replace('/', '_'))).encode('UTF-8'))+'/*'): #FIXME
+                filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+                if (now - filecdate).days > 45:
+                    os.remove(filepath)            
+        else:
+            for filepath in glob.glob(REPLY_PATH+'/*'):
+                filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+                if (now - filecdate).days > 45:
+                    os.remove(filepath)
+            for filepath in glob.glob(TIMELINE_PATH+'/*'):
+                filecdate = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+                if (now - filecdate).days > 45:
+                    os.remove(filepath)
+                
 class KhweeteurRefreshWorker(QThread):
     ''' Common Abstract class for the refresh thread '''
 
@@ -201,6 +216,29 @@ class KhweeteurRefreshWorker(QThread):
     def run(self):
         pass
 
+    def getCacheFolder(self):
+        if not hasattr(self,'keywords'):
+            folder_path = TIMELINE_PATH
+        else:
+            folder_path = os.path.join(CACHE_PATH,os.path.normcase(unicode(self.keywords.replace('/', '_'))).encode('UTF-8'))
+            
+        if not os.path.isdir(folder_path):
+            try:
+                os.makedirs(folder_path)
+            except IOError,e:
+                print 'getCacheFolder:',e
+
+        return folder_path
+        
+    def serialize(self,statuses):
+
+        folder_path = self.getCacheFolder()
+                        
+        for status in statuses:
+            pkl_file = open(os.path.join(folder_path,str(status.id)), 'wb')
+            pickle.dump(status, pkl_file,pickle.HIGHEST_PROTOCOL)
+            pkl_file.close()
+
     def downloadProfilesImage(self, statuses):
         for status in statuses:
             if type(status)!=twitter.DirectMessage:
@@ -217,45 +255,48 @@ class KhweeteurRefreshWorker(QThread):
     def removeAlreadyInCache(self,statuses):
         #Load cached statuses
         try:
-            if not hasattr(self, 'keywords'):
-                filename = os.path.join(CACHE_PATH, 'tweets.cache')
-            else:
-                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keywords.replace('/', '_'))+u'.cache'))).encode('UTF-8')
-            pkl_file = open(filename, 'rb')
-            items = pickle.load(pkl_file)
-            pkl_file.close()
-            statuses_to_remove = []
+            folder_path = self.getCacheFolder()
+
             for status in statuses:
-                for item in items:
-                    if item[1]==status.id:
-                        statuses_to_remove.append(status)
-                        break
-            for status_to_remove in statuses_to_remove:
-                statuses_to_remove.remove(status_to_remove)
+                if os.path.exists(os.path.join(folder_path,str(status.id))):
+                    statuses.remove(status)
+                    #print 'Remove status already in cache:',status.text
+
         except StandardError,e:
-            print 'error',e                                
+            print e                                
 
     def getOneReplyContent(self,api,tid):
-        rpath = os.path.join(REPLY_PATH,unicode(tid))
-        if os.path.exists(rpath):
-            fhandle = open(rpath,'rb')
-            text = fhandle.read()
-            fhandle.close()
-        else:        
-            try:
-                text = api.GetStatus(tid).text
-                fhandle = open(rpath,'wb')
-                text = fhandle.write(text)
+        rpath = os.path.join(self.getCacheFolder(),unicode(tid))
+        rpath_reply = os.path.join(REPLY_PATH,unicode(tid))
+
+        try:
+            if os.path.exists(rpath):
+                fhandle = open(rpath,'rb')
+                status = pickle.load(fhandle)
                 fhandle.close()
+                return status.text
+            if os.path.exists(rpath_reply):
+                fhandle = open(rpath_reply,'rb')
+                status = pickle.load(fhandle)
+                fhandle.close()
+                return status.text
+            raise StandardError("Need to get it")
+        except:        
+            try:
+                status = api.GetStatus(tid)
+                pkl_file = open(os.path.join(REPLY_PATH,unicode(status.id)), 'wb')
+                pickle.dump(status, pkl_file,pickle.HIGHEST_PROTOCOL)
+                pkl_file.close()
+                return status.text
             except:
                 import traceback
                 traceback.print_exc()
 
-        return text
+        return None
         
     def getRepliesContent(self, api, statuses):
         for status in statuses:
-            if not hasattr(status, 'in_reply_to_status_id'):
+            if not hasattr(status, 'in_reply_to_status_id'):                
                 status.in_reply_to_status_text = None
             elif (not status.in_reply_to_status_text) and (status.in_reply_to_status_id):
                 status.in_reply_to_status_text = self.getOneReplyContent(api, status.in_reply_to_status_id)
@@ -278,10 +319,11 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_GetFriendsTimeline', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
@@ -302,10 +344,11 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_GetRetweetedByMe', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
@@ -327,17 +370,18 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_GetRetweetsOfMe', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError(self.tr('A network error occurs')))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 
 class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
@@ -351,17 +395,18 @@ class KhweeteurRepliesWorker(KhweeteurRefreshWorker):
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_GetReplies', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError(self.tr('A network error occurs')))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurDMWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -372,17 +417,18 @@ class KhweeteurDMWorker(KhweeteurRefreshWorker):
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_DirectMessages', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError(self.tr('A network error occurs')))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurMentionWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None):
@@ -394,17 +440,18 @@ class KhweeteurMentionWorker(KhweeteurRefreshWorker):
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 self.settings.setValue('last_id/'+self.api.base_url+'_GetMentions', statuses[0].id)
         except twitter.TwitterError,e:
             self.errors.emit(e)
         except:
             self.errors.emit(StandardError(self.tr('A network error occurs')))
-#            import traceback
-#            traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
 class KhweeteurSearchWorker(KhweeteurRefreshWorker):
     def __init__(self, parent = None, api=None, keywords=None, geocode=None):
@@ -421,10 +468,11 @@ class KhweeteurSearchWorker(KhweeteurRefreshWorker):
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api,statuses)
             self.getRepliesContent(self.api,statuses)
+            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses)>0:
-                self.newStatuses.emit(statuses)
+                self.newStatuses.emit([status.id for status in statuses])
                 if not self.geocode:
                     self.settings.setValue(self.keywords+'/last_id/'+self.api.base_url, statuses[0].id)
         except twitter.TwitterError,e:
@@ -510,7 +558,7 @@ class KhweeteurWorker(QThread):
                 
     def errors(self,error):
         self.error = error
-        print error       
+        print 'errors : ',error       
 
     def newStatuses(self,list):
         self.emit(SIGNAL("newStatuses(PyQt_PyObject)"), list)
@@ -533,7 +581,7 @@ class KhweeteurWorker(QThread):
         if 'twitter' in api.base_url:
             refresh_retweetedbyme_worker.errors.connect(self.errors)
             refresh_retweetedbyme_worker.newStatuses.connect(self.newStatuses)
-            refresh_retweetedbyme_worker.start()
+#            refresh_retweetedbyme_worker.start()
 
         refresh_replies_worker = KhweeteurRepliesWorker(self,api)
         refresh_replies_worker.errors.connect(self.errors)
@@ -578,12 +626,13 @@ class KhweeteurWorker(QThread):
         try:
             if (self.settings.value("twitter_access_token_key")!=None):
                 #Login to twitter
-                api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
-                        password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
-                        access_token_key=str(self.settings.value("twitter_access_token_key")), \
-                        access_token_secret=str(self.settings.value("twitter_access_token_secret")))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                threads.extend(self.refresh_unified(api))
+                if not hasattr(self,'twitter_api'):
+                    self.twitter_api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY, \
+                            password=KHWEETEUR_TWITTER_CONSUMER_SECRET, \
+                            access_token_key=str(self.settings.value("twitter_access_token_key")), \
+                            access_token_secret=str(self.settings.value("twitter_access_token_secret")))               
+                    self.twitter_api.SetUserAgent('Khweeteur/%s' % (__version__))                    
+                threads.extend(self.refresh_unified(self.twitter_api))
 
         except twitter.TwitterError,e:
             print 'Error during twitter refresh : ',e.message
@@ -595,36 +644,39 @@ class KhweeteurWorker(QThread):
         try:
             identica_mlist = []
             if (self.settings.value("identica_access_token_key")!=None):
-                api = twitter.Api(base_url='http://identi.ca/api/', \
+                if not hasattr(self,'identica_api'):
+                    self.identica_api = twitter.Api(base_url='http://identi.ca/api/', \
                         username=KHWEETEUR_IDENTICA_CONSUMER_KEY, \
                         password=KHWEETEUR_IDENTICA_CONSUMER_SECRET, \
                         access_token_key=str(self.settings.value("identica_access_token_key")), \
                         access_token_secret=str(self.settings.value("identica_access_token_secret")))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                threads.extend(self.refresh_unified(api))
+                    self.identica_api.SetUserAgent('Khweeteur/%s' % (__version__))
+                threads.extend(self.refresh_unified(self.identica_api))
         except twitter.TwitterError,e:
             print 'Error during identi.ca refresh: ',e.message
             self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
         except:
             self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
 
-        try:
-            if (self.settings.value("statusnet_access_token_key")!=None):
-                api = twitter.Api(base_url='http://khertan.status.net/api/', \
-                        username=KHWEETEUR_STATUSNET_CONSUMER_KEY, \
-                        password=KHWEETEUR_STATUSNET_CONSUMER_SECRET, \
-                        access_token_key=str(self.settings.value("statusnet_access_token_key")), \
-                        access_token_secret=str(self.settings.value("statusnet_access_token_secret")))
-                api.SetUserAgent('Khweeteur/%s' % (__version__))
-                threads.extend(self.refresh_unified(api))
-        except twitter.TwitterError,e:
-            print 'Error during status.net refresh: ',e.message
-            self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
-        except:
-            self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
+        # try:
+            # if (self.settings.value("statusnet_access_token_key")!=None):
+                # api = twitter.Api(base_url='http://khertan.status.net/api/', \
+                        # username=KHWEETEUR_STATUSNET_CONSUMER_KEY, \
+                        # password=KHWEETEUR_STATUSNET_CONSUMER_SECRET, \
+                        # access_token_key=str(self.settings.value("statusnet_access_token_key")), \
+                        # access_token_secret=str(self.settings.value("statusnet_access_token_secret")))
+                # api.SetUserAgent('Khweeteur/%s' % (__version__))
+                # threads.extend(self.refresh_unified(api))
+        # except twitter.TwitterError,e:
+            # print 'Error during status.net refresh: ',e.message
+            # self.emit(SIGNAL("info(PyQt_PyObject)"),e.message)
+        # except:
+            # self.emit(SIGNAL("info(PyQt_PyObject)"), 'A network error occur')
 
         while any(thread.isRunning()==True for thread in threads):
-            self.sleep(2)
+#            for thread in threads:
+#                print type(thread)
+            self.sleep(2)            
 
         del threads
 
@@ -641,7 +693,9 @@ class KhweetsModel(QAbstractListModel):
     def __init__(self, mlist=[],keyword=None):
         QAbstractListModel.__init__(self)
         # Cache the passed data list as a class member.
-        self._items = mlist
+        self._items = [] #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text
+        self._uids = []
+        
         self._avatars = {}
         self._new_counter = 0
         self.now = time.time()
@@ -692,93 +746,57 @@ class KhweetsModel(QAbstractListModel):
             if index>self.khweets_limit:
                 break
             try:
+                #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text 
                 self._items[index] = (item[0],
-                                      item[1],
-                                      item[2],
-                                      item[3],
-                                      item[4],
-                                      self.GetRelativeCreatedAt(item[0]),
-                                      item[6],
-                                      item[7],
-                                      item[8])            
+                                        item[1],
+                                        item[2],
+                                        item[3],
+                                        self.GetRelativeCreatedAt(item[0]),
+                                        item[5],
+                                        item[6],
+                                        item[7],
+                                        item[8],
+                                        item[9],)
+                                        
             except StandardError,e:
-                print e, ':', item
+                print e
 
-        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
+        QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._uids)))
 
-    def addStatuses(self,listVariant):
-        GetRelativeCreatedAt = self.GetRelativeCreatedAt
-        current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+    def addStatuses(self,uids):
+        try:
+            keys = []
+            for uid in uids:
+                try:
+                    pkl_file = open(os.path.join(TIMELINE_PATH,str(uid)), 'rb')
+                    status = pickle.load(pkl_file)
+                    pkl_file.close()
+                    
+                    self._appendStatusInList(status)
 
-        new_ids = []
-        
-        for variant in listVariant:
-            try:
-#                if not variant in self._items:
-                if all(item[1]!=variant.id for item in self._items):
-                    #self.beginInsertRows(QModelIndex(), 0,1)
-                    if variant.created_at_in_seconds >= current_dt:
-                        if type(variant) != twitter.DirectMessage:
-                            self._items.insert(0,
-                                (variant.created_at_in_seconds,
-                                 variant.id,
-                                 variant.user.screen_name,
-                                 variant.text,
-                                 variant.user.profile_image_url,
-                                 GetRelativeCreatedAt(variant.created_at_in_seconds),
-                                 variant.in_reply_to_screen_name,
-                                 variant.in_reply_to_status_text,
-                                 variant.origin))
-
-                            if variant.user.screen_name!=None:
-                                try:
-                                    if variant.user.profile_image_url[4]!=None:
-                                        path = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(variant.user.profile_image_url.replace('/', '_')))
-                                        if not path.endswith('.png'):
-                                            path = os.path.splitext(path)[0] + '.png'
-                                        pix = QPixmap(path) #.scaled(50,50)
-#                                        if pix.isNull():
-#                                            print path
-                                        self._avatars[variant.user.profile_image_url] = (pix)
-                                except StandardError, err:
-                                    print 'error on loading avatar :',err
-                        else:
-                            self._items.insert(0,
-                                 (variant.created_at_in_seconds,
-                                  variant.id,
-                                  variant.sender_screen_name,
-                                  variant.text,
-                                  None,
-                                  GetRelativeCreatedAt(variant.created_at_in_seconds),
-                                  None,
-                                  None,
-                                  variant.origin))
-
-
-                        new_ids.append(variant.id)
-#                        self._new_counter += 1
-#                    self.now = time.time()
-                    #self.endInsertRows()
-            except StandardError, e:
-                print "We shouldn't got this error here :",e
-
-        if len(listVariant)>0:
+                    keys.append(status.id)
+                except IOError,e:
+                    print e
+                
+            
+        except StandardError, e:
+            print "We shouldn't got this error here :",e
+            import traceback
+            traceback.print_exc()
+            
+        if len(keys)>0:
             self._items.sort()
             self._items.reverse()
             self._items = self._items[:self.khweets_limit]
-            for new_id in new_ids:
-                if all(item[1]==variant.id for item in self._items):
-                    self._new_counter += 1
+            self._new_counter += len(keys)
                     
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-            self.serialize()
+            #self.serialize()
 
     def destroyStatus(self, index):
+        return #DEBUG
         self._items.pop(index.row())
         QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-
-    def isInModel(self,tweet_id):
-        return not all(item[1]!=tweet_id for item in self._items)
 
     def getNewAndReset(self):
         counter = self._new_counter
@@ -791,26 +809,8 @@ class KhweetsModel(QAbstractListModel):
     def setData(self, index,variant,role):
         return True
 
-    def setTweets(self, mlist):
-        try:
-            if len(mlist)>0:
-                #if type(mlist[0])==tuple:
-                #    if len(mlist[0])==6:
-                self._items = mlist
-                self._new_counter = 0
-                QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
-                return True
-                 #   else:
-                 #       print 'Wrong cache format'
-                 #       write_report("%s Version %s\nOld cache format : %s\n" % ('Khweeteur', __version__, ''))
-                 #       KhweeteurNotification().info('Old cache format. Reinit cache.')
-        except StandardError,err:
-            KhweeteurNotification().info(self.tr('Wrong cache format. Reinit cache.'))
-            write_report("%s Version %s\nWrong cache format : %s\n" % ('Khweeteur', __version__, err))
-            print 'Wrong cache format'
-        return False
-
     def serialize(self):
+        return #DEBUG
         try:
             if not self.keyword:
                 filename = os.path.join(CACHE_PATH, 'tweets.cache')
@@ -823,75 +823,166 @@ class KhweetsModel(QAbstractListModel):
         except StandardError,e:
             KhweeteurNotification().info(self.tr('An error occurs while saving cache : ')+str(e))
 
+    def _appendStatusInList(self,status):
+        if status.id in self._uids:
+            return
+            
+        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text          
+        status.rel_created_at = self.GetRelativeCreatedAt(status.created_at_in_seconds)
+            
+        if hasattr(status,'user'):
+            screen_name = status.user.screen_name
+            profile_image = os.path.basename(status.user.profile_image_url.replace('/', '_'))
+            if profile_image:
+                if profile_image not in self._avatars:
+                    try:
+                        self._avatars[profile_image] = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,profile_image))
+                    except:
+                        import traceback
+                        traceback.print_exc()
+        else:
+            screen_name = status.sender_screen_name
+            profile_image = None
+            
+        if not hasattr(status,'in_reply_to_status_id'):
+            status.in_reply_to_status_id = None
+            
+        if not hasattr(status,'in_reply_to_screen_name'):
+            status.in_reply_to_screen_name = None
+            
+        if not hasattr(status,'in_reply_to_status_text'):
+            status.in_reply_to_status_text = None        
+        
+        #Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text, Origin                   
+        self._items.append((    status.created_at_in_seconds, #0
+                            status.id, #1
+                            screen_name,  #2
+                            status.text,   #3
+                            status.rel_created_at,   #4
+                            profile_image,   #5
+                            status.in_reply_to_status_id,   #6
+                            status.in_reply_to_screen_name,   #7
+                            status.in_reply_to_status_text, #8
+                            status.origin))  #9
+
+        self._uids.append(status.id)
+                                    
+    def _createCacheList(self,cach_path,uids):
+        for uid in uids:
+            uid = os.path.basename(uid)
+            try:
+                pkl_file = open(os.path.join(cach_path,uid), 'rb')
+                status = pickle.load(pkl_file)
+                pkl_file.close()
+                              
+                self._appendStatusInList(status)
+
+            except StandardError,e:
+                KhweeteurNotification().info(self.tr('An error occurs while loading tweet : ')+str(uid))
+                os.remove(os.path.join(cach_path,uid))
+                
     def unSerialize(self):
         try:
             if not self.keyword:
-                filename = os.path.join(CACHE_PATH, 'tweets.cache')
+#                filename = os.path.join(CACHE_PATH, 'tweets.cache')
+                cach_path = TIMELINE_PATH
+                uids = glob.glob(cach_path + '/*')
+                self.cachecleanerworker =KhweeteurCacheCleaner()
+                self.cachecleanerworker.start()
             else:
-                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
-            pkl_file = open(filename, 'rb')
-            items = pickle.load(pkl_file)
-            self.setTweets(items)
-            pkl_file.close()
+                self.cachecleanerworker =KhweeteurCacheCleaner(keyword=self.keyword)
+                self.cachecleanerworker.start()            
+                cach_path = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_')))))
+                uids = glob.glob(cach_path+u'/*')
+
+            if len(uids)==0:
+                print 'Cache cleared'
+                self.settings = QSettings()
+                if not self.keyword:
+                    self.settings.remove('last_id')
+                else:
+                    self.settings.remove(self.keyword+'/last_id')                
+            else:
+                self._createCacheList(cach_path,uids)
+                self._items.sort()
+                self._items.reverse()
+
+#            else:
+#                filename = os.path.normcase(unicode(os.path.join(unicode(CACHE_PATH), unicode(self.keyword.replace('/', '_'))+u'.cache'))).encode('UTF-8')
+#                pkl_file = open(filename, 'rb')
+#                items = pickle.load(pkl_file)
+#                self.setTweets(items)
+#                pkl_file.close()
         except StandardError,e:
             print 'unSerialize : ',e
-            self.settings = QSettings()
-            if not self.keyword:
-                print 'Cache cleared'
-                self.settings.remove('last_id')
-            else:
-                self.settings.remove(self.keyword+'/last_id')
-
-        finally:
-            #14 Day limitations
-            self._items.sort()
-            self._items.reverse()
-            current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
-            for index, item in enumerate(self._items):
-                if item[0] < current_dt:
-                    self._items = self._items[:index]
-                    break
-            self._items = self._items[:self.khweets_limit]
-            for item in self._items:
-                try:
-                    if item[4]!=None:
-                        path = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/', '_')))
-                        if not path.endswith('.png'):
-                            path = os.path.splitext(path)[0]+'.png'
-                        pix = (QPixmap(path)) #.scaled(50,50)
-                        self._avatars[item[4]] = (pix)
-                except StandardError, err:
-                    print 'error on loading avatar :',err
-            self._items.sort()
-            self._items.reverse()
+#            self.settings = QSettings()
+#            if not self.keyword:
+#                print 'Cache cleared'
+#                self.settings.remove('last_id')
+#            else:
+#                self.settings.remove(self.keyword+'/last_id')
+#
+#        finally:
+#            #14 Day limitations
+#            self._items.sort()
+#            self._items.reverse()
+#            current_dt = time.mktime((datetime.datetime.now() - datetime.timedelta(days=14)).timetuple())
+#            for index, item in enumerate(self._items):
+#                if item[0] < current_dt:
+#                    self._items = self._items[:index]
+#                    break
+#            self._items = self._items[:self.khweets_limit]
+#            for item in self._items:
+#                try:
+#                    if item[4]!=None:
+#                        path = os.path.join(AVATAR_CACHE_FOLDER,os.path.basename(item[4].replace('/', '_')))
+#                        if not path.endswith('.png'):
+#                            path = os.path.splitext(path)[0]+'.png'
+#                        pix = (QPixmap(path)) #.scaled(50,50)
+#                        self._avatars[item[4]] = (pix)
+#                except StandardError, err:
+#                    print 'error on loading avatar :',err
+#            self._items.sort()
+#            self._items.reverse()
             QObject.emit(self, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.createIndex(0,0), self.createIndex(0,len(self._items)))
 
     def data(self, index, role = Qt.DisplayRole):
+        #0 -> Created_at, 
+        #1 -> Status.id, 
+        #2 -> ScreenName, 
+        #3 -> Text,
+        #4 -> Rel_Created_at,
+        #5 -> Profile Image,        
+        #6 -> Reply_ID,
+        #7 -> Reply_ScreenName,
+        #8 -> Reply_Text
+        #9 -> Origine 
         if role == Qt.DisplayRole:
             return self._items[index.row()][3]
         elif role == SCREENNAMEROLE:
             return self._items[index.row()][2]
         elif role == IDROLE:
             return self._items[index.row()][1]
-        elif role == REPLYTOSCREENNAMEROLE:
+        elif role == REPLYIDROLE:
             return self._items[index.row()][6]
+        elif role == REPLYTOSCREENNAMEROLE:
+            return self._items[index.row()][7]
         elif role == REPLYTEXTROLE:
-            if self._items[index.row()][7]!=None:
-                return self._items[index.row()][7]
-            return ''
+            return self._items[index.row()][8]
+        elif role == ORIGINROLE:
+            return self._items[index.row()][9]
         elif role == Qt.ToolTipRole:
-            return self._items[index.row()][5]
-        elif role == Qt.DecorationRole:
+            return self._items[index.row()][4]
+        elif role == Qt.DecorationRole:            
             try:
-                return self._avatars[self._items[index.row()][4]]
-            except:
-                return None
+                return self._avatars[self._items[index.row()][5]]
+            except KeyError,keye:
+                pass
         else:
             return None
 
     def wantsUpdate(self):
         QObject.emit(self, SIGNAL("layoutChanged()"))
-
 
 
 class WhiteCustomDelegate(QStyledItemDelegate):
@@ -954,18 +1045,29 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             height = self.fm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), tweet).height()+40
 
             if self.show_replyto:
-                if (index.data(REPLYTOSCREENNAMEROLE)!=None) and (index.data(REPLYTOSCREENNAMEROLE) != ''):
+                reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
+                reply_text = index.data(role=REPLYTEXTROLE)            
+                if (reply_name) and (reply_text):
                     #One time is enought sizeHint need to be fast
 #                    print 'index.data(REPLYTOSCREENNAMEROLE):',index.data(REPLYTOSCREENNAMEROLE)
 #                    print 'index.data(REPLYTEXTROLE):',index.data(REPLYTEXTROLE)
-                    reply = 'In reply to @'+index.data(REPLYTOSCREENNAMEROLE)+' : '+index.data(REPLYTEXTROLE)
+                    reply = 'In reply to @'+reply_name+' : '+reply_text
                     if not self.minifm:
                         if not self.miniFont:
                             self.miniFont = QFont(option.font)
                             self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
                         self.minifm = QFontMetrics(self.miniFont)
                     height += self.minifm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply).height()
-
+                elif reply_name:
+                    reply = 'In reply to @'+reply_name
+                    if not self.minifm:
+                        if not self.miniFont:
+                            self.miniFont = QFont(option.font)
+                            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
+                        self.minifm = QFontMetrics(self.miniFont)
+                    height += self.minifm.boundingRect(0,0,option.rect.width()-75,800, int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply).height()
+                
+                
             if height < 70:
                 height = 70
 
@@ -1034,12 +1136,20 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         # Draw reply
         if self.show_replyto:
-            if index.data(REPLYTOSCREENNAMEROLE)!=None:
-                reply = 'In reply to @'+index.data(REPLYTOSCREENNAMEROLE)+' : '+index.data(REPLYTEXTROLE)
+            reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
+            reply_text = index.data(role=REPLYTEXTROLE)
+            if reply_name and reply_text:
+                reply = 'In reply to @'+reply_name+' : '+reply_text
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
                 new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,new_rect.height()+5,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply)
-
+            elif reply_name:
+                reply = 'In reply to @'+reply_name
+                painter.setFont(self.miniFont)
+                painter.setPen(self.replyto_color)
+                new_rect = painter.drawText(option.rect.adjusted(int(self.show_avatar)*70,new_rect.height()+5,-4,0),  int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), reply)
+                
+          
         # Draw line
         painter.setPen(self.separator_color)
 #        x1,y1,x2,y2 = option.rect.getCoords()
@@ -1340,8 +1450,6 @@ class KhweeteurWin(QMainWindow):
             win.close()
 
     def justAfterInit(self):
-        self.cachecleanerworker =KhweeteurRepliesCacheCleaner()
-        self.cachecleanerworker.start()
 
         if not noDBUS:
             from nwmanager import NetworkManager
@@ -1443,18 +1551,6 @@ class KhweeteurWin(QMainWindow):
         self.addAction(self.tb_scrollbottom)
 
         QTimer.singleShot(200, self.timedUnserialize)
-
-#    def textEditChanged(self):
-#        #Resize
-#        doc = self.tb_text.document()
-#        cursor = self.tb_text.cursorRect()
-#        s = doc.size()
-#        s.setHeight((s.height() + 1) * (self.tb_text.fontMetrics().lineSpacing() + 1))
-#        fr = self.tb_text.frameRect()
-#        cr = self.tb_text.contentsRect()
-#        self.tb_text.setMinimumHeight(max(s.height(), s.height() + (fr.height() - cr.height() - 1)))
-#        self.tb_text.setHeight(max(s.height(), s.height() + (fr.height() - cr.height() - 1)))
-        #self.setMinimumWidth(max(s.width(),s.width() + (fr.width()-cr.width()) - 1))
         
     def scrolltop(self):
         self.tweetsView.scrollToTop()
@@ -1465,7 +1561,7 @@ class KhweeteurWin(QMainWindow):
     def tweet_do_ask_action(self):
         user = None
         for index in self.tweetsView.selectedIndexes():
-            user = self.tweetsModel._items[index.row()][2]
+            user = self.tweetsModel.data(index,role=SCREENNAMEROLE)
         if user:
             self.tweetActionDialog = KhweetAction(self, user)
             self.connect(self.tweetActionDialog.reply, SIGNAL('clicked()'), self.reply)
@@ -1494,18 +1590,18 @@ class KhweeteurWin(QMainWindow):
         if self.tweetActionDialog != None:
             self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
-            user = self.tweetsModel._items[index.row()][2]
-            self.tb_text_replyid = self.tweetsModel._items[index.row()][1]
+            user = self.tweetsModel.data(index,role=SCREENNAMEROLE)
+            self.tb_text_replyid = self.tweetsModel.data(index,role=IDROLE)
             self.tb_text_replytext = '@'+user+' '
             self.tb_text.setPlainText('@'+user+' ')
-            self.tb_text_replysource = self.tweetsModel._items[index.row()][8]
+            self.tb_text_replysource = self.tweetsModel.data(index,role=ORIGINROLE)
 #            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
             
     def open_url(self):
         import re
         self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
-            status = self.tweetsModel._items[index.row()][3]
+            status = self.tweetsModel.data(index)
             try:
                 urls = re.findall("(?P<url>https?://[^\s]+)", status)
                 for url in urls:
@@ -1519,13 +1615,12 @@ class KhweeteurWin(QMainWindow):
             self.parent().nw.request_connection_with_tmp_callback(self.follow)
         else:
             for index in self.tweetsView.selectedIndexes():
+                user_screenname = self.tweetsModel.data(index,role=SCREENNAMEROLE)
                 if ((QMessageBox.question(self,
                            "Khweeteur",
-                           self.tr("Follow : %s ?") % self.tweetsModel._items[index.row()][2],
+                           self.tr("Follow : %s ?") % user_screenname,
                            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                    user_screenname = self.tweetsModel._items[index.row()][2]
-                    #print 'DEBUG Follow:', user_screenname
-                    if 'twitter' in self.tweetsModel._items[index.row()][8]:
+                    if 'twitter' in self.tweetsModel.data(index,role=ORIGINROLE):
                         try:
                             if self.settings.value("twitter_access_token_key")!=None:
                                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
@@ -1542,7 +1637,7 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.warn(self.tr('Add %s to friendship failed on Twitter : %s') %(user_screenname, str(e)))
                                 print e
 
-                    if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
+                    if 'http://identi.ca/api/' == self.tweetsModel.data(index,role=ORIGINROLE):
                         try:
                             if self.settings.value("identica_access_token_key")!=None:
                                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -1566,13 +1661,13 @@ class KhweeteurWin(QMainWindow):
             self.parent().nw.request_connection_with_tmp_callback(self.unfollow)
         else:
             for index in self.tweetsView.selectedIndexes():
+                user_screenname = self.tweetsModel.data(index,role=SCREENNAMEROLE)
                 if ((QMessageBox.question(self,
                            "Khweeteur",
-                           self.tr("Unfollow : %s ?") % self.tweetsModel._items[index.row()][2],
+                           self.tr("Unfollow : %s ?") % user_screenname,
                            QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                    user_screenname = self.tweetsModel._items[index.row()][2]
                     #print 'DEBUG Follow:', user_screenname
-                    if 'twitter' in self.tweetsModel._items[index.row()][8]:
+                    if 'twitter' in self.tweetsModel.data(index,role=ORIGINROLE):
                         try:
                             if self.settings.value("twitter_access_token_key")!=None:
                                 api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
@@ -1589,7 +1684,7 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.warn(self.tr('Remove %s to friendship failed on Twitter : %s') %(user_screenname, str(e)))
                                 print e
 
-                    if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
+                    if 'http://identi.ca/api/' == self.tweetsModel.data(index,role=ORIGINROLE):
                         try:
                             if self.settings.value("identica_access_token_key")!=None:
                                 api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -1612,10 +1707,10 @@ class KhweeteurWin(QMainWindow):
         for index in self.tweetsView.selectedIndexes():
             if ((QMessageBox.question(self,
                        "Khweeteur",
-                       "Retweet this : %s ?" % self.tweetsModel._items[index.row()][3],
+                       "Retweet this : %s ?" % self.tweetsModel.data(index),
                        QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                tweetid = self.tweetsModel._items[index.row()][1]
-                if 'twitter' in self.tweetsModel._items[index.row()][8]:
+                tweetid = self.tweetsModel.data(index,role=IDROLE)
+                if 'twitter' in self.tweetsModel.data(index,role=ORIGINROLE):
                     try:
                         if self.settings.value("twitter_access_token_key")!=None:
                             api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
@@ -1632,7 +1727,7 @@ class KhweeteurWin(QMainWindow):
                             self.notifications.warn(self.tr('Retweet to twitter failed : ')+str(e))
                             print e
 
-                if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
+                if 'http://identi.ca/api/' == self.tweetsModel.data(index,role=ORIGINROLE):
                     try:
                         if self.settings.value("identica_access_token_key")!=None:
                             api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -1655,10 +1750,10 @@ class KhweeteurWin(QMainWindow):
         for index in self.tweetsView.selectedIndexes():
             if ((QMessageBox.question(self,
                        "Khweeteur",
-                       self.tr("Destroy this : %s ?") % self.tweetsModel._items[index.row()][3],
+                       self.tr("Destroy this : %s ?") % self.tweetsModel.data(index),
                        QMessageBox.Yes|QMessageBox.Close)) == QMessageBox.Yes):
-                tweetid = self.tweetsModel._items[index.row()][1]
-                if 'twitter' in self.tweetsModel._items[index.row()][8]:
+                tweetid = self.tweetsModel.data(index,role=IDROLE)
+                if 'twitter' in self.tweetsModel.data(index,role=ORIGINROLE):
                     try:
                         if self.settings.value("twitter_access_token_key")!=None:
                             api = twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
@@ -1676,7 +1771,7 @@ class KhweeteurWin(QMainWindow):
                             self.notifications.warn('Destroy status from twitter failed : '+str(e))
                             print e
 
-                if 'http://identi.ca/api/' == self.tweetsModel._items[index.row()][8]:
+                if 'http://identi.ca/api/' == self.tweetsModel.data(index,role=ORIGINROLE):
                     try:
                         if self.settings.value("identica_access_token_key")!=None:
                             api = twitter.Api(base_url='http://identi.ca/api/', username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -1743,10 +1838,13 @@ class KhweeteurWin(QMainWindow):
                 geocode = None
         else:
             geocode = None            
-        self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
-        self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
-        self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
-        self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
+        if not self.worker:
+            self.worker = KhweeteurWorker(self, search_keyword=self.search_keyword, geocode=geocode)
+            self.connect(self.worker, SIGNAL("newStatuses(PyQt_PyObject)"), self.tweetsModel.addStatuses)
+            self.connect(self.worker, SIGNAL("finished()"), self.refreshEnded)
+            self.notifications.connect(self.worker, SIGNAL('info(PyQt_PyObject)'), self.notifications.info)
+        else:
+            self.worker.geocode=geocode
         self.worker.start()
 
     def request_refresh(self):
@@ -1777,7 +1875,7 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp")) == 2
         self.tweetsView.custom_delegate.show_avatar = int(self.settings.value("displayAvatar")) == 2
         self.tweetsView.custom_delegate.show_replyto = int(self.settings.value("displayReplyTo")) == 2
-        QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel._items)))
+        QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel.rowCount())))
         if (int(self.settings.value("refreshInterval"))>0):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
         else:
