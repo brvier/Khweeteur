@@ -162,10 +162,10 @@ class KhweeteurPref(QMainWindow):
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
                         token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                        token.set_verifier(str(pincode))
+                        token.set_verifier(str(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
-                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
                         access_token  = dict(parse_qsl(content))
 
                         if resp['status'] != '200':
@@ -230,10 +230,10 @@ class KhweeteurPref(QMainWindow):
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
                         token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                        token.set_verifier(str(pincode))
+                        token.set_verifier(str(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
-                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode))
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
                         write_log(resp)
                         write_log(content)
                         access_token  = dict(parse_qsl(content))

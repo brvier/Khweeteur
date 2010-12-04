@@ -1207,23 +1207,31 @@ class KhweeteurAbout(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle(self.tr("Khweeteur About"))
 
-        aboutScrollArea = QScrollArea(self)
-        aboutScrollArea.setWidgetResizable(True)
-        awidget = QWidget(aboutScrollArea)
-        awidget.setMinimumSize(480,1200)
-        awidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
-        aboutScrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
-        #Kinetic scroller is available on Maemo and should be on meego
-        try:
-            scroller = aboutScrollArea.property("kineticScroller")
-            scroller.setEnabled(True)
-        except:
-            pass
+	if isMAEMO:
+		aboutScrollArea = QScrollArea(self)
+		aboutScrollArea.setWidgetResizable(True)
+		awidget = QWidget(aboutScrollArea)
+		awidget.setMinimumSize(480,1200)
+		awidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+		aboutScrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+		#Kinetic scroller is available on Maemo and should be on meego
+		try:
+		    scroller = aboutScrollArea.property("kineticScroller")
+		    scroller.setEnabled(True)
+		except:
+		    pass
 
-        aboutLayout = QVBoxLayout(awidget)
+		aboutLayout = QVBoxLayout(awidget)
+	else:
+		awidget = QWidget(self)
+		aboutLayout = QVBoxLayout(awidget)
 
         aboutIcon = QLabel()
-        aboutIcon.setPixmap(QIcon.fromTheme('khweeteur').pixmap(128,128))
+        if isMAEMO:
+            aboutIcon.setPixmap(QIcon.fromTheme('khweeteur').pixmap(128,128))
+        else:
+            aboutIcon.setPixmap(QIcon(os.path.join(os.path.dirname(os.path.abspath( __file__ )),'icons','khweeteur.png')).pixmap(128,128))
+            
         aboutIcon.setAlignment( Qt.AlignCenter or Qt.AlignHCenter )
         aboutIcon.resize(128,128)
         aboutLayout.addWidget(aboutIcon)
@@ -1265,9 +1273,13 @@ class KhweeteurAbout(QMainWindow):
         buttonLayout.addWidget(self.website_button)
         aboutLayout.addWidget(awidget2)
 
-        awidget.setLayout(aboutLayout)
-        aboutScrollArea.setWidget(awidget)
-        self.setCentralWidget(aboutScrollArea)
+	if isMAEMO:
+		awidget.setLayout(aboutLayout)
+		aboutScrollArea.setWidget(awidget)
+		self.setCentralWidget(aboutScrollArea)
+	else:
+		self.setCentralWidget(awidget)
+		
         self.show()
 
     def open_website(self):
@@ -1349,6 +1361,8 @@ class KhweeteurWin(QMainWindow):
             except:
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+	else:
+		self.resize(300,600)
 
         if self.search_keyword != None:
             if self.search_keyword != 'GeOSearH':
@@ -1362,7 +1376,6 @@ class KhweeteurWin(QMainWindow):
         self.setupMain()
 
         self.worker = None
-#        print 'DEBUG:',self.settings.value("displayUser"),type(self.settings.value("displayUser"))
         self.tweetsModel.display_screenname = self.settings.value("displayUser")=='2'
         self.tweetsModel.display_timestamp = self.settings.value("displayTimestamp")=='2'
         self.tweetsModel.display_avatar = self.settings.value("displayAvatar")=='2'
@@ -1439,9 +1452,14 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.setModel(self.tweetsModel)
         self.setCentralWidget(self.tweetsView)
 
-        self.toolbar = self.addToolBar('Toolbar')
+        self.toolbar = QToolBar('Toolbar')
+        self.addToolBar(Qt.BottomToolBarArea,self.toolbar)
 
-        self.tb_update = QAction(QIcon.fromTheme("general_refresh"), 'Update', self)
+        if isMAEMO:
+            self.tb_update = QAction(QIcon.fromTheme("general_refresh"), 'Update', self)
+        else:
+            self.tb_update = QAction(QIcon(os.path.join(os.path.dirname(os.path.abspath( __file__ )),'icons','refresh.png')), 'Update', self)
+            
         self.tb_update.setShortcut('Ctrl+R')
         self.connect(self.tb_update, SIGNAL('triggered()'), self.request_refresh)
         self.toolbar.addAction(self.tb_update)
@@ -1461,7 +1479,11 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addWidget(self.tb_charCounter)
         self.connect(self.tb_text, SIGNAL('textChanged()'), self.countCharsAndResize)
 
-        self.tb_tweet = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
+        if isMAEMO:
+            self.tb_tweet = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
+        else:
+            self.tb_tweet = QAction(QIcon(os.path.join(os.path.dirname(os.path.abspath( __file__ )),'icons','khweeteur.png')), 'Tweet', self)
+ 
         self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
         self.toolbar.addAction(self.tb_tweet)
 
@@ -1814,7 +1836,7 @@ class KhweeteurWin(QMainWindow):
         self.tweetsView.custom_delegate.show_timestamp = int(self.settings.value("displayTimestamp")) == 2
         self.tweetsView.custom_delegate.show_avatar = int(self.settings.value("displayAvatar")) == 2
         self.tweetsView.custom_delegate.show_replyto = int(self.settings.value("displayReplyTo")) == 2
-        QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,len(self.tweetsModel.rowCount())))
+        QObject.emit(self.tweetsModel, SIGNAL("dataChanged(const QModelIndex&, const QModelIndex &)"), self.tweetsModel.createIndex(0,0), self.tweetsModel.createIndex(0,(self.tweetsModel.rowCount())))
         if (int(self.settings.value("refreshInterval"))>0):
             self.timer.start(int(self.settings.value("refreshInterval"))*60*1000)
         else:

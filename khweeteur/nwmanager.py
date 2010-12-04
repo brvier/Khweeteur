@@ -31,8 +31,8 @@ class NetworkManager(QObject):
         self.tmp_callback_if_connected = None
 
         # Note prints so I wont forget the hack on for releases
-        if self.device_has_networking:
-            print "\n" + 10 * " >> >> NOTE: Scratchbox networking enabled hack in use!\n"
+        #if self.device_has_networking:
+        #    print "\n" + 10 * " >> >> NOTE: Scratchbox networking enabled hack in use!\n"
 
         self.gmainloop = gobject.MainLoop()
         self.mainloop_context = self.gmainloop.get_context()

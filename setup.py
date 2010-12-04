@@ -7,7 +7,12 @@ import imp
 import sys
 reload(sys).setdefaultencoding("UTF-8")
 
-from sdist_maemo import sdist_maemo as _sdist_maemo
+try:
+    from sdist_maemo import sdist_maemo as _sdist_maemo
+except:
+    _sdist_maemo = None
+    print 'sdist_maemo command not available'
+
 from distutils.core import setup
 import khweeteur
 
@@ -55,7 +60,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fixes error on first authentification, fix error on refreshEnded introduce in previous version',
+      'changelog':'* Major changes in the cache format to speed up and lower number of api calls, Some minor fixes for usage on desktop, Strip unnecessary space when user copy paste auth token that can be introduce by microb copy',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
