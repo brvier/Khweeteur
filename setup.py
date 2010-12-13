@@ -65,7 +65,27 @@ setup(name='khweeteur',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
-rm -rf /home/user/.khweeteur/""",
+rm -rf /home/user/.khweeteur/
+NOTIFICATIONS_CONF="/etc/hildon-desktop/notification-groups.conf"
+NOTIFICATIONS_KEY="khweteur-new-tweets"
+if ! grep -q "$NOTIFICATIONS_KEY" "$NOTIFICATIONS_CONF"; then
+echo -n "Updating $NOTIFICATIONS_CONF..."
+cat >>$NOTIFICATIONS_CONF << EOF
+### BEGIN Added by Khweeteur postinst ###
+[khweeteur-new-tweets]
+Destination=Khweeteur
+Icon=khweeteur
+Title-Text-Empty=Khweeteur
+Secondary-Text=New tweets available
+Text-Domain=khweeteur
+LED-Pattern=PatternCommonNotification
+### END Added by khweeteur postinst ###
+EOF
+    echo "done."
+fi
+""",
+      'postre':"""#!/bin/sh
+rm -rf /usr/lib/python2.5/site-packages/khweeteur""",
       'copyright':'gpl'},
       'bdist_rpm':{
       'requires':'python, python-setuptools, python-mobility-location, python-qt4-gui,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.5
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2010 BenoÃ®t HERVIER
 # Licenced under GPLv3
 
 from PyQt4.QtGui import *
@@ -22,7 +22,6 @@ try:
 except:
     isMAEMO = False
 
-
 try:
     import dbus
     import dbus.service
@@ -32,6 +31,9 @@ try:
 except:
     noDBUS = True
 
+if noDBUS:
+    import pynotify
+    
 class KhweeteurNotification(QObject):
     '''Notification class interface'''
     def __init__(self):
@@ -55,7 +57,11 @@ class KhweeteurNotification(QObject):
                     self.iface.SystemNoteDialog(message,0, 'Nothing')
                 except:
                     pass
-
+        else:
+            if pynotify.init("Khweeteur"):
+                n = pynotify.Notification(message, message)
+                n.show()
+                
     def info(self, message):
         '''Display an information banner'''
         if not noDBUS:
@@ -64,8 +70,12 @@ class KhweeteurNotification(QObject):
                     self.iface.SystemNoteInfoprint('Khweeteur : '+message)
                 except:
                     pass
-
-    def notify(self,title, message,category='im.received', icon='khweeteur',count=1):
+        else:
+            if pynotify.init("Khweeteur"):
+                n = pynotify.Notification(message, message)
+                n.show()
+                
+    def notify(self,title, message,category='khweeteur-new-tweets', icon='khweeteur',count=1):
         '''Create a notification in the style of email one'''
         if not noDBUS:
             try:
@@ -84,3 +94,9 @@ class KhweeteurNotification(QObject):
                                   )
             except:
                 pass
+                
+        else:
+            if pynotify.init("Khweeteur"):
+                n = pynotify.Notification(title, message)
+                n.show()
+
