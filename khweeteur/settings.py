@@ -4,15 +4,8 @@
 # Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 '''A simple Twitter client made with pyqt4'''
-import sip
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
-
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
 
 from utils import *
-from notifications import KhweeteurNotification
 
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
 KHWEETEUR_TWITTER_CONSUMER_SECRET = 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU'
@@ -45,6 +38,7 @@ class KhweeteurPref(QMainWindow):
     THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME]
 
     def __init__(self, parent=None):
+        ''' Init the GUI Win'''
         QMainWindow.__init__(self,parent)
         self.parent = parent
 
@@ -60,10 +54,11 @@ class KhweeteurPref(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle("Khweeteur Prefs")
 
-        self.setupGUI()
+        self._setupGUI()
         self.loadPrefs()
 
     def loadPrefs(self):
+        ''' Load and init default prefs to GUI'''
         if self.settings.value("refreshInterval"):
             self.refresh_value.setValue(int(self.settings.value("refreshInterval")))
         else:
@@ -101,6 +96,7 @@ class KhweeteurPref(QMainWindow):
             self.history_value.setValue(30)
 
     def savePrefs(self):
+        ''' Save the prefs from the GUI to QSettings''' 
         self.settings.setValue('refreshInterval', self.refresh_value.value())
         self.settings.setValue('displayUser', self.displayUser_value.checkState())
         self.settings.setValue('useNotification', self.useNotification_value.checkState())
@@ -116,9 +112,11 @@ class KhweeteurPref(QMainWindow):
         self.emit(SIGNAL("save()"))
 
     def closeEvent(self,widget,*args):
+        ''' close event called when closing window'''
         self.savePrefs()
 
     def request_twitter_access_or_clear(self):
+        ''' Request or clear twitter auth token'''
         if self.settings.value('twitter_access_token'):
             self.settings.setValue('twitter_access_token_key','')
             self.settings.setValue('twitter_access_token_secret','')
@@ -185,6 +183,7 @@ class KhweeteurPref(QMainWindow):
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def request_identica_access_or_clear(self):
+        ''' Request or clear identi.ca auth token'''
         import urllib
         if self.settings.value('identica_access_token'):
             self.settings.setValue('identica_access_token_key','')
@@ -255,6 +254,7 @@ class KhweeteurPref(QMainWindow):
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
     def request_statusnet_access_or_clear(self):
+        ''' Request or clear status.net auth token'''
         QMessageBox.question(self,
            "Khweeteur",
            "Status.net isn't yet fully implemented",
@@ -325,8 +325,8 @@ class KhweeteurPref(QMainWindow):
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
-    def setupGUI(self):
-#        self.aWidget = QWidget()
+    def _setupGUI(self):
+        ''' Create the gui content of the window'''
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.aWidget = QWidget(self.scrollArea)

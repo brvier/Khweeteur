@@ -4,32 +4,7 @@
 # Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-
-
-try:
-    from PyQt4.QtMobility.QtLocation import *
-#    from PySide.QtMobility.QtLocation import *
-    noQtLocation = False
-except:
-    noQtLocation = True
-
-try:
-    from PyQt4.QtMaemo5 import *
-#    from PySide.QtMaemo5 import *
-    isMAEMO = True
-except:
-    isMAEMO = False
-
-try:
-    import dbus
-    import dbus.service
-    from dbus.mainloop.qt import DBusQtMainLoop
-    from dbusobj import KhweeteurDBus
-    noDBUS = False
-except:
-    noDBUS = True
+from utils import *
 
 if noDBUS:
     import pynotify

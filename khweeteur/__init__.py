@@ -6,83 +6,9 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-USE_PYSIDE = False
-
-if not USE_PYSIDE:
-    import sip
-    sip.setapi('QString', 2)
-    sip.setapi('QVariant', 2)
-
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
-
-    try:
-        from PyQt4.QtMobility.QtLocation import *
-        noQtLocation = False
-    except:
-        noQtLocation = True
-
-    try:   
-        from PyQt4.QtMaemo5 import *
-        isMAEMO = True
-    except:
-        isMAEMO = False
-
-else:
-    from PySide.QtCore import * #PySide
-    from PySide.QtGui import * #PySide
-    pyqtSlot = Slot
-    pyqtSignal = Signal
-    try:
-        from PySide.QtMobility.QtLocation import * #PySide
-        noQtLocation = False
-    except:
-        noQtLocation = True
-
-    try:   
-        from PySide.QtMaemo5 import * #PySide        
-        isMAEMO = True
-    except:
-        isMAEMO = False
-
-
-import twitter
-import sys
-import os.path
-from urllib import urlretrieve
-import datetime
-import time
-try:
-    import dbus
-    import dbus.service
-    from dbus.mainloop.qt import DBusQtMainLoop
-    from dbusobj import KhweeteurDBus
-    noDBUS = False
-except:
-    noDBUS = True
-import pickle
-try:
-    from PIL import Image
-except:
-    import Image
-import re
-import urllib2
-import socket
-import glob
-
-from settings import KhweeteurPref
 from utils import *
-from notifications import KhweeteurNotification
 
-__version__ = '0.0.61'
-
-# ~ class KhweeteurSingleNotify(QObject):
-     # ~ def __init__(self,title,message,iconpath):
-        # ~ QObject.__init__(self)
-
-        # ~ n = pynotify.Notification(title, message, "khweeteur")
-        # ~ n.set_icon_from_pixbuf(icon)
-
+__version__ = '0.1.0'
 
 class KhweeteurActionWorker(QThread):
 
@@ -169,7 +95,7 @@ class KhweeteurActionWorker(QThread):
                         api.PostUpdate(status_text,
                                 in_reply_to_status_id=self.tb_text_replyid,
                                 latitude=latitude, longitude=longitude)
-                    self.emit(SIGNAL('info(PyQt_PyObject)'),
+                    self.emit(SIGNAL('info(unicode)'),
                               'Tweet sent to Twitter')
 
             if 'http://identi.ca/api/' == self.tb_text_replysource \
@@ -610,6 +536,8 @@ class KhweeteurWorker(QThread):
 
     ''' Thread to Refresh in background '''
 
+    newStatuses = pyqtSignal(list)
+
     def __init__(
         self,
         parent=None,
@@ -660,7 +588,7 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker1 = KhweeteurSearchWorker(self,
                     api, self.search_keyword, self.geocode)
             self.refresh_search_worker1.errors.connect(self.errors)
-            self.refresh_search_worker1.newStatuses.connect(self.newStatuses)
+            self.refresh_search_worker1.newStatuses.connect(self.transmitNewStatuses)
             self.refresh_search_worker1.start()
 
         if self.settings.value('identica_access_token_key') != None:
@@ -675,7 +603,7 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker2 = KhweeteurSearchWorker(self,
                     api2, self.search_keyword, self.geocode)
             self.refresh_search_worker2.errors.connect(self.errors)
-            self.refresh_search_worker2.newStatuses.connect(self.newStatuses)
+            self.refresh_search_worker2.newStatuses.connect(self.transmitNewStatuses)
             self.refresh_search_worker2.start()
 
         if self.settings.value('twitter_access_token_key') != None \
@@ -698,48 +626,49 @@ class KhweeteurWorker(QThread):
                 self.emit(SIGNAL('info(PyQt_PyObject)'),
                           self.error.message)  # fix bug#404
             else:
-                self.emit(SIGNAL('info(PyQt_PyObject)'),
+                self.emit(SIGNAL('info(unicode)'),
                           self.tr('A network error occur'))
 
     def errors(self, error):
         self.error = error
         print 'errors : ', error
 
-    def newStatuses(self, list):
-        self.emit(SIGNAL('newStatuses(PyQt_PyObject)'), list)
-
+    def transmitNewStatuses(self, alist):
+#        self.emit(SIGNAL('newStatuses(list)'), list)
+        self.newStatuses.emit(alist)
+        
     def refresh_unified(self, api):
         refresh_timeline_worker = KhweeteurHomeTimelineWorker(self, api)
         refresh_timeline_worker.errors.connect(self.errors)
-        refresh_timeline_worker.newStatuses.connect(self.newStatuses)
+        refresh_timeline_worker.newStatuses.connect(self.transmitNewStatuses)
         refresh_timeline_worker.start()
 
         refresh_retweetsofme_worker = KhweeteurRetweetsOfMeWorker(self,
                 api)
         refresh_retweetsofme_worker.errors.connect(self.errors)
-        refresh_retweetsofme_worker.newStatuses.connect(self.newStatuses)
+        refresh_retweetsofme_worker.newStatuses.connect(self.transmitNewStatuses)
         refresh_retweetsofme_worker.start()
 
         refresh_retweetedbyme_worker = \
             KhweeteurRetweetedByMeWorker(self, api)
         if 'twitter' in api.base_url:
             refresh_retweetedbyme_worker.errors.connect(self.errors)
-            refresh_retweetedbyme_worker.newStatuses.connect(self.newStatuses)
+            refresh_retweetedbyme_worker.newStatuses.connect(self.transmitNewStatuses)
             refresh_retweetedbyme_worker.start()
 
         refresh_replies_worker = KhweeteurRepliesWorker(self, api)
         refresh_replies_worker.errors.connect(self.errors)
-        refresh_replies_worker.newStatuses.connect(self.newStatuses)
+        refresh_replies_worker.newStatuses.connect(self.transmitNewStatuses)
         refresh_replies_worker.start()
 
         refresh_dm_worker = KhweeteurDMWorker(self, api)
         refresh_dm_worker.errors.connect(self.errors)
-        refresh_dm_worker.newStatuses.connect(self.newStatuses)
+        refresh_dm_worker.newStatuses.connect(self.transmitNewStatuses)
         refresh_dm_worker.start()
 
         refresh_mention_worker = KhweeteurMentionWorker(self, api)
         refresh_mention_worker.errors.connect(self.errors)
-        refresh_mention_worker.newStatuses.connect(self.newStatuses)
+        refresh_mention_worker.newStatuses.connect(self.transmitNewStatuses)
         refresh_mention_worker.start()
 
         if 'twitter' in api.base_url:
@@ -803,9 +732,9 @@ class KhweeteurWorker(QThread):
                 threads.extend(self.refresh_unified(self.identica_api))
         except twitter.TwitterError, e:
             print 'Error during identi.ca refresh: ', e.message
-            self.emit(SIGNAL('info(PyQt_PyObject)'), e.message)
+            self.emit(SIGNAL('info(unicode)'), e.message)
         except:
-            self.emit(SIGNAL('info(PyQt_PyObject)'),
+            self.emit(SIGNAL('info(unicode)'),
                       'A network error occur')
 
         while any(thread.isRunning() == True for thread in threads):
@@ -817,10 +746,10 @@ class KhweeteurWorker(QThread):
             if type(self.error) == twitter.TwitterError:
                 print 'Error during twitter refresh : ', \
                     self.error.message
-                self.emit(SIGNAL('info(PyQt_PyObject)'),
+                self.emit(SIGNAL('info(unicode)'),
                           self.error.message)  # fix bug#404
             else:
-                self.emit(SIGNAL('info(PyQt_PyObject)'),
+                self.emit(SIGNAL('info(unicode)'),
                           'A network error occur')
 
 
@@ -918,9 +847,10 @@ class KhweetsModel(QAbstractListModel):
                     status = pickle.load(pkl_file)
                     pkl_file.close()
 
-                    self._appendStatusInList(status)
-
-                    keys.append(status.id)
+                    #Test if status already exists
+                    if self._appendStatusInList(status):
+                        keys.append(status.id)
+                        
                 except IOError, e:
                     print e
         except StandardError, e:
@@ -967,7 +897,7 @@ class KhweetsModel(QAbstractListModel):
 
     def _appendStatusInList(self, status):
         if status.id in self._uids:
-            return
+            return False
 
         # Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text
 
@@ -1026,6 +956,7 @@ class KhweetsModel(QAbstractListModel):
             ))
 
         self._uids.append(status.id)
+        return True
 
     def _createCacheList(self, cach_path, uids):
         for uid in uids:
@@ -1248,9 +1179,16 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         ):
         '''Paint our tweet'''
 
-        # Ugly hack ?
+        if not USE_PYSIDE:
+            (x1, y1, x2, y2) = option.rect.getCoords()
+        else:
+            #Work arround Pyside bug #544
+            y1 = option.rect.y()
+            y2 = y1 + option.rect.height()
+            x1 = option.rect.x()
+            x2 = x1 + option.rect.width()
 
-        (x1, y1, x2, y2) = option.rect.getCoords()
+        # Ugly hack ?
         if y1 < 0 and y2 < 0:
             return
 
@@ -1736,7 +1674,8 @@ class KhweeteurWin(QMainWindow):
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
         self.tb_text_replysource = ''
-        self.tb_text.enabledChange(True)
+        if not USE_PYSIDE:
+            self.tb_text.enabledChange(True)
         self.toolbar.addWidget(self.tb_text)
 
         self.tb_charCounter = QLabel('140')
@@ -2256,13 +2195,14 @@ class KhweeteurWin(QMainWindow):
         if not self.worker:
             self.worker = KhweeteurWorker(self,
                     search_keyword=self.search_keyword, geocode=geocode)
-            self.connect(self.worker,
-                         SIGNAL('newStatuses(PyQt_PyObject)'),
-                         self.tweetsModel.addStatuses)
+#            self.connect(self.worker,
+#                         SIGNAL('newStatuses(tuple)'),
+#                         self.tweetsModel.addStatuses)
+            self.worker.newStatuses.connect(self.tweetsModel.addStatuses)
             self.connect(self.worker, SIGNAL('finished()'),
                          self.refreshEnded)
             self.notifications.connect(self.worker,
-                    SIGNAL('info(PyQt_PyObject)'),
+                    SIGNAL('info(unicode)'),
                     self.notifications.info)
         else:
             self.worker.geocode = geocode

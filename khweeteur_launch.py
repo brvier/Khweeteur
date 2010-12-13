@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """KhtEditor a source code editor by Khertan"""
-from khweeteur import Khweeteur
+try:
+    from khweeteur import Khweeteur
+except:
+    from khweeteur_experimental import Khweeteur
 import sys
 
 if __name__ == '__main__':

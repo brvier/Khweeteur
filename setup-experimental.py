@@ -53,7 +53,7 @@ setup(name='khweeteur-experimental',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'1',
+      'buildversion':'3',
       'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
@@ -85,7 +85,7 @@ EOF
 fi
 """,
       'postre':"""#!/bin/sh
-rm -rf /usr/lib/python2.5/site-packages/khweeteur""",
+rm -rf /usr/lib/python2.5/site-packages/khweeteur-experimental""",
       'copyright':'gpl'},
       'bdist_rpm':{
       'requires':'python, python-setuptools, python-mobility-location, python-qt4-gui,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
