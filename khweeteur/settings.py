@@ -14,23 +14,12 @@ KHWEETEUR_IDENTICA_CONSUMER_SECRET = '236fa46bf3f65fabdb1fd34d63c26d28'
 KHWEETEUR_STATUSNET_CONSUMER_KEY = '84e768bba2b6625f459a9a19f5d57bd1'
 KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 
-try:
-    from PyQt4.QtMobility.QtLocation import *
-#    from PySide.QtMobility.QtLocation import *
-    noQtLocation = False
-except:
-    noQtLocation = True
-
-try:
-    from PyQt4.QtMaemo5 import *
-#    from PySide.QtMaemo5 import *
-    isMAEMO = True
-except:
-    isMAEMO = False
-
 import oauth2 as oauth
 
 class KhweeteurPref(QMainWindow):
+
+    save = pyqtSignal()
+    
     DEFAULTTHEME = 'Default'
     WHITETHEME = 'White'
     COOLWHITETHEME = 'CoolWhite'
@@ -64,21 +53,21 @@ class KhweeteurPref(QMainWindow):
         else:
             self.refresh_value.setValue(10)
         if self.settings.value("displayUser"):
-            self.displayUser_value.setCheckState(int(self.settings.value("displayUser")))
+            self.displayUser_value.setCheckState(Qt.CheckState(int(self.settings.value("displayUser"))))
         else:
-            self.displayUser_value.setCheckState(2)
+            self.displayUser_value.setCheckState(Qt.CheckState.Checked)
         if self.settings.value("displayAvatar"):
-            self.displayAvatar_value.setCheckState(int(self.settings.value("displayAvatar")))
+            self.displayAvatar_value.setCheckState(Qt.CheckState(int(self.settings.value("displayAvatar"))))
         if self.settings.value("displayTimestamp"):
-            self.displayTimestamp_value.setCheckState(int(self.settings.value("displayTimestamp")))
+            self.displayTimestamp_value.setCheckState(Qt.CheckState(int(self.settings.value("displayTimestamp"))))
         if self.settings.value("displayReplyTo"):
-            self.displayReplyTo_value.setCheckState(int(self.settings.value("displayReplyTo")))
+            self.displayReplyTo_value.setCheckState(Qt.CheckState(int(self.settings.value("displayReplyTo"))))
         if self.settings.value("useNotification"):
-            self.useNotification_value.setCheckState(int(self.settings.value("useNotification")))
+            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value("useNotification"))))
         if self.settings.value("useSerialization"):
-            self.useSerialization_value.setCheckState(int(self.settings.value("useSerialization")))
+            self.useSerialization_value.setCheckState(Qt.CheckState(int(self.settings.value("useSerialization"))))
         if self.settings.value("useBitly"):
-            self.useBitly_value.setCheckState(int(self.settings.value("useBitly")))
+            self.useBitly_value.setCheckState(Qt.CheckState(int(self.settings.value("useBitly"))))
         if not self.settings.value("theme"):
             self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
         if not self.settings.value("theme") in self.THEMES:
@@ -87,9 +76,9 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue("useAutoRotation",True)
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme")))
         if self.settings.value("useAutoRotation"):
-            self.useAutoRotation_value.setCheckState(int(self.settings.value("useAutoRotation")))
+            self.useAutoRotation_value.setCheckState(Qt.CheckState(int(self.settings.value("useAutoRotation"))))
         if self.settings.value("useGPS"):
-            self.useGPS_value.setCheckState(int(self.settings.value("useGPS")))
+            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value("useGPS"))))
         if self.settings.value("tweetHistory"):
             self.history_value.setValue(int(self.settings.value("tweetHistory")))
         else:
@@ -109,7 +98,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useAutoRotation', self.useAutoRotation_value.checkState())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
-        self.emit(SIGNAL("save()"))
+        self.save.emit()
 
     def closeEvent(self,widget,*args):
         ''' close event called when closing window'''

@@ -14,24 +14,25 @@ class KhweeteurActionWorker(QThread):
 
     '''ActionWorker : Post tweet in background'''
 
+    info = pyqtSignal(unicode)
+    warn = pyqtSignal(unicode)
+    tweetSent = pyqtSignal()
+#    finished = pyqtSignal()
+        
     def __init__(
         self,
         parent=None,
         action=None,
-        data=None,
-        data2=None,
-        data3=None,
-        data4=None,
-        data5=None,
+        data=(None,None,None,None,None),
         ):
         QThread.__init__(self, parent)
         self.settings = QSettings()
         self.action = action
-        self.data = data
-        self.tb_text_replyid = data2
-        self.tb_text_replytext = data3
-        self.tb_text_replysource = data4
-        self.geolocation = data5
+        self.data = data[0]
+        self.tb_text_replyid = data[1]
+        self.tb_text_replytext = data[2]
+        self.tb_text_replysource = data[3]
+        self.geolocation = data[4]
 
     def run(self):
         '''Run the background thread'''
@@ -95,8 +96,7 @@ class KhweeteurActionWorker(QThread):
                         api.PostUpdate(status_text,
                                 in_reply_to_status_id=self.tb_text_replyid,
                                 latitude=latitude, longitude=longitude)
-                    self.emit(SIGNAL('info(unicode)'),
-                              'Tweet sent to Twitter')
+                    self.info.emit('Tweet sent to Twitter')
 
             if 'http://identi.ca/api/' == self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
@@ -119,17 +119,15 @@ class KhweeteurActionWorker(QThread):
                         api.PostUpdate(status_text,
                                 in_reply_to_status_id=self.tb_text_replyid,
                                 latitude=latitude, longitude=longitude)
-                    self.emit(SIGNAL('info(PyQt_PyObject)'),
-                              'Tweet sent to Identica')
+                    self.info.emit('Tweet sent to Identica')
 
-            self.emit(SIGNAL('tweetSent()'))
+            self.tweetSent.emit()
         except twitter.TwitterError, e:
 
-            self.emit(SIGNAL('warn(PyQt_PyObject)'), e.message)
+            self.warn.emit(e.message)
             print e.message
         except:
-            self.emit(SIGNAL('warn(PyQt_PyObject)'),
-                      'A network error occur')
+            self.warn.emit('A network error occur')
             print 'A network error occur'
             import traceback
             traceback.print_exc()
@@ -537,7 +535,8 @@ class KhweeteurWorker(QThread):
     ''' Thread to Refresh in background '''
 
     newStatuses = pyqtSignal(list)
-
+    info = pyqtSignal(unicode)
+    
     def __init__(
         self,
         parent=None,
@@ -623,11 +622,9 @@ class KhweeteurWorker(QThread):
             if type(self.error) == twitter.TwitterError:
                 print 'Error during twitter refresh : ', \
                     self.error.message
-                self.emit(SIGNAL('info(PyQt_PyObject)'),
-                          self.error.message)  # fix bug#404
+                self.info.emit(self.error.message)  # fix bug#404
             else:
-                self.emit(SIGNAL('info(unicode)'),
-                          self.tr('A network error occur'))
+                self.info.emit(self.tr('A network error occur'))
 
     def errors(self, error):
         self.error = error
@@ -686,7 +683,7 @@ class KhweeteurWorker(QThread):
                     refresh_replies_worker, refresh_dm_worker,
                     refresh_mention_worker]
 
-    def refresh(self):
+    def refresh(self):        
         self.error = None
         threads = []
 
@@ -709,10 +706,9 @@ class KhweeteurWorker(QThread):
         except twitter.TwitterError, e:
 
             print 'Error during twitter refresh : ', e.message
-            self.emit(SIGNAL('info(PyQt_PyObject)'), e.message)
+            self.info.emit(e.message)
         except StandardError, e:
-            self.emit(SIGNAL('info(PyQt_PyObject)'),
-                      'A network error occur')
+            self.info.emit('A network error occur')
             print e
 
         try:
@@ -732,10 +728,9 @@ class KhweeteurWorker(QThread):
                 threads.extend(self.refresh_unified(self.identica_api))
         except twitter.TwitterError, e:
             print 'Error during identi.ca refresh: ', e.message
-            self.emit(SIGNAL('info(unicode)'), e.message)
+            self.info.emit(e.message)
         except:
-            self.emit(SIGNAL('info(unicode)'),
-                      'A network error occur')
+            self.info.emit('A network error occur')
 
         while any(thread.isRunning() == True for thread in threads):
             self.sleep(2)
@@ -746,17 +741,17 @@ class KhweeteurWorker(QThread):
             if type(self.error) == twitter.TwitterError:
                 print 'Error during twitter refresh : ', \
                     self.error.message
-                self.emit(SIGNAL('info(unicode)'),
-                          self.error.message)  # fix bug#404
+                self.info.emit(self.error.message)  # fix bug#404
             else:
-                self.emit(SIGNAL('info(unicode)'),
-                          'A network error occur')
+                self.info.emit('A network error occur')
 
 
 class KhweetsModel(QAbstractListModel):
 
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
 
+    dataChanged = pyqtSignal(QModelIndex,QModelIndex)
+    
     def __init__(self, keyword=None):
         QAbstractListModel.__init__(self)
 
@@ -832,11 +827,13 @@ class KhweetsModel(QAbstractListModel):
             except StandardError, e:
                 print e
 
-        QObject.emit(self,
-                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-                     ), self.createIndex(0, 0), self.createIndex(0,
-                     len(self._uids)))
-
+#        QObject.emit(self,
+#                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
+#                     ), self.createIndex(0, 0), self.createIndex(0,
+#                     len(self._uids)))
+        self.dataChanged.emit(self.createIndex(0, 0),
+                              self.createIndex(0,
+                              len(self._items)))
     def addStatuses(self, uids):
         try:
             keys = []
@@ -865,20 +862,24 @@ class KhweetsModel(QAbstractListModel):
             self._items = self._items[:self.khweets_limit]
             self._new_counter += len(keys)
 
-            QObject.emit(self,
-                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-                         ), self.createIndex(0, 0), self.createIndex(0,
-                         len(self._items)))
-
+#            QObject.emit(self,
+#                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
+#                         ), self.createIndex(0, 0), self.createIndex(0,
+#                         len(self._items)))
+            self.dataChanged.emit(self.createIndex(0, 0),
+                                  self.createIndex(0,
+                                  len(self._items)))
             # self.serialize()
 
     def destroyStatus(self, index):
         self._items.pop(index.row())
-        QObject.emit(self,
-                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-                     ), self.createIndex(0, 0), self.createIndex(0,
-                     len(self._items)))
-
+#        QObject.emit(self,
+#                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
+#                     ), self.createIndex(0, 0), self.createIndex(0,
+#                     len(self._items)))
+        self.dataChanged.emit(self.createIndex(0, 0),
+                              self.createIndex(0,
+                              len(self._items)))
     def getNewAndReset(self):
         counter = self._new_counter
         self._new_counter = 0
@@ -1002,11 +1003,13 @@ class KhweetsModel(QAbstractListModel):
                 self._items.reverse()
         except StandardError, e:
             print 'unSerialize : ', e
-            QObject.emit(self,
-                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-                         ), self.createIndex(0, 0), self.createIndex(0,
-                         len(self._items)))
-
+#            QObject.emit(self,
+#                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
+#                         ), self.createIndex(0, 0), self.createIndex(0,
+#                         len(self._items)))
+            self.dataChanged.emit(self.createIndex(0, 0),
+                                  self.createIndex(0,
+                                  len(self._items)))
     def data(self, index, role=Qt.DisplayRole):
 
         # 0 -> Created_at,
@@ -1691,7 +1694,7 @@ class KhweeteurWin(QMainWindow):
                 QAction(QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         'icons', 'khweeteur.png')), 'Tweet', self)
 
-        self.connect(self.tb_tweet, SIGNAL('triggered()'), self.tweet)
+        self.tb_tweet.triggered.connect(self.tweet)
         self.toolbar.addAction(self.tb_tweet)
 
         if isMAEMO:
@@ -1708,14 +1711,12 @@ class KhweeteurWin(QMainWindow):
 
         self.tb_scrolltop = QAction('Scroll to top', self)
         self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
-        self.connect(self.tb_scrolltop, SIGNAL('triggered()'),
-                     self.scrolltop)
+        self.tb_scrolltop.triggered.connect(self.scrolltop)
         self.addAction(self.tb_scrolltop)
 
         self.tb_scrollbottom = QAction('Scroll to bottom', self)
         self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
-        self.connect(self.tb_scrollbottom, SIGNAL('triggered()'),
-                     self.scrollbottom)
+        self.tb_scrollbottom.triggered.connect(self.scrollbottom)
         self.addAction(self.tb_scrollbottom)
 
         QTimer.singleShot(200, self.timedUnserialize)
@@ -1732,18 +1733,12 @@ class KhweeteurWin(QMainWindow):
             user = self.tweetsModel.data(index, role=SCREENNAMEROLE)
         if user:
             self.tweetActionDialog = KhweetAction(self, user)
-            self.connect(self.tweetActionDialog.reply,
-                         SIGNAL('clicked()'), self.reply)
-            self.connect(self.tweetActionDialog.openurl,
-                         SIGNAL('clicked()'), self.open_url)
-            self.connect(self.tweetActionDialog.retweet,
-                         SIGNAL('clicked()'), self.retweet)
-            self.connect(self.tweetActionDialog.follow,
-                         SIGNAL('clicked()'), self.follow)
-            self.connect(self.tweetActionDialog.unfollow,
-                         SIGNAL('clicked()'), self.unfollow)
-            self.connect(self.tweetActionDialog.destroy_tweet,
-                         SIGNAL('clicked()'), self.destroy_tweet)
+            self.tweetActionDialog.reply.clicked.connect(self.reply)
+            self.tweetActionDialog.openurl.clicked.connect(self.open_url)
+            self.tweetActionDialog.retweet.clicked.connect(self.retweet)
+            self.tweetActionDialog.follow.clicked.connect(self.follow)
+            self.tweetActionDialog.unfollow.clicked.connect(self.unfollow)
+            self.tweetActionDialog.destroy_tweet.clicked.connect(self.destroy_tweet)
             self.tweetActionDialog.exec_()
 
     def countCharsAndResize(self):
@@ -2153,22 +2148,18 @@ class KhweeteurWin(QMainWindow):
             self.tweetAction = KhweeteurActionWorker(
                 self,
                 'tweet',
-                unicode(self.tb_text.toPlainText()).encode('utf-8'),
+                (unicode(self.tb_text.toPlainText()).encode('utf-8'),
                 self.tb_text_replyid,
                 self.tb_text_replytext,
                 self.tb_text_replysource,
-                geoposition,
+                geoposition),
                 )
-            self.connect(self.tweetAction, SIGNAL('tweetSent()'),
-                         self.tweetSent)
-            self.connect(self.tweetAction, SIGNAL('finished()'),
-                         self.tweetSentFinished)
-            self.notifications.connect(self.tweetAction,
-                    SIGNAL('info(PyQt_PyObject)'),
-                    self.notifications.info)
-            self.notifications.connect(self.tweetAction,
-                    SIGNAL('warn(PyQt_PyObject)'),
-                    self.notifications.warn)
+            self.tweetAction.tweetSent.connect(self.tweetSent)
+            self.tweetAction.finished.connect(self.tweetSentFinished)
+            self.tweetAction.info.connect(self.notifications.info)
+            self.tweetAction.warn.connect(self.notifications.warn)
+            self.tweetAction.tweetSent.connect(self.tweetSentFinished)
+            self.tweetAction.finished.connect(self.tweetSent)
             self.tweetAction.start()
 
     def refreshEnded(self):
@@ -2341,7 +2332,7 @@ class KhweeteurWin(QMainWindow):
 
     def do_show_pref(self):
         self.pref_win = KhweeteurPref(self)
-        self.connect(self.pref_win, SIGNAL('save()'), self.restartTimer)
+        self.pref_win.save.connect(self.restartTimer)
         self.pref_win.show()
 
     def do_about(self):

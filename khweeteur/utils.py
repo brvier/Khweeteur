@@ -34,7 +34,7 @@ else:
     pyqtSlot = Slot
     pyqtSignal = Signal
     try:
-        from PySide.QtMobility.QtLocation import * #PySide
+        from QtMobility.Location import * #PySide
         noQtLocation = False
     except:
         noQtLocation = True
