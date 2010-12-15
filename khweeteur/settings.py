@@ -15,6 +15,7 @@ KHWEETEUR_STATUSNET_CONSUMER_KEY = '84e768bba2b6625f459a9a19f5d57bd1'
 KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 
 import oauth2 as oauth
+from notifications import KhweeteurNotification
 
 class KhweeteurPref(QMainWindow):
 
@@ -130,11 +131,17 @@ class KhweeteurPref(QMainWindow):
                 ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
                 AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
 
+                if isMAEMO:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+
                 signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
                 oauth_consumer             = oauth.Consumer(key=KHWEETEUR_TWITTER_CONSUMER_KEY, secret=KHWEETEUR_TWITTER_CONSUMER_SECRET)
                 oauth_client               = oauth.Client(oauth_consumer)
 
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+
+                if isMAEMO:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
                 if resp['status'] != '200':
                     KhweeteurNotification().warn(self.tr('Invalid respond from Twitter requesting temp token: %s') % resp['status'])
@@ -197,14 +204,20 @@ class KhweeteurPref(QMainWindow):
                 ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
                 AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
 
+                if isMAEMO:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
+
                 signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
                 oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
                 oauth_client               = oauth.Client(oauth_consumer)
                 oauth_callback_uri = 'oob'
                 #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'POST', body=urllib.urlencode(dict(oauth_callback=oauth_callback_uri)))
-                write_log(resp)
-                write_log(content)
+#                write_log(resp)
+#                write_log(content)
+                if isMAEMO:
+                    self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
+
                 if resp['status'] != '200':
                     KhweeteurNotification().warn(self.tr('Invalid respond from Identi.ca requesting temp token: %s') % resp['status'])
                 else:
@@ -222,8 +235,8 @@ class KhweeteurPref(QMainWindow):
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
                         resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
-                        write_log(resp)
-                        write_log(content)
+#                        write_log(resp)
+#                        write_log(content)
                         access_token  = dict(parse_qsl(content))
 
                         if resp['status'] != '200':

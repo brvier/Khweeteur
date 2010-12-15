@@ -30,7 +30,7 @@ setup(name='khweeteur',
       author_email='khertan@khertan.net',
       maintainer=u'Benoît HERVIER',
       maintainer_email='khertan@khertan.net',
-      requires=['imaging','simplejson','conic','PyQt4'],
+      requires=['imaging','simplejson','conic','PySide','oauth2'],
       url='http://www.khertan.net/khweeteur',
       packages= ['khweeteur',],
       package_data = {'khweeteur': ['icons/*.png']},
@@ -54,20 +54,20 @@ setup(name='khweeteur',
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
       'buildversion':'1',
-      'depends':'python2.5, python-setuptools, python2.5-mobility-location, python2.5-qt4-gui,python2.5-qt4-core, python2.5-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'depends':'python2.5, python-setuptools, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Major changes in the cache format to speed up and lower number of api calls, Some minor fixes for usage on desktop, Strip unnecessary space when user copy paste auth token that can be introduce by microb copy',
+      'changelog':'* Fix some notifications error and and identi.ca auth bug introduce by 0.1.0',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/
 NOTIFICATIONS_CONF="/etc/hildon-desktop/notification-groups.conf"
-NOTIFICATIONS_KEY="khweteur-new-tweets"
+NOTIFICATIONS_KEY="khweeteur-new-tweets"
 if ! grep -q "$NOTIFICATIONS_KEY" "$NOTIFICATIONS_CONF"; then
 echo -n "Updating $NOTIFICATIONS_CONF..."
 cat >>$NOTIFICATIONS_CONF << EOF
@@ -88,7 +88,7 @@ fi
 rm -rf /usr/lib/python2.5/site-packages/khweeteur""",
       'copyright':'gpl'},
       'bdist_rpm':{
-      'requires':'python, python-setuptools, python-mobility-location, python-qt4-gui,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'requires':'python, python-setuptools, pyside-mobility, python-pyside,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'icon':'khweeteur.png',
       'group':'Network',}}

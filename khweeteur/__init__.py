@@ -7,8 +7,9 @@
 '''A simple Twitter client made with pyqt4'''
 
 from utils import *
+from notifications import KhweeteurNotification
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 class KhweeteurActionWorker(QThread):
 
@@ -625,7 +626,7 @@ class KhweeteurWorker(QThread):
                 self.info.emit(self.error.message)  # fix bug#404
             else:
                 self.info.emit(self.tr('A network error occur'))
-
+        
     def errors(self, error):
         self.error = error
         print 'errors : ', error
@@ -1388,7 +1389,7 @@ class KhweeteurAbout(QMainWindow):
             aboutScrollArea = QScrollArea(self)
             aboutScrollArea.setWidgetResizable(True)
             awidget = QWidget(aboutScrollArea)
-            awidget.setMinimumSize(480, 1200)
+            awidget.setMinimumSize(480, 1300)
             awidget.setSizePolicy(QSizePolicy.Expanding,
                                   QSizePolicy.Expanding)
             aboutScrollArea.setSizePolicy(QSizePolicy.Expanding,
@@ -2192,9 +2193,7 @@ class KhweeteurWin(QMainWindow):
             self.worker.newStatuses.connect(self.tweetsModel.addStatuses)
             self.connect(self.worker, SIGNAL('finished()'),
                          self.refreshEnded)
-            self.notifications.connect(self.worker,
-                    SIGNAL('info(unicode)'),
-                    self.notifications.info)
+            self.worker.info.connect(self.notifications.info)
         else:
             self.worker.geocode = geocode
         self.worker.start()

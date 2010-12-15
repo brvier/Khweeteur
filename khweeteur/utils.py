@@ -72,7 +72,6 @@ except:
     import Image
 
 from settings import KhweeteurPref
-from notifications import KhweeteurNotification
 
 #Brrrr ... Globals :)
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),  '.khweeteur', 'cache')
