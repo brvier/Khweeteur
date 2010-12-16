@@ -6,6 +6,13 @@
 
 '''A simple Twitter client made with pyqt4'''
 
+#TODOS :
+#* Fix Identi.ca oauth bug
+#* Discover why notification some time show more new tweets than there is
+#* Implements Twitpic
+#* Push 0.1.x line to extras
+#* Refactoring, Clean and Comment the code
+
 from utils import *
 from notifications import KhweeteurNotification
 
