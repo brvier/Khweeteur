@@ -1542,7 +1542,8 @@ class KhweeteurWin(QMainWindow):
 
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide
-        if (self.settings.value('twitter_access_token') in ('True','1'):
+        #FIXME
+        if self.settings.value('twitter_access_token') in ('True','1'):
             self.settings.setValue('twitter_access_token',1)
         else:
             self.settings.setValue('twitter_access_token',0)
