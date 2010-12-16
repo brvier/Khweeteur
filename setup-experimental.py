@@ -60,14 +60,14 @@ setup(name='khweeteur-experimental',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Switch to pyside binding',
+      'changelog':'* Fix some notifications error and and identi.ca auth bug introduce by 0.1.0, add print in consol to uderstand some identi.ca oauth error on auth',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
 rm -rf /home/user/.khweeteur/
 NOTIFICATIONS_CONF="/etc/hildon-desktop/notification-groups.conf"
-NOTIFICATIONS_KEY="khweteur-new-tweets"
+NOTIFICATIONS_KEY="khweeteur-new-tweets"
 if ! grep -q "$NOTIFICATIONS_KEY" "$NOTIFICATIONS_CONF"; then
 echo -n "Updating $NOTIFICATIONS_CONF..."
 cat >>$NOTIFICATIONS_CONF << EOF

@@ -9,7 +9,7 @@
 from utils import *
 from notifications import KhweeteurNotification
 
-__version__ = '0.1.1'
+__version__ = '0.1.3'
 
 class KhweeteurActionWorker(QThread):
 
@@ -78,7 +78,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'twitter' in self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if self.settings.value('twitter_access_token_key') \
+                if bool(int(self.settings.value('twitter_access_token_key'))) \
                     != None:
                     api = \
                         twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
@@ -101,7 +101,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'http://identi.ca/api/' == self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if self.settings.value('identica_access_token_key') \
+                if bool(int(self.settings.value('identica_access_token_key'))) \
                     != None:
                     api = twitter.Api(base_url='http://identi.ca/api/',
                             username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -689,7 +689,7 @@ class KhweeteurWorker(QThread):
         threads = []
 
         try:
-            if self.settings.value('twitter_access_token_key') != None:
+            if bool(int(self.settings.value('twitter_access_token'))):
 
                 # Login to twitter
 
@@ -714,7 +714,7 @@ class KhweeteurWorker(QThread):
 
         try:
             identica_mlist = []
-            if self.settings.value('identica_access_token_key') != None:
+            if bool(int(self.settings.value('identica_access_token'))):
                 if not hasattr(self, 'identica_api'):
                     self.identica_api = \
                         twitter.Api(base_url='http://identi.ca/api/',
@@ -1540,6 +1540,17 @@ class KhweeteurWin(QMainWindow):
 
         self.settings = QSettings()
 
+        #Crappy fix for old prefs due to change to QVariant
+        #Api 2 and PySide
+        if self.settings.value('twitter_access_token') == 'True':
+            self.settings.setValue('twitter_access_token',1)
+        else:
+            self.settings.setValue('twitter_access_token',0)
+        if self.settings.value('identica_access_token') == 'True':
+            self.settings.setValue('identica_access_token',1)
+        else:
+            self.settings.setValue('identica_access_token',0)
+        
         try:
             if int(self.settings.value('useGPS')) == 2:
                 if self.parent != None:
@@ -2262,6 +2273,9 @@ class KhweeteurWin(QMainWindow):
         fileMenu.addAction(self.tr('&Search'), self.open_search,
                            QKeySequence(self.tr('Ctrl+S', 'Search')))
 
+#        fileMenu.addAction(self.tr('&TwitPic Upload'), self.twitpic_upload,
+#                           QKeySequence(self.tr('Ctrl+T', 'Twitpic Upload')))
+
         if self.search_keyword != None:
             keywords = self.settings.value('savedSearch')
             if keywords != None:
@@ -2277,6 +2291,29 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr('&About'), self.do_about)
 
+    def twitpic_upload(self):
+        message = 'Test'
+        import twitpic2
+        api = \
+            twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+                password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                access_token_key=str(self.settings.value('twitter_access_token_key'
+                )),
+                access_token_secret=str(self.settings.value('twitter_access_token_secret'
+                )))
+        twitpic = twitpic2.TwitPicOAuthClient(
+            consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
+            consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
+            access_token = ACCESS_TOKEN, #FIXME
+            service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
+            )
+        # methods - read, create, update, remove
+        params = []
+        params['media'] = 'khweeteur.png'
+        params['message'] = 'Test of python-twitpic module from #Khweeteur'
+        response = twitpic2.create('upload', params)
+        print response
+        
     def del_search(self):
         keywords = self.settings.value('savedSearch')
         if not keywords:

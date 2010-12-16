@@ -107,10 +107,10 @@ class KhweeteurPref(QMainWindow):
 
     def request_twitter_access_or_clear(self):
         ''' Request or clear twitter auth token'''
-        if self.settings.value('twitter_access_token'):
+        if bool(self.settings.value('twitter_access_token')):
             self.settings.setValue('twitter_access_token_key','')
             self.settings.setValue('twitter_access_token_secret','')
-            self.settings.setValue('twitter_access_token',False)
+            self.settings.setValue('twitter_access_token',0)
             self.twitter_value.setText(self.tr('Auth on Twitter'))
         else:
 
@@ -166,13 +166,13 @@ class KhweeteurPref(QMainWindow):
                             KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('twitter_access_token_key','')
                             self.settings.setValue('twitter_access_token_secret','')
-                            self.settings.setValue('twitter_access_token',False)
+                            self.settings.setValue('twitter_access_token',0)
                         else:
                             #print access_token['oauth_token']
                             #print access_token['oauth_token_secret']
                             self.settings.setValue('twitter_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('twitter_access_token_secret',access_token['oauth_token_secret'])
-                            self.settings.setValue('twitter_access_token',True)
+                            self.settings.setValue('twitter_access_token',1)
                             self.twitter_value.setText(self.tr('Clear Twitter Auth'))
                             KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
@@ -181,10 +181,10 @@ class KhweeteurPref(QMainWindow):
     def request_identica_access_or_clear(self):
         ''' Request or clear identi.ca auth token'''
         import urllib
-        if self.settings.value('identica_access_token'):
+        if bool(self.settings.value('identica_access_token')):
             self.settings.setValue('identica_access_token_key','')
             self.settings.setValue('identica_access_token_secret','')
-            self.settings.setValue('identica_access_token',False)
+            self.settings.setValue('identica_access_token',0)
             self.identica_value.setText(self.tr('Auth on Identi.ca'))
         else:
             try:
@@ -212,13 +212,17 @@ class KhweeteurPref(QMainWindow):
                 oauth_client               = oauth.Client(oauth_consumer)
                 oauth_callback_uri = 'oob'
                 #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
+                print urllib.urlencode(dict(oauth_callback=oauth_callback_uri))
                 resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'POST', body=urllib.urlencode(dict(oauth_callback=oauth_callback_uri)))
-#                write_log(resp)
-#                write_log(content)
+                print datetime.datetime.now()
+                print resp, content
+
                 if isMAEMO:
                     self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,False)
 
                 if resp['status'] != '200':
+                    
+#                    write_log(log)
                     KhweeteurNotification().warn(self.tr('Invalid respond from Identi.ca requesting temp token: %s') % resp['status'])
                 else:
                     request_token = dict(parse_qsl(content))
@@ -234,7 +238,9 @@ class KhweeteurPref(QMainWindow):
                         token.set_verifier(str(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
-                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
+                        resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST' )
+                        print datetime.datetime.now()
+                        print resp, content
 #                        write_log(resp)
 #                        write_log(content)
                         access_token  = dict(parse_qsl(content))
@@ -243,13 +249,13 @@ class KhweeteurPref(QMainWindow):
                             KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('identica_access_token_key','')
                             self.settings.setValue('identica_access_token_secret','')
-                            self.settings.setValue('identica_access_token',False)
+                            self.settings.setValue('identica_access_token',0)
                         else:
                             #print access_token['oauth_token']
                             #print access_token['oauth_token_secret']
                             self.settings.setValue('identica_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('identica_access_token_secret',access_token['oauth_token_secret'])
-                            self.settings.setValue('identica_access_token',True)
+                            self.settings.setValue('identica_access_token',1)
                             self.identica_value.setText(self.tr('Clear Identi.ca Auth'))
                             KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
@@ -315,13 +321,13 @@ class KhweeteurPref(QMainWindow):
                             KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
                             self.settings.setValue('statusnet_access_token_key','')
                             self.settings.setValue('statusnet_access_token_secret','')
-                            self.settings.setValue('statusnet_access_token',False)
+                            self.settings.setValue('statusnet_access_token',0)
                         else:
                             #print access_token['oauth_token']
                             #print access_token['oauth_token_secret']
                             self.settings.setValue('statusnet_access_token_key',access_token['oauth_token'])
                             self.settings.setValue('statusnet_access_token_secret',access_token['oauth_token_secret'])
-                            self.settings.setValue('statusnet_access_token',True)
+                            self.settings.setValue('statusnet_access_token',1)
                             self.statusnet_value.setText(self.tr('Clear Status.net Auth'))
                             KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
                         if isMAEMO:
@@ -345,16 +351,21 @@ class KhweeteurPref(QMainWindow):
         self._main_layout = QGridLayout(self.aWidget)
 
         self._main_layout.addWidget(QLabel(self.tr('Authorizations :')),0,0)
-        if self.settings.value(self.tr('twitter_access_token')):
-            self.twitter_value = QPushButton(self.tr('Clear Twitter Auth'))
-        else:
+        try:
+            if bool(int(self.settings.value(self.tr('twitter_access_token')))):
+                self.twitter_value = QPushButton(self.tr('Clear Twitter Auth'))
+            else:
+                self.twitter_value = QPushButton(self.tr('Auth on Twitter'))
+        except:
             self.twitter_value = QPushButton(self.tr('Auth on Twitter'))
         self._main_layout.addWidget(self.twitter_value,0,1)
         self.connect(self.twitter_value, SIGNAL('clicked()'), self.request_twitter_access_or_clear)
-
-        if self.settings.value('identica_access_token'):
-            self.identica_value = QPushButton(self.tr('Clear Identi.ca Auth'))
-        else:
+        try:
+            if bool(int(self.settings.value('identica_access_token'))):
+                self.identica_value = QPushButton(self.tr('Clear Identi.ca Auth'))
+            else:
+                self.identica_value = QPushButton(self.tr('Auth on Identi.ca'))
+        except:
             self.identica_value = QPushButton(self.tr('Auth on Identi.ca'))
         self._main_layout.addWidget(self.identica_value,1,1)
         self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
