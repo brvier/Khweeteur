@@ -377,7 +377,7 @@ class KhweeteurPref(QMainWindow):
         self.refresh_value = QSpinBox()
         self._main_layout.addWidget(self.refresh_value,3,1)
 
-        self._main_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view (History) :')),4,0)
+        self._main_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view :')),4,0)
         self.history_value = QSpinBox()
         self._main_layout.addWidget(self.history_value,4,1)
 

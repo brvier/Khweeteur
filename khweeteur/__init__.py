@@ -78,7 +78,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'twitter' in self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if bool(int(self.settings.value('twitter_access_token_key'))) \
+                if bool(int(self.settings.value('twitter_access_token'))) \
                     != None:
                     api = \
                         twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
@@ -101,7 +101,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'http://identi.ca/api/' == self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if bool(int(self.settings.value('identica_access_token_key'))) \
+                if bool(int(self.settings.value('identica_access_token'))) \
                     != None:
                     api = twitter.Api(base_url='http://identi.ca/api/',
                             username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
@@ -2170,8 +2170,8 @@ class KhweeteurWin(QMainWindow):
             self.tweetAction.finished.connect(self.tweetSentFinished)
             self.tweetAction.info.connect(self.notifications.info)
             self.tweetAction.warn.connect(self.notifications.warn)
-            self.tweetAction.tweetSent.connect(self.tweetSentFinished)
-            self.tweetAction.finished.connect(self.tweetSent)
+            self.tweetAction.tweetSent.connect(self.tweetSent)
+            self.tweetAction.finished.connect(self.tweetSentFinished)
             self.tweetAction.start()
 
     def refreshEnded(self):
