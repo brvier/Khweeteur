@@ -1542,11 +1542,11 @@ class KhweeteurWin(QMainWindow):
 
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide
-        if self.settings.value('twitter_access_token') == 'True':
+        if (self.settings.value('twitter_access_token') in ('True','1'):
             self.settings.setValue('twitter_access_token',1)
         else:
             self.settings.setValue('twitter_access_token',0)
-        if self.settings.value('identica_access_token') == 'True':
+        if self.settings.value('identica_access_token') in ('True','1'):
             self.settings.setValue('identica_access_token',1)
         else:
             self.settings.setValue('identica_access_token',0)
