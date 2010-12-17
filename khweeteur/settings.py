@@ -17,6 +17,47 @@ KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 import oauth2 as oauth
 from notifications import KhweeteurNotification
 
+from PySide.QtWebKit import *
+
+
+javaScriptLogin = """ 
+return document.getElementsByName('oauth_pin'); 
+ """  
+   
+class OAuthWeb(QWebView):  
+    def __init__(self, parent=None):  
+        QWebView.__init__(self,parent)  
+        self.loggedIn = False  
+   
+    def open(self, url):  
+        """."""  
+        self.url = QUrl(url)  
+        self.loadFinished.connect(self._loadFinished)  
+        self.load(self.url)
+        self.show()
+   
+    def createWindow(self, windowType):  
+        """Load links in the same web-view."""  
+        return self  
+   
+    def _loadFinished(self):  
+#        if self.loggedIn:  
+#            self.loadFinished.disconnect(self._loadFinished)  
+   
+#        self.loggedIn = True  
+        print self.page().mainFrame().evaluateJavaScript(javaScriptLogin)  
+   
+#    def contextMenuEvent(self, event):  
+#        """Add a 'Back to GMail' entry."""  
+#        menu = self.page().createStandardContextMenu()  
+#        menu.addSeparator()  
+#        action = menu.addAction('Back to GMail')  
+#        @action.triggered.connect  
+#        def backToGMail():  
+#            self.load(self.url)  
+#        menu.exec_(QtGui.QCursor.pos())  
+
+
 class KhweeteurPref(QMainWindow):
 
     save = pyqtSignal()
@@ -229,8 +270,13 @@ class KhweeteurPref(QMainWindow):
 
                     QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
 
-                    pincode, ok = QInputDialog.getText(self, self.tr('Identi.ca Authentification'), self.tr('Enter the token :'))
+#                    Javascript didn t work yet
+#                    self.wbkt=OAuthWeb()
+#                    self.wbkt.open(('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
 
+
+                    pincode, ok = QInputDialog.getText(self, self.tr('Identi.ca Authentification'), self.tr('Enter the token :'))
+#                    ok = False
                     if ok:
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)

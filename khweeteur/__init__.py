@@ -12,11 +12,12 @@
 #* Implements Twitpic
 #* Push 0.1.x line to extras
 #* Refactoring, Clean and Comment the code
+#* Add retry on network errors
 
 from utils import *
 from notifications import KhweeteurNotification
 
-__version__ = '0.1.3'
+__version__ = '0.1.5'
 
 class KhweeteurActionWorker(QThread):
 
@@ -2325,10 +2326,9 @@ class KhweeteurWin(QMainWindow):
     def del_search(self):
         keywords = self.settings.value('savedSearch')
         if not keywords:
+            keywords = []            
+        elif type(keywords) == unicode:
             keywords = []
-        elif type(keywords) == str:
-            if self.search_keyword == keywords:
-                keywords = []
         elif type(keywords) == list:
             try:
                 keywords.remove(self.search_keyword)
@@ -2343,19 +2343,23 @@ class KhweeteurWin(QMainWindow):
         keywords = self.settings.value('savedSearch')
         if not keywords:
             keywords = []
-        elif type(keywords) == str:
-            keywords = [keywords]
+        elif type(keywords) == unicode:
+            keywords = [keywords,]
         keywords.append(self.search_keyword)
         self.settings.setValue('savedSearch', keywords)
 
     def open_saved_search(self):
         keywords = self.settings.value('savedSearch')
-        if type(keywords) == str:
-            keywords = [keywords]
+        if type(keywords) == unicode:
+            keywords = [keywords,]
 
         if keywords != None:
-            for keyword in keywords:
-                self.do_search(keyword)
+            if type(keywords)==list:
+                for keyword in keywords:
+                    self.do_search(keyword)
+            else:
+                self.settings.setValue('savedSearch',[])
+                
         self.activateWindow()
 
     def open_search(self):

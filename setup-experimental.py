@@ -60,7 +60,7 @@ setup(name='khweeteur-experimental',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix some notifications error and and identi.ca auth bug introduce by 0.1.0, add print in consol to uderstand some identi.ca oauth error on auth',
+      'changelog':'* Remove of a test on identi.ca auth',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
