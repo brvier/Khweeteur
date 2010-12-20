@@ -26,7 +26,6 @@ class KhweeteurActionWorker(QThread):
     info = pyqtSignal(unicode)
     warn = pyqtSignal(unicode)
     tweetSent = pyqtSignal()
-#    finished = pyqtSignal()
         
     def __init__(
         self,
@@ -155,7 +154,7 @@ class KhweeteurCacheCleaner(QThread):
         if self.keyword:
             for filepath in glob.glob(os.path.join(CACHE_PATH,
                     os.path.normcase(unicode(self.keyword.replace('/',
-                    '_'))).encode('UTF-8')) + '/*'):  # FIXME
+                    '_'))).encode('UTF-8')) + '/*'):
                 filecdate = \
                     datetime.datetime.fromtimestamp(os.path.getctime(filepath))
                 if (now - filecdate).days > 45:
@@ -187,7 +186,7 @@ class KhweeteurRefreshWorker(QThread):
         self.api = api
         self.settings = QSettings()
 
-    def run(self):
+    def run(self):        
         pass
 
     def getCacheFolder(self):
@@ -303,7 +302,7 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
     def run(self):
 
         # Get Home TimeLine
-
+        print 'Refresh KhweeteurHomeTimelineWorker'
         try:
             statuses = \
                 self.api.GetFriendsTimeline(since_id=self.settings.value('last_id/'
@@ -317,6 +316,8 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
             statuses.sort()
             statuses.reverse()
             if len(statuses) > 0:
+                print 'Got new status', [status.id for status in
+                        statuses]
                 self.newStatuses.emit([status.id for status in
                         statuses])
                 self.settings.setValue('last_id/' + self.api.base_url
@@ -751,8 +752,11 @@ class KhweeteurWorker(QThread):
                 print 'Error during twitter refresh : ', \
                     self.error.message
                 self.info.emit(self.error.message)  # fix bug#404
+            elif type(self.error) == urllib2.httplib.BadStatusLine:
+                print 'Bad status line : ', self.error.line
             else:
                 self.info.emit('A network error occur')
+        print 'DEBUG:Refresh ended'
 
 
 class KhweetsModel(QAbstractListModel):
@@ -777,6 +781,13 @@ class KhweetsModel(QAbstractListModel):
 
     def setLimit(self, limit):
         self.khweets_limit = limit
+
+
+    def orderLimitAndCacheUids(self):
+        self._items.sort()
+        self._items.reverse()
+        self._items = self._items[:self.khweets_limit]
+        self._uids = [item[1] for item in self._items]
 
     def GetRelativeCreatedAt(self, timestamp):
         '''Get a human redable string representing the posting time
@@ -836,10 +847,6 @@ class KhweetsModel(QAbstractListModel):
             except StandardError, e:
                 print e
 
-#        QObject.emit(self,
-#                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-#                     ), self.createIndex(0, 0), self.createIndex(0,
-#                     len(self._uids)))
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
                               len(self._items)))
@@ -866,29 +873,22 @@ class KhweetsModel(QAbstractListModel):
             traceback.print_exc()
 
         if len(keys) > 0:
-            self._items.sort()
-            self._items.reverse()
-            self._items = self._items[:self.khweets_limit]
-            self._new_counter += len(keys)
+            self.orderLimitAndCacheUids()
 
-#            QObject.emit(self,
-#                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-#                         ), self.createIndex(0, 0), self.createIndex(0,
-#                         len(self._items)))
+            for key in keys:
+                if key in self._uids:
+                    self._new_counter += 1
+
             self.dataChanged.emit(self.createIndex(0, 0),
                                   self.createIndex(0,
                                   len(self._items)))
-            # self.serialize()
 
     def destroyStatus(self, index):
         self._items.pop(index.row())
-#        QObject.emit(self,
-#                     SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-#                     ), self.createIndex(0, 0), self.createIndex(0,
-#                     len(self._items)))
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
                               len(self._items)))
+                              
     def getNewAndReset(self):
         counter = self._new_counter
         self._new_counter = 0
@@ -999,7 +999,10 @@ class KhweetsModel(QAbstractListModel):
                         unicode(self.keyword.replace('/', '_')))))
                 uids = glob.glob(cach_path + u'/*')
 
-            if len(uids) == 0:
+            if len(uids) != 0:
+                self._createCacheList(cach_path, uids)
+
+            if len(self._uids) == 0:
                 print 'Cache cleared'
                 self.settings = QSettings()
                 if not self.keyword:
@@ -1007,18 +1010,14 @@ class KhweetsModel(QAbstractListModel):
                 else:
                     self.settings.remove(self.keyword + '/last_id')
             else:
-                self._createCacheList(cach_path, uids)
-                self._items.sort()
-                self._items.reverse()
+                self.orderLimitAndCacheUids()
+
         except StandardError, e:
             print 'unSerialize : ', e
-#            QObject.emit(self,
-#                         SIGNAL('dataChanged(const QModelIndex&, const QModelIndex &)'
-#                         ), self.createIndex(0, 0), self.createIndex(0,
-#                         len(self._items)))
             self.dataChanged.emit(self.createIndex(0, 0),
                                   self.createIndex(0,
                                   len(self._items)))
+
     def data(self, index, role=Qt.DisplayRole):
 
         # 0 -> Created_at,
@@ -1113,8 +1112,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
 
-        uid = str(index.data(role=IDROLE)) + 'x' \
-            + str(option.rect.width())
+	uid = str(index.data(role=IDROLE)) + 'x' + \
+		str(option.rect.width())
         try:
             return self.memoized_size[uid]
         except:
@@ -1550,7 +1549,6 @@ class KhweeteurWin(QMainWindow):
 
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide
-        #FIXME
         if self.settings.value('twitter_access_token') in ('True','1'):
             self.settings.setValue('twitter_access_token',1)
         else:
@@ -1620,13 +1618,13 @@ class KhweeteurWin(QMainWindow):
 
     def justAfterInit(self):
 
+        self.notifications = KhweeteurNotification()
+
         if not noDBUS:
             from nwmanager import NetworkManager
             self.nw = NetworkManager(self.refresh_timeline)
         else:
-            self.refresh_timeline
-
-        self.notifications = KhweeteurNotification()
+            self.refresh_timeline()
 
         self.connect(self.timer, SIGNAL('timeout()'),
                      self.timed_refresh)
@@ -2199,7 +2197,7 @@ class KhweeteurWin(QMainWindow):
         if self.search_keyword == 'GeOSearH':
             if self.parent.coordinates:
                 geocode = (self.parent.coordinates[0],
-                           self.parent.coordinates[1], '1km')  # FIXME
+                           self.parent.coordinates[1], '1km')
             else:
                 geocode = None
         else:
@@ -2300,28 +2298,28 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr('&About'), self.do_about)
 
-    def twitpic_upload(self):
-        message = 'Test'
-        import twitpic2
-        api = \
-            twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
-                password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
-                access_token_key=str(self.settings.value('twitter_access_token_key'
-                )),
-                access_token_secret=str(self.settings.value('twitter_access_token_secret'
-                )))
-        twitpic = twitpic2.TwitPicOAuthClient(
-            consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
-            consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
-            access_token = ACCESS_TOKEN, #FIXME
-            service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
-            )
-        # methods - read, create, update, remove
-        params = []
-        params['media'] = 'khweeteur.png'
-        params['message'] = 'Test of python-twitpic module from #Khweeteur'
-        response = twitpic2.create('upload', params)
-        print response
+#    def twitpic_upload(self):
+#        message = 'Test'
+#        import twitpic2
+#        api = \
+#            twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+#                password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+#                access_token_key=str(self.settings.value('twitter_access_token_key'
+#                )),
+#                access_token_secret=str(self.settings.value('twitter_access_token_secret'
+#                )))
+#        twitpic = twitpic2.TwitPicOAuthClient(
+#            consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
+#            consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
+#            access_token = ACCESS_TOKEN, #FIXME
+#            service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
+#            )
+#        # methods - read, create, update, remove
+#        params = []
+#        params['media'] = 'khweeteur.png'
+#        params['message'] = 'Test of python-twitpic module from #Khweeteur'
+#        response = twitpic2.create('upload', params)
+#        print response
         
     def del_search(self):
         keywords = self.settings.value('savedSearch')

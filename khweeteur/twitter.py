@@ -467,7 +467,7 @@ class Status(object):
       user = None
     return Status(created_at=data.get('created_at', None),
                   favorited=data.get('favorited', None),
-                  id=data.get('id', None),
+                  id=long(data.get('id', None)),
                   text=data.get('text', None),
                   location=data.get('location', None),
                   in_reply_to_screen_name=data.get('in_reply_to_screen_name', None),
@@ -1947,7 +1947,7 @@ class Api(object):
     if not self._username:
       raise TwitterError("The twitter.Api instance must be authenticated.")
     try:
-        if int(tweet_id) <= 0:
+        if long(tweet_id) <= 0:
             raise TwitterError("'id' must be a positive number")
     except ValueError:
         raise TwitterError("'id' must be an integer")
