@@ -8,7 +8,6 @@
 
 #TODOS :
 #* Fix Identi.ca oauth bug
-#* Discover why notification some time show more new tweets than there is
 #* Implements Twitpic
 #* Push 0.1.x line to extras
 #* Refactoring, Clean and Comment the code
@@ -29,7 +28,7 @@ class KhweeteurActionWorker(QThread):
         
     def __init__(
         self,
-        parent=None,
+        parent=None,    
         action=None,
         data=(None,None,None,None,None),
         ):
