@@ -6,7 +6,62 @@
 '''A simple Twitter client made with pyqt4'''
 
 from utils import *
+import datetime
 
+if not USE_PYSIDE:
+    from PyQt4.QtGui import QMainWindow, \
+                            QDialog, \
+                            QApplication, \
+                            QMenu, \
+                            QKeySequence, \
+                            QToolBar, \
+                            QAction, \
+                            QIcon, \
+                            QPlainTextEdit, \
+                            QLabel, \
+                            QMessageBox, \
+                            QCheckBox, \
+                            QComboBox, \
+                            QSpinBox, \
+                            QScrollArea, \
+                            QPushButton, \
+                            QInputDialog, \
+                            QWidget, \
+                            QDesktopServices, \
+                            QSizePolicy, \
+                            QGridLayout                    
+                                                                   
+    from PyQt4.QtCore import QSettings, \
+                             Qt, \
+                             QUrl
+                            
+else:
+    from PySide.QtGui import QMainWindow, \
+                             QDialog, \
+                             QApplication, \
+                             QMenu, \
+                             QKeySequence, \
+                             QToolBar, \
+                             QAction, \
+                             QIcon, \
+                             QPlainTextEdit, \
+                             QLabel, \
+                             QMessageBox, \
+                             QCheckBox, \
+                             QComboBox, \
+                             QSpinBox, \
+                             QScrollArea, \
+                             QPushButton, \
+                             QInputDialog, \
+                             QWidget, \
+                             QDesktopServices, \
+                             QSizePolicy, \
+                             QGridLayout
+                             
+    from PySide.QtCore import QSettings, \
+                              Qt, \
+                              QUrl
+                              
 KHWEETEUR_TWITTER_CONSUMER_KEY = 'uhgjkoA2lggG4Rh0ggUeQ'
 KHWEETEUR_TWITTER_CONSUMER_SECRET = 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU'
 KHWEETEUR_IDENTICA_CONSUMER_KEY = 'c7e86efd4cb951871200440ad1774413'
@@ -24,28 +79,28 @@ javaScriptLogin = """
 return document.getElementsByName('oauth_pin'); 
  """  
    
-class OAuthWeb(QWebView):  
-    def __init__(self, parent=None):  
-        QWebView.__init__(self,parent)  
-        self.loggedIn = False  
+#class OAuthWeb(QWebView):  
+#    def __init__(self, parent=None):  
+#        QWebView.__init__(self,parent)  
+#        self.loggedIn = False  
    
-    def open(self, url):  
-        """."""  
-        self.url = QUrl(url)  
-        self.loadFinished.connect(self._loadFinished)  
-        self.load(self.url)
-        self.show()
+#    def open(self, url):  
+#        """."""  
+#        self.url = QUrl(url)  
+#        self.loadFinished.connect(self._loadFinished)  
+#        self.load(self.url)
+#        self.show()
    
-    def createWindow(self, windowType):  
-        """Load links in the same web-view."""  
-        return self  
+#    def createWindow(self, windowType):  
+#        """Load links in the same web-view."""  
+#        return self  
    
-    def _loadFinished(self):  
+#    def _loadFinished(self):  
 #        if self.loggedIn:  
 #            self.loadFinished.disconnect(self._loadFinished)  
    
 #        self.loggedIn = True  
-        print self.page().mainFrame().evaluateJavaScript(javaScriptLogin)  
+#        print self.page().mainFrame().evaluateJavaScript(javaScriptLogin)  
    
 #    def contextMenuEvent(self, event):  
 #        """Add a 'Back to GMail' entry."""  
@@ -97,7 +152,7 @@ class KhweeteurPref(QMainWindow):
         if self.settings.value("displayUser"):
             self.displayUser_value.setCheckState(Qt.CheckState(int(self.settings.value("displayUser"))))
         else:
-            self.displayUser_value.setCheckState(Qt.CheckState.Checked)
+            self.displayUser_value.setCheckState(Qt.Checked)
         if self.settings.value("displayAvatar"):
             self.displayAvatar_value.setCheckState(Qt.CheckState(int(self.settings.value("displayAvatar"))))
         if self.settings.value("displayTimestamp"):
@@ -241,7 +296,7 @@ class KhweeteurPref(QMainWindow):
                 except:
                     from cgi import parse_qsl
 
-                REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token'
+                REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token?oauth_callback=oob'                
                 ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
                 AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
 
@@ -253,9 +308,9 @@ class KhweeteurPref(QMainWindow):
                 oauth_client               = oauth.Client(oauth_consumer)
                 oauth_callback_uri = 'oob'
                 #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
-                print urllib.urlencode(dict(oauth_callback=oauth_callback_uri))
-                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'POST', body=urllib.urlencode(dict(oauth_callback=oauth_callback_uri)))
-                print datetime.datetime.now()
+                #print urllib.urlencode(dict(oauth_callback=oauth_callback_uri))
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
+                #print datetime.datetime.now()
                 print resp, content
 
                 if isMAEMO:
@@ -405,7 +460,8 @@ class KhweeteurPref(QMainWindow):
         except:
             self.twitter_value = QPushButton(self.tr('Auth on Twitter'))
         self._main_layout.addWidget(self.twitter_value,0,1)
-        self.connect(self.twitter_value, SIGNAL('clicked()'), self.request_twitter_access_or_clear)
+#        self.connect(self.twitter_value, SIGNAL('clicked()'), self.request_twitter_access_or_clear)
+        self.twitter_value.clicked.connect(self.request_twitter_access_or_clear)
         try:
             if bool(int(self.settings.value('identica_access_token'))):
                 self.identica_value = QPushButton(self.tr('Clear Identi.ca Auth'))
@@ -414,8 +470,8 @@ class KhweeteurPref(QMainWindow):
         except:
             self.identica_value = QPushButton(self.tr('Auth on Identi.ca'))
         self._main_layout.addWidget(self.identica_value,1,1)
-        self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
-
+#        self.connect(self.identica_value, SIGNAL('clicked()'), self.request_identica_access_or_clear)
+        self.identica_value.clicked.connect(self.request_identica_access_or_clear)
         #Remove statusnet oauth as it didn't support subdomain
         #and require app keys for each subdomain
 

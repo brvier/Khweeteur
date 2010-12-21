@@ -53,14 +53,14 @@ setup(name='khweeteur',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'2',
+      'buildversion':'1',
       'depends':'python2.5, python-setuptools, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix package postre',
+      'changelog':'* Clean up code and various minor fixes * fix bug #548 * Improve memory footprint',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

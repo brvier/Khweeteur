@@ -6,7 +6,20 @@
 
 from utils import *
 
-if noDBUS:
+if not USE_PYSIDE:
+    from PyQt4.QtCore import QObject
+else:
+    from PySide.QtCore import QObject
+    
+try:
+    import dbus
+    import dbus.service
+    from dbus.mainloop.qt import DBusQtMainLoop
+    from dbusobj import KhweeteurDBus
+    noDBUS = False
+except:
+    noDBUS = True
+    print 'No dbus try with pynotify'
     import pynotify
     
 class KhweeteurNotification(QObject):

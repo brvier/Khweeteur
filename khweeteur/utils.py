@@ -13,65 +13,59 @@ if not USE_PYSIDE:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
+#    from PyQt4.QtGui import *
+#    from PyQt4.QtCore import *
+
+#    try:
+#        from PyQt4.QtMobility.QtLocation import *
+#        noQtLocation = False
+#    except:
+#        noQtLocation = True
 
     try:
-        from PyQt4.QtMobility.QtLocation import *
-        noQtLocation = False
-    except:
-        noQtLocation = True
-
-    try:   
         from PyQt4.QtMaemo5 import *
         isMAEMO = True
     except:
         isMAEMO = False
 
 else:
-    from PySide.QtCore import * #PySide
-    from PySide.QtGui import * #PySide
+#    from PySide.QtCore import * #PySide
+#    from PySide.QtGui import * #PySide
+    from PySide.QtCore import Slot,Signal
+    
     pyqtSlot = Slot
     pyqtSignal = Signal
-    try:
-        from QtMobility.Location import * #PySide
-        noQtLocation = False
-    except:
-        noQtLocation = True
+#    try:
+#        from QtMobility.Location import * #PySide
+#        noQtLocation = False
+#    except:
+#        noQtLocation = True
 
-    try:   
-        from PySide.QtMaemo5 import * #PySide        
+    try:
+        from PySide.QtMaemo5 import * #PySide
         isMAEMO = True
     except:
         isMAEMO = False
 
-import twitter
+#import twitter
 import sys
 import os.path
 import datetime
-import time
-import re
-import urllib2
-from urllib import urlretrieve
-import socket
-import glob
+#import time
+#import re
+#import urllib2
+#from urllib import urlretrieve
+#import socket
+#import glob
 import pickle
 
-try:
-    import dbus
-    import dbus.service
-    from dbus.mainloop.qt import DBusQtMainLoop
-    from dbusobj import KhweeteurDBus
-    noDBUS = False
-except:
-    noDBUS = True
-    
-try:
-    from PIL import Image
-except:
-    import Image
 
-from settings import KhweeteurPref
+#try:
+#    from PIL import Image
+#except:
+#    import Image
+
+#from settings import KhweeteurPref
 
 #Brrrr ... Globals :)
 AVATAR_CACHE_FOLDER = os.path.join(os.path.expanduser("~"),  '.khweeteur', 'cache')
