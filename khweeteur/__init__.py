@@ -84,8 +84,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'twitter' in self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if bool(int(self.settings.value('twitter_access_token'))) \
-                    != None:
+                if bool(int(self.settings.value('twitter_access_token'))):
                     api = \
                         twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
                                     password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
@@ -107,8 +106,7 @@ class KhweeteurActionWorker(QThread):
 
             if 'http://identi.ca/api/' == self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
-                if bool(int(self.settings.value('identica_access_token'))) \
-                    != None:
+                if bool(int(self.settings.value('identica_access_token'))):
                     api = twitter.Api(base_url='http://identi.ca/api/',
                             username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                             password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,

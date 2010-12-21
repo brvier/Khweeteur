@@ -53,14 +53,14 @@ setup(name='khweeteur',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'1',
+      'buildversion':'2',
       'depends':'python2.5, python-setuptools, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Remove of a test on identi.ca auth',
+      'changelog':'* Fix package postre',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
@@ -84,8 +84,8 @@ EOF
     echo "done."
 fi
 """,
-      'postre':"""#!/bin/sh
-rm -rf /usr/lib/python2.5/site-packages/khweeteur""",
+#      'postre':"""#!/bin/sh
+#rm -rf /usr/lib/python2.5/site-packages/khweeteur""",
       'copyright':'gpl'},
       'bdist_rpm':{
       'requires':'python, python-setuptools, pyside-mobility, python-pyside,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
