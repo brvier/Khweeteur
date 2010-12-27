@@ -39,19 +39,19 @@ class KhweeteurRefreshWorker(QThread):
 
     def getCacheFolder(self):
         if not hasattr(self, 'keywords'):
-            folder_path = TIMELINE_PATH
+            self.folder_path = TIMELINE_PATH
         else:
-            folder_path = os.path.join(CACHE_PATH,
+            self.folder_path = os.path.join(CACHE_PATH,
                     os.path.normcase(unicode(self.keywords.replace('/',
                     '_'))).encode('UTF-8'))
 
-        if not os.path.isdir(folder_path):
+        if not os.path.isdir(self.folder_path):
             try:
-                os.makedirs(folder_path)
+                os.makedirs(self.folder_path)
             except IOError, e:
                 print 'getCacheFolder:', e
 
-        return folder_path
+        return self.folder_path
 
     def serialize(self, statuses):
 
@@ -490,6 +490,7 @@ class KhweeteurWorker(QThread):
 
     def transmitNewStatuses(self, alist):
 #        self.emit(SIGNAL('newStatuses(list)'), list)
+        print 'transmitNewStatuses',len(alist)
         self.newStatuses.emit(alist)
 
     def refresh_unified(self, api):

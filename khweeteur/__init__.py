@@ -6,7 +6,7 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
@@ -231,9 +231,7 @@ class KhweetAction(QDialog):
                 if int(self.settings.value('useAutoRotation')) == 2:
                     self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             except:
-
                    # No pref yet default is true
-
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
 
         _layout = QGridLayout(self)
@@ -478,12 +476,15 @@ class KhweeteurWin(QMainWindow):
 
         QTimer.singleShot(200, self.timedUnserialize)
 
+    @pyqtSlot()
     def scrolltop(self):
         self.tweetsView.scrollToTop()
 
+    @pyqtSlot()
     def scrollbottom(self):
         self.tweetsView.scrollToBottom()
 
+    @pyqtSlot()
     def tweet_do_ask_action(self):
         user = None
         for index in self.tweetsView.selectedIndexes():
@@ -498,6 +499,7 @@ class KhweeteurWin(QMainWindow):
             self.tweetActionDialog.destroy_tweet.clicked.connect(self.destroy_tweet)
             self.tweetActionDialog.exec_()
 
+    @pyqtSlot()
     def countCharsAndResize(self):
         local_self = self.tb_text
         self.tb_charCounter.setText(unicode(140
@@ -518,6 +520,7 @@ class KhweeteurWin(QMainWindow):
         local_self.setFixedHeight(min(370, s.height() + fr.height()
                                   - cr.height() - 1))
 
+    @pyqtSlot()
     def reply(self):
         if self.tweetActionDialog != None:
             self.tweetActionDialog.accept()
@@ -532,6 +535,7 @@ class KhweeteurWin(QMainWindow):
 
 #            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
 
+    @pyqtSlot()
     def open_url(self):
         import re
         self.tweetActionDialog.accept()
@@ -544,6 +548,7 @@ class KhweeteurWin(QMainWindow):
             except StandardError, e:
                 print e
 
+    @pyqtSlot()
     def follow(self):
         self.tweetActionDialog.accept()
         if not self.nw.device_has_networking:
@@ -628,6 +633,7 @@ class KhweeteurWin(QMainWindow):
                                         ) % (user_screenname, str(e)))
                                 print e
 
+    @pyqtSlot()
     def unfollow(self):
         self.tweetActionDialog.accept()
         if not self.nw.device_has_networking:
@@ -714,7 +720,7 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.warn(self.tr('Remove %s to friendship failed on Identi.ca : %s'
                                         ) % (user_screenname, str(e)))
                                 print e
-
+    @pyqtSlot()
     def retweet(self):
         self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
@@ -794,6 +800,7 @@ class KhweeteurWin(QMainWindow):
                                     ) + str(e))
                             print e
 
+    @pyqtSlot()
     def destroy_tweet(self):
         self.tweetActionDialog.accept()
         for index in self.tweetsView.selectedIndexes():
@@ -875,16 +882,19 @@ class KhweeteurWin(QMainWindow):
                                      + str(e))
                             print e
 
+    @pyqtSlot()
     def tweetSent(self):
         self.tb_text.setPlainText('')
         self.tb_text_replyid = 0
         self.tb_text_replytext = ''
         self.request_refresh()  # Feature Request : 201
 
+    @pyqtSlot()
     def tweetSentFinished(self):
         self.tb_text.setEnabled(True)
         self.tb_tweet.setEnabled(True)
 
+    @pyqtSlot()
     def tweet(self):
         try:
             if not self.nw.device_has_networking:
@@ -1122,8 +1132,7 @@ class KhweeteurWin(QMainWindow):
     def do_about(self):
         self.aboutWin = KhweeteurAbout(self)
 
-#    @Slot()
-
+#    @pyqtSlot()
     @pyqtSlot()
     def activated_by_dbus(self):
         self.tweetsModel.getNewAndReset()

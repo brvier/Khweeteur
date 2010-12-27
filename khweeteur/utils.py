@@ -5,6 +5,7 @@
 # Licenced under GPLv3
 
 USE_PYSIDE = True
+USE_PYSIDE = False
 
 #Mega Import ! Beurk
 
@@ -12,6 +13,8 @@ if not USE_PYSIDE:
     import sip
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
+
+    from PyQt4.QtCore import pyqtSlot,pyqtSignal
 
 #    from PyQt4.QtGui import *
 #    from PyQt4.QtCore import *

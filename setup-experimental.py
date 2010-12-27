@@ -53,8 +53,8 @@ setup(name='khweeteur-experimental',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'1',
-      'depends':'python2.5, python-setuptools, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'buildversion':'2',
+      'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus',
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
@@ -84,8 +84,8 @@ EOF
     echo "done."
 fi
 """,
-#      'postre':"""#!/bin/sh
-#rm -rf /usr/lib/python2.5/site-packages/khweeteur-experimental""",
+      'prere':"""#!/bin/sh
+rm -rf /usr/lib/python2.5/site-packages/khweeteur-experimental/*.pyc""",
       'copyright':'gpl'},
       'bdist_rpm':{
       'requires':'python, python-setuptools, python-mobility-location, python-qt4-gui,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
