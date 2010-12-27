@@ -123,17 +123,20 @@ class KhweetsModel(QAbstractListModel):
                               len(self._items)))
                               
     def addStatuses(self, uids):
+        #Optimization
+        _appendStatusInList = self._appendStatusInList
+        pickleload = pickle.load
         try:
             keys = []
             for uid in uids:
                 try:
                     pkl_file = open(os.path.join(TIMELINE_PATH,
                                     str(uid)), 'rb')
-                    status = pickle.load(pkl_file)
+                    status = pickleload(pkl_file)
                     pkl_file.close()
 
                     #Test if status already exists
-                    if self._appendStatusInList(status):
+                    if _appendStatusInList(status):
                         keys.append(status.id)
 
                 except IOError, e:
