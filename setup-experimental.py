@@ -15,6 +15,7 @@ except:
     
 from distutils.core import setup
 import khweeteur
+from khweeteur.utils import *
 
 #Remove pyc and pyo file
 import glob,os
@@ -54,13 +55,14 @@ setup(name='khweeteur-experimental',
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
       'buildversion':'2',
-      'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus',
+      'depends':['python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus' if USE_PYSIDE \
+      else 'python2.5, python2.5-mobility-location, python-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus'],
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Clean up code and various minor fixes * fix bug #548 * Improve memory footprint',
+      'changelog':'* Fix for PyQt4 binding, revert to PyQt4 binding',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
