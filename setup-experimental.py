@@ -62,7 +62,7 @@ setup(name='khweeteur-experimental',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix for PyQt4 binding, revert to PyQt4 binding',
+      'changelog':'* Fix for PyQt4 binding, revert to PyQt4 binding, implement a fork of oauth2 to try to fix identi.ca problems',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
