@@ -284,6 +284,7 @@ class KhweeteurWin(QMainWindow):
             self.settings.setValue('twitter_access_token',1)
         else:
             self.settings.setValue('twitter_access_token',0)
+            
         if self.settings.value('identica_access_token') in ('True','1'):
             self.settings.setValue('identica_access_token',1)
         else:
@@ -365,6 +366,9 @@ class KhweeteurWin(QMainWindow):
                              )) * 60 * 1000)
 
         if not self.search_keyword:
+            if not (bool(self.settings.value('twitter_access_token')) or \
+                bool(self.settings.value('identica_access_token'))):
+                self.notifications.warn('Khweeteur aren\'t authorized to connect to any service. Please authorize one in preferences.')
             self.open_saved_search()
 
     def enterEvent(self, event):
@@ -533,8 +537,6 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_replysource = self.tweetsModel.data(index,
                     role=ORIGINROLE)
 
-#            print self.tb_text_replysource, self.tb_text_replyid, self.tweetsModel._items[index.row()][3]
-
     @pyqtSlot()
     def open_url(self):
         import re
@@ -646,8 +648,6 @@ class KhweeteurWin(QMainWindow):
                         self.tr('Unfollow : %s ?') % user_screenname,
                         QMessageBox.Yes | QMessageBox.Close) \
                     == QMessageBox.Yes:
-
-                    # print 'DEBUG Follow:', user_screenname
 
                     if 'twitter' in self.tweetsModel.data(index,
                             role=ORIGINROLE):

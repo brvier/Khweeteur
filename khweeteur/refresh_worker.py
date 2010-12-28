@@ -105,7 +105,7 @@ class KhweeteurRefreshWorker(QThread):
                 status = pickle.load(fhandle)
                 fhandle.close()
                 return status.text
-            if os.path.exists(rpath_reply):
+            elif os.path.exists(rpath_reply):
                 fhandle = open(rpath_reply, 'rb')
                 status = pickle.load(fhandle)
                 fhandle.close()
@@ -122,6 +122,7 @@ class KhweeteurRefreshWorker(QThread):
             except:
                 import traceback
                 traceback.print_exc()
+                print 'Cannot write to reply path:',REPLY_PATH
 
         return None
 
@@ -150,7 +151,6 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
     def run(self):
 
         # Get Home TimeLine
-        print 'Refresh KhweeteurHomeTimelineWorker'
         try:
             statuses = \
                 self.api.GetFriendsTimeline(since_id=self.settings.value('last_id/'
@@ -164,8 +164,6 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
             statuses.sort()
             statuses.reverse()
             if len(statuses) > 0:
-                print 'Got new status', [status.id for status in
-                        statuses]
                 self.newStatuses.emit([status.id for status in
                         statuses])
                 self.settings.setValue('last_id/' + self.api.base_url
@@ -603,4 +601,3 @@ class KhweeteurWorker(QThread):
                 print 'Bad status line : ', self.error.line
             else:
                 self.info.emit('A network error occur')
-        print 'DEBUG:Refresh ended'

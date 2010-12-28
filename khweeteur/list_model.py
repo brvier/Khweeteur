@@ -154,11 +154,9 @@ class KhweetsModel(QAbstractListModel):
                 if key in self._uids:
                     self._new_counter += 1
 
-            print 'DEBUG 1'
             self.dataChanged.emit(self.createIndex(0, 0),
                                   self.createIndex(0,
                                   len(self._items)))
-            print 'DEBUG 2'
 
     def destroyStatus(self, index):
         self._items.pop(index.row())
