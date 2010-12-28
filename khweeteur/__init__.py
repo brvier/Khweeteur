@@ -6,7 +6,7 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
