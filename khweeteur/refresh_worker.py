@@ -92,8 +92,10 @@ class KhweeteurRefreshWorker(QThread):
                                   str(status.id))):
                     statuses.remove(status)
                     #FIXME
-                    print 'Debug : Already in cache'
-                    
+                    print 'Debug : Already in cache',status.id
+                    import traceback
+                    traceback.print_stack()
+
         except StandardError, e:
 
             print e
