@@ -2016,7 +2016,7 @@ class Api(object):
     self._CheckForTwitterError(data)
     return [Status.NewFromJsonDict(x) for x in data]
 
-def GetUserTimeline(self,
+  def GetUserTimeline(self,
                       id=None,
                       user_id=None,
                       screen_name=None,
@@ -2514,7 +2514,7 @@ def GetUserTimeline(self,
     self._CheckForTwitterError(data)
     return List.NewFromJsonDict(data)
 
- def GetLists(self, user, cursor=-1):
+  def GetLists(self, user, cursor=-1):
     '''Fetch the sequence of lists for a user.
 
     The twitter.Api instance must be authenticated.
