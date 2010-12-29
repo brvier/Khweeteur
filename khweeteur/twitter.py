@@ -18,7 +18,7 @@
 '''A library that provides a Python interface to the Twitter API'''
 
 __author__ = 'python-twitter@googlegroups.com'
-__version__ = '0.8-khtfork.2'
+__version__ = '0.8-khtfork.3'
 
 
 import base64
@@ -477,6 +477,364 @@ class Status(object):
                   source=data.get('source', None),
                   user=user)
 
+class List(object):
+  '''A class representing the List structure used by the twitter API.
+  
+  The List structure exposes the following properties:
+  
+    list.id
+    list.name
+    list.slug
+    list.description
+    list.full_name
+    list.mode
+    list.uri
+    list.member_count
+    list.subscriber_count
+    list.following
+  '''
+  def __init__(self,
+               id=None,
+               name=None,
+               slug=None,
+               description=None,
+               full_name=None,
+               mode=None,
+               uri=None,
+               member_count=None,
+               subscriber_count=None,
+               following=None,
+               user=None):
+    self.id = id
+    self.name = name
+    self.slug = slug
+    self.description = description
+    self.full_name = full_name
+    self.mode = mode
+    self.uri = uri
+    self.member_count = member_count
+    self.subscriber_count = subscriber_count
+    self.following = following
+    self.user = user
+
+  def GetId(self):
+    '''Get the unique id of this list.
+
+    Returns:
+      The unique id of this list
+    '''
+    return self._id
+
+  def SetId(self, id):
+    '''Set the unique id of this list.
+
+    Args:
+      id:
+        The unique id of this list.
+    '''
+    self._id = id
+
+  id = property(GetId, SetId,
+                doc='The unique id of this list.')
+
+  def GetName(self):
+    '''Get the real name of this list.
+
+    Returns:
+      The real name of this list
+    '''
+    return self._name
+
+  def SetName(self, name):
+    '''Set the real name of this list.
+
+    Args:
+      name:
+        The real name of this list
+    '''
+    self._name = name
+
+  name = property(GetName, SetName,
+                  doc='The real name of this list.')
+
+  def GetSlug(self):
+    '''Get the slug of this list.
+
+    Returns:
+      The slug of this list
+    '''
+    return self._slug
+
+  def SetSlug(self, slug):
+    '''Set the slug of this list.
+
+    Args:
+      slug:
+        The slug of this list.
+    '''
+    self._slug = slug
+
+  slug = property(GetSlug, SetSlug,
+                  doc='The slug of this list.')
+
+  def GetDescription(self):
+    '''Get the description of this list.
+
+    Returns:
+      The description of this list
+    '''
+    return self._description
+
+  def SetDescription(self, description):
+    '''Set the description of this list.
+
+    Args:
+      description:
+        The description of this list.
+    '''
+    self._description = description
+
+  description = property(GetDescription, SetDescription,
+                         doc='The description of this list.')
+
+  def GetFull_name(self):
+    '''Get the full_name of this list.
+
+    Returns:
+      The full_name of this list
+    '''
+    return self._full_name
+
+  def SetFull_name(self, full_name):
+    '''Set the full_name of this list.
+
+    Args:
+      full_name:
+        The full_name of this list.
+    '''
+    self._full_name = full_name
+
+  full_name = property(GetFull_name, SetFull_name,
+                       doc='The full_name of this list.')
+
+  def GetMode(self):
+    '''Get the mode of this list.
+
+    Returns:
+      The mode of this list
+    '''
+    return self._mode
+
+  def SetMode(self, mode):
+    '''Set the mode of this list.
+
+    Args:
+      mode:
+        The mode of this list.
+    '''
+    self._mode = mode
+
+  mode = property(GetMode, SetMode,
+                  doc='The mode of this list.')
+
+  def GetUri(self):
+    '''Get the uri of this list.
+
+    Returns:
+      The uri of this list
+    '''
+    return self._uri
+
+  def SetUri(self, uri):
+    '''Set the uri of this list.
+
+    Args:
+      uri:
+        The uri of this list.
+    '''
+    self._uri = uri
+
+  uri = property(GetUri, SetUri,
+                 doc='The uri of this list.')
+
+  def GetMember_count(self):
+    '''Get the member_count of this list.
+
+    Returns:
+      The member_count of this list
+    '''
+    return self._member_count
+
+  def SetMember_count(self, member_count):
+    '''Set the member_count of this list.
+
+    Args:
+      member_count:
+        The member_count of this list.
+    '''
+    self._member_count = member_count
+
+  member_count = property(GetMember_count, SetMember_count,
+                          doc='The member_count of this list.')
+
+  def GetSubscriber_count(self):
+    '''Get the subscriber_count of this list.
+
+    Returns:
+      The subscriber_count of this list
+    '''
+    return self._subscriber_count
+
+  def SetSubscriber_count(self, subscriber_count):
+    '''Set the subscriber_count of this list.
+
+    Args:
+      subscriber_count:
+        The subscriber_count of this list.
+    '''
+    self._subscriber_count = subscriber_count
+
+  subscriber_count = property(GetSubscriber_count, SetSubscriber_count,
+                              doc='The subscriber_count of this list.')
+
+  def GetFollowing(self):
+    '''Get the following status of this list.
+
+    Returns:
+      The following status of this list
+    '''
+    return self._following
+
+  def SetFollowing(self, following):
+    '''Set the following status of this list.
+
+    Args:
+      following:
+        The following of this list.
+    '''
+    self._following = following
+
+  following = property(GetFollowing, SetFollowing,
+                       doc='The following status of this list.')
+
+  def GetUser(self):
+    '''Get the user of this list.
+
+    Returns:
+      The owner of this list
+    '''
+    return self._user
+
+  def SetUser(self, user):
+    '''Set the user of this list.
+
+    Args:
+      user:
+        The owner of this list.
+    '''
+    self._user = user
+
+  user = property(GetUser, SetUser,
+                  doc='The owner of this list.')
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def __eq__(self, other):
+    try:
+      return other and \
+             self.id == other.id and \
+             self.name == other.name and \
+             self.slug == other.slug and \
+             self.description == other.description and \
+             self.full_name == other.full_name and \
+             self.mode == other.mode and \
+             self.uri == other.uri and \
+             self.member_count == other.member_count and \
+             self.subscriber_count == other.subscriber_count and \
+             self.following == other.following and \
+             self.user == other.user
+
+    except AttributeError:
+      return False
+
+  def __str__(self):
+    '''A string representation of this twitter.List instance.
+
+    The return value is the same as the JSON string representation.
+
+    Returns:
+      A string representation of this twitter.List instance.
+    '''
+    return self.AsJsonString()
+
+  def AsJsonString(self):
+    '''A JSON string representation of this twitter.List instance.
+
+    Returns:
+      A JSON string representation of this twitter.List instance
+   '''
+    return simplejson.dumps(self.AsDict(), sort_keys=True)
+
+  def AsDict(self):
+    '''A dict representation of this twitter.List instance.
+
+    The return value uses the same key names as the JSON representation.
+
+    Return:
+      A dict representing this twitter.List instance
+    '''
+    data = {}
+    if self.id:
+      data['id'] = self.id
+    if self.name:
+      data['name'] = self.name
+    if self.slug:
+      data['slug'] = self.slug
+    if self.description:
+      data['description'] = self.description
+    if self.full_name:
+      data['full_name'] = self.full_name
+    if self.mode:
+      data['mode'] = self.mode
+    if self.uri:
+      data['uri'] = self.uri
+    if self.member_count is not None:
+      data['member_count'] = self.member_count
+    if self.subscriber_count is not None:
+      data['subscriber_count'] = self.subscriber_count
+    if self.following is not None:
+      data['following'] = self.following
+    if self.user is not None:
+      data['user'] = self.user
+    return data
+
+  @staticmethod
+  def NewFromJsonDict(data):
+    '''Create a new instance based on a JSON dict.
+
+    Args:
+      data:
+        A JSON dict, as converted from the JSON in the twitter API
+
+    Returns:
+      A twitter.List instance
+    '''
+    if 'user' in data:
+      user = User.NewFromJsonDict(data['user'])
+    else:
+      user = None
+    return List(id=data.get('id', None),
+                name=data.get('name', None),
+                slug=data.get('slug', None),
+                description=data.get('description', None),
+                full_name=data.get('full_name', None),
+                mode=data.get('mode', None),
+                uri=data.get('uri', None),
+                member_count=data.get('member_count', None),
+                subscriber_count=data.get('subscriber_count', None),
+                following=data.get('following', None),
+                user=user)
 
 class User(object):
   '''A class representing the User structure used by the twitter API.
@@ -1658,14 +2016,16 @@ class Api(object):
     self._CheckForTwitterError(data)
     return [Status.NewFromJsonDict(x) for x in data]
 
-  def GetUserTimeline(self,
+def GetUserTimeline(self,
                       id=None,
                       user_id=None,
                       screen_name=None,
                       since_id=None,
                       max_id=None,
                       count=None,
-                      page=None):
+                      page=None,
+                      include_rts=None,
+                      include_entities=None):
     '''Fetch the sequence of public Status messages for a single user.
 
     The twitter.Api instance must be authenticated if the user is private.
@@ -1673,27 +2033,38 @@ class Api(object):
     Args:
       id:
         Specifies the ID or screen name of the user for whom to return
-        the user_timeline. [optional]
+        the user_timeline. [Optional]
       user_id:
         Specfies the ID of the user for whom to return the
         user_timeline. Helpful for disambiguating when a valid user ID
-        is also a valid screen name. [optional]
+        is also a valid screen name. [Optional]
       screen_name:
         Specfies the screen name of the user for whom to return the
         user_timeline. Helpful for disambiguating when a valid screen
-        name is also a user ID. [optional]
+        name is also a user ID. [Optional]
       since_id:
-        Returns only public statuses with an ID greater than (that is,
-        more recent than) the specified ID. [optional]
+        Returns results with an ID greater than (that is, more recent
+        than) the specified ID. There are limits to the number of
+        Tweets which can be accessed through the API. If the limit of
+        Tweets has occured since the since_id, the since_id will be
+        forced to the oldest ID available. [Optional]
       max_id:
         Returns only statuses with an ID less than (that is, older
-        than) or equal to the specified ID. [optional]
+        than) or equal to the specified ID. [Optional]
       count:
         Specifies the number of statuses to retrieve. May not be
-        greater than 200.  [optional]
+        greater than 200.  [Optional]
       page:
-         Specifies the page of results to retrieve. Note: there are
-         pagination limits. [optional]
+        Specifies the page of results to retrieve.
+        Note: there are pagination limits. [Optional]
+      include_rts:
+        If True, the timeline will contain native retweets (if they
+        exist) in addition to the standard stream of tweets. [Optional]
+      include_entities:
+        If True, each tweet will include a node called "entities,".
+        This node offers a variety of metadata about the tweet in a
+        discreet structure, including: user_mentions, urls, and
+        hashtags. [Optional]
 
     Returns:
       A sequence of Status instances, one for each message up to count
@@ -1735,6 +2106,12 @@ class Api(object):
         parameters['page'] = int(page)
       except:
         raise TwitterError("page must be an integer")
+
+    if include_rts:
+      parameters['include_rts'] = 1
+
+    if include_entities:
+      parameters['include_entities'] = 1
 
     json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
@@ -2016,6 +2393,157 @@ class Api(object):
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return [User.NewFromJsonDict(x) for x in data]
+
+  def GetSubscriptions(self, user, cursor=-1):
+    '''Fetch the sequence of Lists that the given user is subscribed to
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user:
+        The twitter name or id of the user
+      cursor:
+        "page" value that Twitter will use to start building the
+        list sequence from.  -1 to start at the beginning.
+        Twitter will return in the result the values for next_cursor
+        and previous_cursor. [Optional]
+
+    Returns:
+      A sequence of twitter.List instances, one for each list
+    '''
+    if not self._oauth_consumer:
+      raise TwitterError("twitter.Api instance must be authenticated")
+
+    url = '%s/%s/lists/subscriptions.json' % (self.base_url, user)
+    parameters = {}
+    parameters['cursor'] = cursor
+
+    json = self._FetchUrl(url, parameters=parameters)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    print data
+    return [List.NewFromJsonDict(x) for x in data['lists']]
+
+  def CreateList(self, user, name, mode=None, description=None):
+    '''Creates a new list with the give name
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user:
+        Twitter name to create the list for
+      name:
+        New name for the list
+      mode:
+        'public' or 'private'.
+        Defaults to 'public'. [Optional]
+      description:
+        Description of the list. [Optional]
+
+    Returns:
+      A twitter.List instance representing the new list
+    '''
+    url = '%s/%s/lists.json' % (self.base_url, user)
+    parameters = {'name': name}
+    if mode is not None:
+      parameters['mode'] = mode
+    if description is not None:
+      parameters['description'] = description
+    json = self._FetchUrl(url, post_data=parameters)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return List.NewFromJsonDict(data)
+
+  def DestroyList(self, user, id):
+    '''Destroys the list from the given user
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user:
+        The user to remove the list from.
+      id:
+        The slug or id of the list to remove.
+    Returns:
+      A twitter.List instance representing the removed list.
+    '''
+    url = '%s/%s/lists/%s.json' % (self.base_url, user, id)
+    json = self._FetchUrl(url, post_data={'_method': 'DELETE'})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return List.NewFromJsonDict(data)
+
+  def CreateSubscription(self, owner, list):
+    '''Creates a subscription to a list by the authenticated user
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      owner:
+        User name or id of the owner of the list being subscribed to.
+      list:
+        The slug or list id to subscribe the user to
+
+    Returns:
+      A twitter.List instance representing the list subscribed to
+    '''
+    url = '%s/%s/%s/subscribers.json' % (self.base_url, owner, list)
+    json = self._FetchUrl(url, post_data={'list_id': list})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return List.NewFromJsonDict(data)
+
+  def DestroySubscription(self, owner, list):
+    '''Destroys the subscription to a list for the authenticated user
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      owner:
+        The user id or screen name of the user that owns the
+        list that is to be unsubscribed from
+      list:
+        The slug or list id of the list to unsubscribe from
+
+    Returns:
+      A twitter.List instance representing the removed list.
+    '''
+    url = '%s/%s/%s/subscribers.json' % (self.base_url, owner, list)
+    json = self._FetchUrl(url, post_data={'_method': 'DELETE', 'list_id': list})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return List.NewFromJsonDict(data)
+
+ def GetLists(self, user, cursor=-1):
+    '''Fetch the sequence of lists for a user.
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user:
+        The twitter name or id of the user whose friends you are fetching.
+        If the passed in user is the same as the authenticated user
+        then you will also receive private list data.
+      cursor:
+        "page" value that Twitter will use to start building the
+        list sequence from.  -1 to start at the beginning.
+        Twitter will return in the result the values for next_cursor
+        and previous_cursor. [Optional]
+
+    Returns:
+      A sequence of twitter.List instances, one for each list
+    '''
+    if not self._oauth_consumer:
+      raise TwitterError("twitter.Api instance must be authenticated")
+
+    url = '%s/%s/lists.json' % (self.base_url, user)
+    parameters = {}
+    parameters['cursor'] = cursor
+
+    json = self._FetchUrl(url, parameters=parameters)
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return [List.NewFromJsonDict(x) for x in data['lists']]
 
   def GetFriendIDs(self, user=None, cursor=-1):
       '''Returns a list of twitter user id's for every person

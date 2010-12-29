@@ -3,7 +3,10 @@
 try:
     from khweeteur import Khweeteur
 except:
+    import traceback
+    traceback.print_exc()
     from khweeteur_experimental import Khweeteur
+
 import sys
 
 if __name__ == '__main__':

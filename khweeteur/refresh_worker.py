@@ -91,6 +91,9 @@ class KhweeteurRefreshWorker(QThread):
                 if os.path.exists(os.path.join(folder_path,
                                   str(status.id))):
                     statuses.remove(status)
+                    #FIXME
+                    print 'Debug : Already in cache'
+                    
         except StandardError, e:
 
             print e
@@ -153,9 +156,9 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
         # Get Home TimeLine
         try:
             statuses = \
-                self.api.GetFriendsTimeline(since_id=self.settings.value('last_id/'
+                self.api.GetUserTimeline(since_id=self.settings.value('last_id/'
                      + self.api.base_url + '_GetFriendsTimeline'),
-                    retweets=True)
+                    include_rts=True)
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)

@@ -54,9 +54,9 @@ setup(name='khweeteur-experimental',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'2',
+      'buildversion':'1',
       'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus' if USE_PYSIDE \
-      else 'python2.5, python2.5-mobility-location, python-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus',
+      else 'python2.5, python2.5-mobility-location, python2.5-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus',
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',

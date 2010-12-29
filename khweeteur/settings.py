@@ -72,7 +72,7 @@ KHWEETEUR_STATUSNET_CONSUMER_SECRET = 'fbc51241e2ab12e526f89c26c6ca5837'
 import oauth2 as oauth
 from notifications import KhweeteurNotification
 
-from PySide.QtWebKit import *
+#from PySide.QtWebKit import *
 
 
 javaScriptLogin = """ 
