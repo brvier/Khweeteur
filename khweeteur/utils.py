@@ -14,7 +14,7 @@ if not USE_PYSIDE:
     sip.setapi('QString', 2)
     sip.setapi('QVariant', 2)
 
-    from PyQt4.QtCore import pyqtSlot,pyqtSignal
+    from PyQt4.QtCore import pyqtSlot,pyqtSignal,QSettings
 
 #    from PyQt4.QtGui import *
 #    from PyQt4.QtCore import *
@@ -34,7 +34,7 @@ if not USE_PYSIDE:
 else:
 #    from PySide.QtCore import * #PySide
 #    from PySide.QtGui import * #PySide
-    from PySide.QtCore import Slot,Signal
+    from PySide.QtCore import Slot,Signal,QSettings
     
     pyqtSlot = Slot
     pyqtSignal = Signal
@@ -127,3 +127,39 @@ def install_excepthook(version):
         write_report(formatted_text)
 
     sys.excepthook = my_excepthook
+
+class KhweeteurSettings(QSettings):
+    def __init__(self):
+        QSettings.__init__(self)
+        if not self.value("refreshInterval"):
+            self.setValue('refreshInterval',10)
+        if not self.value("displayUser"):
+            self.setValue('displayUser',2)
+        if not self.value("twitter_access_token"):
+            self.setValue('twitter_access_token',0)
+        if not self.value("identica_access_token"):
+            self.setValue('identica_access_token',0)
+        if not self.value("displayUser"):
+            self.setValue('displayUser',2)
+        if not self.value("displayAvatar"):
+            self.setValue('displayAvatar',2)
+        if not self.value("displayTimestamp"):
+            self.setValue('displayTimestamp',2)
+        if not self.value("displayReplyTo"):
+            self.setValue('displayReplyTo',2)
+        if not self.value("useNotification"):
+            self.setValue('useNotification',2)
+        if not self.value("useSerialization"):
+            self.setValue('useSerialization',2)
+        if not self.value("useBitly"):
+            self.setValue('useBitly',2)
+        if not self.value("theme"):
+            self.setValue('theme','Default')
+        if not self.value("useAutoRotation"):
+            self.setValue('useAutoRotation',2)
+        if not self.value("useGPS"):
+            self.setValue('useGPS',2)
+        if not self.value("tweetHistory"):
+            self.setValue('tweetHistory',60)
+        
+

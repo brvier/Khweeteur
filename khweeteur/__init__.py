@@ -278,7 +278,7 @@ class KhweeteurWin(QMainWindow):
 
         self.search_win = []
 
-        self.settings = QSettings()
+        self.settings = KhweeteurSettings()
 
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide

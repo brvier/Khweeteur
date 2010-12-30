@@ -3,10 +3,6 @@ The MIT License
 
 Copyright (c) 2007-2010 Leah Culver, Joe Stump, Mark Paschal, Vic Fryzel
 
-This version of oauth2 fix some issues with the oauth_callback
-which can occur with identi.ca.
-Modifications implemented by Benoit HERVIER (Khertan) Copyleft 2010
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -35,12 +31,12 @@ import binascii
 import httplib2
 
 try:
-    from urlparse import parse_qs, parse_qsl
+    from urlparse import parse_qs
 except ImportError:
-    from cgi import parse_qs, parse_qsl
+    from cgi import parse_qs
 
 
-VERSION = '1.0'
+VERSION = '1.0'  # Hi Blaine!
 HTTP_METHOD = 'GET'
 SIGNATURE_METHOD = 'PLAINTEXT'
 
@@ -277,12 +273,15 @@ class Request(dict):
         self.url = url
         if parameters is not None:
             self.update(parameters)
+#        print 'DEBUG:',self
  
     @setter
     def url(self, value):
         self.__dict__['url'] = value
         if value is not None:
-            scheme, netloc, path, params, query, fragment = urlparse.urlparse(value)
+            #Issue #35
+            #scheme, netloc, path, params, query, fragment = urlparse.urlparse(value)
+            scheme, netloc, path, query, fragment = urlparse.urlsplit(value)
 
             # Exclude default port numbers.
             if scheme == 'http' and netloc[-3:] == ':80':
@@ -293,7 +292,9 @@ class Request(dict):
                 raise ValueError("Unsupported URL %s (%s)." % (value, scheme))
 
             # Normalized URL excludes params, query, and fragment.
-            self.normalized_url = urlparse.urlunparse((scheme, netloc, path, None, None, None))
+            #Issue #35
+            #self.normalized_url = urlparse.urlunparse((scheme, netloc, path, None, None, None))
+            self.normalized_url = urlparse.urlunsplit((scheme, netloc, path, None, None))
         else:
             self.normalized_url = None
             self.__dict__['url'] = None
@@ -313,7 +314,7 @@ class Request(dict):
     def to_header(self, realm=''):
         """Serialize as a header for an HTTPAuth request."""
         oauth_params = ((k, v) for k, v in self.items() 
-                            if k.startswith('oauth_'))
+                            if self.has_key(k))
         stringy_params = ((k, escape(str(v))) for k, v in oauth_params)
         header_params = ('%s="%s"' % (k, v) for k, v in stringy_params)
         params_header = ', '.join(header_params)
@@ -512,7 +513,7 @@ class Request(dict):
         """Turn URL string into parameters."""
         parameters = parse_qs(param_str, keep_blank_values=False)
         for k, v in parameters.iteritems():
-            parameters[k] = sorted(list([urllib.unquote(w) for w in v]))
+            parameters[k] = urllib.unquote(v[0])
         return parameters
 
 
@@ -553,10 +554,11 @@ class Client(httplib2.Http):
             DEFAULT_CONTENT_TYPE) != DEFAULT_CONTENT_TYPE
 
         if body and (method == "POST" or method == 'PUT') and not is_multipart:
-            parameters = dict(parse_qsl(body))
+            parameters = parse_qs(body)
             if callback_url != None:
                 parameters['oauth_callback'] = callback_url
         else:
+            parameters = None
             if callback_url != None and not is_multipart:
                 parameters = {'oauth_callback':callback_url}
             else:

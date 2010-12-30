@@ -203,7 +203,7 @@ class KhweeteurPref(QMainWindow):
 
     def request_twitter_access_or_clear(self):
         ''' Request or clear twitter auth token'''
-        if bool(self.settings.value('twitter_access_token')):
+        if bool(int(self.settings.value('twitter_access_token'))):
             self.settings.setValue('twitter_access_token_key','')
             self.settings.setValue('twitter_access_token_secret','')
             self.settings.setValue('twitter_access_token',0)
@@ -219,9 +219,9 @@ class KhweeteurPref(QMainWindow):
                 import os
                 import sys
                 try:
-                    from urlparse import parse_qsl
+                    from urlparse import parse_qs
                 except:
-                    from cgi import parse_qsl
+                    from cgi import parse_qs
 
                 REQUEST_TOKEN_URL = 'https://api.twitter.com/oauth/request_token'
                 ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
@@ -242,21 +242,21 @@ class KhweeteurPref(QMainWindow):
                 if resp['status'] != '200':
                     KhweeteurNotification().warn(self.tr('Invalid respond from Twitter requesting temp token: %s') % resp['status'])
                 else:
-                    request_token = dict(parse_qsl(content))
+                    request_token = (parse_qs(content))
 
-                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'][0])))
 
                     pincode, ok = QInputDialog.getText(self, self.tr('Twitter Authentification'), self.tr('Enter the pincode :'))
 
                     if ok:
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-                        token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                        token.set_verifier(str(pincode.strip()))
+                        token = oauth.Token(request_token['oauth_token'][0], request_token['oauth_token_secret'][0])
+                        token.set_verifier(unicode(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
                         resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
-                        access_token  = dict(parse_qsl(content))
+                        access_token  = (parse_qs(content))
 
                         if resp['status'] != '200':
                             KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
@@ -266,8 +266,8 @@ class KhweeteurPref(QMainWindow):
                         else:
                             #print access_token['oauth_token']
                             #print access_token['oauth_token_secret']
-                            self.settings.setValue('twitter_access_token_key',access_token['oauth_token'])
-                            self.settings.setValue('twitter_access_token_secret',access_token['oauth_token_secret'])
+                            self.settings.setValue('twitter_access_token_key',access_token['oauth_token'][0])
+                            self.settings.setValue('twitter_access_token_secret',access_token['oauth_token_secret'][0])
                             self.settings.setValue('twitter_access_token',1)
                             self.twitter_value.setText(self.tr('Clear Twitter Auth'))
                             KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))
@@ -277,7 +277,7 @@ class KhweeteurPref(QMainWindow):
     def request_identica_access_or_clear(self):
         ''' Request or clear identi.ca auth token'''
         import urllib
-        if bool(self.settings.value('identica_access_token')):
+        if bool(int(self.settings.value('identica_access_token'))):
             self.settings.setValue('identica_access_token_key','')
             self.settings.setValue('identica_access_token_secret','')
             self.settings.setValue('identica_access_token',0)
@@ -292,11 +292,11 @@ class KhweeteurPref(QMainWindow):
                 import os
                 import sys
                 try:
-                    from urlparse import parse_qsl
+                    from urlparse import parse_qs
                 except:
-                    from cgi import parse_qsl
+                    from cgi import parse_qs
 
-                REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token?oauth_callback=oob'                
+                REQUEST_TOKEN_URL = 'http://identi.ca/api/oauth/request_token'                
                 ACCESS_TOKEN_URL  = 'http://identi.ca/api/oauth/access_token'
                 AUTHORIZATION_URL = 'http://identi.ca/api/oauth/authorize'
 
@@ -305,12 +305,11 @@ class KhweeteurPref(QMainWindow):
 
                 signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
                 oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
-                oauth_client               = oauth.Client(oauth_consumer)
-                oauth_callback_uri = 'oob'
+                oauth_client               = oauth.Client(oauth_consumer)                
+
                 #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
-                #print urllib.urlencode(dict(oauth_callback=oauth_callback_uri))
-                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'GET')
-                #print datetime.datetime.now()
+                body = 'oauth_callback=oob'
+                resp, content = oauth_client.request(REQUEST_TOKEN_URL, 'POST', body=body)
                 print resp, content
 
                 if isMAEMO:
@@ -321,9 +320,10 @@ class KhweeteurPref(QMainWindow):
 #                    write_log(log)
                     KhweeteurNotification().warn(self.tr('Invalid respond from Identi.ca requesting temp token: %s') % resp['status'])
                 else:
-                    request_token = dict(parse_qsl(content))
+                    request_token = (parse_qs(content))
+                    print type(request_token),request_token
 
-                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'])))
+                    QDesktopServices.openUrl(QUrl('%s?oauth_token=%s' % (AUTHORIZATION_URL, request_token['oauth_token'][0])))
 
 #                    Javascript didn t work yet
 #                    self.wbkt=OAuthWeb()
@@ -335,8 +335,9 @@ class KhweeteurPref(QMainWindow):
                     if ok:
                         if isMAEMO:
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
-                        token = oauth.Token(request_token['oauth_token'], request_token['oauth_token_secret'])
-                        token.set_verifier(str(pincode.strip()))
+                        token = oauth.Token(request_token['oauth_token'][0], request_token['oauth_token_secret'][0])
+                        token.set_verifier(unicode(pincode.strip()))
+                        body = 'oauth_verifier=%s' % (unicode(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
                         resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST' )
@@ -344,7 +345,7 @@ class KhweeteurPref(QMainWindow):
                         print resp, content
 #                        write_log(resp)
 #                        write_log(content)
-                        access_token  = dict(parse_qsl(content))
+                        access_token  = (parse_qs(content))
 
                         if resp['status'] != '200':
                             KhweeteurNotification().warn(self.tr('The request for a Token did not succeed: %s') % resp['status'])
@@ -354,8 +355,8 @@ class KhweeteurPref(QMainWindow):
                         else:
                             #print access_token['oauth_token']
                             #print access_token['oauth_token_secret']
-                            self.settings.setValue('identica_access_token_key',access_token['oauth_token'])
-                            self.settings.setValue('identica_access_token_secret',access_token['oauth_token_secret'])
+                            self.settings.setValue('identica_access_token_key',access_token['oauth_token'][0])
+                            self.settings.setValue('identica_access_token_secret',access_token['oauth_token_secret'][0])
                             self.settings.setValue('identica_access_token',1)
                             self.identica_value.setText(self.tr('Clear Identi.ca Auth'))
                             KhweeteurNotification().info(self.tr('Khweeteur is now authorized to connect'))

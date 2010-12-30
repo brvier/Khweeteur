@@ -53,7 +53,23 @@ class KhweetsModel(QAbstractListModel):
     def setLimit(self, limit):
         self.khweets_limit = limit
 
-
+    def getCacheFolder(self):
+        if not hasattr(self,'folder_path'):
+            if self.keyword != None:
+                self.folder_path = os.path.join(CACHE_PATH,
+                        os.path.normcase(unicode(self.keyword.replace('/',
+                        '_'))).encode('UTF-8'))                        
+            else:
+                self.folder_path = TIMELINE_PATH
+    
+            if not os.path.isdir(self.folder_path):
+                try:
+                    os.makedirs(self.folder_path)
+                except IOError, e:
+                    print 'getCacheFolder:', e
+    
+        return self.folder_path
+        
     def orderLimitAndCacheUids(self):
         self._items.sort()
         self._items.reverse()
@@ -124,13 +140,14 @@ class KhweetsModel(QAbstractListModel):
                               
     def addStatuses(self, uids):
         #Optimization
+        folder_path = self.getCacheFolder()
         _appendStatusInList = self._appendStatusInList
         pickleload = pickle.load
         try:
             keys = []
             for uid in uids:
                 try:
-                    pkl_file = open(os.path.join(TIMELINE_PATH,
+                    pkl_file = open(os.path.join(folder_path,
                                     str(uid)), 'rb')
                     status = pickleload(pkl_file)
                     pkl_file.close()
@@ -139,13 +156,19 @@ class KhweetsModel(QAbstractListModel):
                     if _appendStatusInList(status):
                         keys.append(status.id)
 
-                except IOError, e:
+                except StandardError, e:
                     print e
-        except StandardError, e:
+                    try:
+                        os.remove(os.path.join(os.path.join(folder_path,
+                                            str(uid)), uid))
+                    except:
+                        pass
 
+        except StandardError, e:
             print "We shouldn't got this error here :", e
             import traceback
             traceback.print_exc()
+            
 
         if len(keys) > 0:
             self.orderLimitAndCacheUids()

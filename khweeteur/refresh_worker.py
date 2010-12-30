@@ -38,19 +38,20 @@ class KhweeteurRefreshWorker(QThread):
         pass
 
     def getCacheFolder(self):
-        if not hasattr(self, 'keywords'):
-            self.folder_path = TIMELINE_PATH
-        else:
-            self.folder_path = os.path.join(CACHE_PATH,
-                    os.path.normcase(unicode(self.keywords.replace('/',
-                    '_'))).encode('UTF-8'))
-
-        if not os.path.isdir(self.folder_path):
-            try:
-                os.makedirs(self.folder_path)
-            except IOError, e:
-                print 'getCacheFolder:', e
-
+        if not hasattr(self,'folder_path'):
+            if not hasattr(self, 'keywords'):
+                self.folder_path = TIMELINE_PATH
+            else:
+                self.folder_path = os.path.join(CACHE_PATH,
+                        os.path.normcase(unicode(self.keywords.replace('/',
+                        '_'))).encode('UTF-8'))
+    
+            if not os.path.isdir(self.folder_path):
+                try:
+                    os.makedirs(self.folder_path)
+                except IOError, e:
+                    print 'getCacheFolder:', e
+    
         return self.folder_path
 
     def serialize(self, statuses):
@@ -58,10 +59,13 @@ class KhweeteurRefreshWorker(QThread):
         folder_path = self.getCacheFolder()
 
         for status in statuses:
-            pkl_file = open(os.path.join(folder_path, str(status.id)),
-                            'wb')
-            pickle.dump(status, pkl_file, pickle.HIGHEST_PROTOCOL)
-            pkl_file.close()
+            try:
+                pkl_file = open(os.path.join(folder_path, str(status.id)),
+                                'wb')
+                pickle.dump(status, pkl_file, pickle.HIGHEST_PROTOCOL)
+                pkl_file.close()
+            except:
+                print 'Serialization error : refresh_worker : serialize'
 
     def downloadProfilesImage(self, statuses):
         for status in statuses:
@@ -91,10 +95,9 @@ class KhweeteurRefreshWorker(QThread):
                 if os.path.exists(os.path.join(folder_path,
                                   str(status.id))):
                     statuses.remove(status)
-                    #FIXME
-                    print 'Debug : Already in cache',status.id
-                    import traceback
-                    traceback.print_stack()
+                    #print 'Debug : Already in cache',status.id
+                    #import traceback
+                    #traceback.print_stack()
 
         except StandardError, e:
 
@@ -148,7 +151,7 @@ class KhweeteurRefreshWorker(QThread):
             status.origin = api.base_url
 
 
-class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
+class KhweeteurUserTimelineWorker(KhweeteurRefreshWorker):
 
     def __init__(self, parent=None, api=None):
         KhweeteurRefreshWorker.__init__(self, None, api)
@@ -159,7 +162,7 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
         try:
             statuses = \
                 self.api.GetUserTimeline(since_id=self.settings.value('last_id/'
-                     + self.api.base_url + '_GetFriendsTimeline'),
+                     + self.api.base_url + '_GetUserTimeline'),
                     include_rts=True)
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
@@ -172,7 +175,40 @@ class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
                 self.newStatuses.emit([status.id for status in
                         statuses])
                 self.settings.setValue('last_id/' + self.api.base_url
-                        + '_GetFriendsTimeline', statuses[0].id)
+                        + '_GetUserTimeline', statuses[0].id)
+        except twitter.TwitterError, e:
+            self.errors.emit(e)
+            print e
+        except:
+            self.errors.emit(StandardError('A network error occurs'))
+            import traceback
+            traceback.print_exc()
+
+
+class KhweeteurHomeTimelineWorker(KhweeteurRefreshWorker):
+
+    def __init__(self, parent=None, api=None):
+        KhweeteurRefreshWorker.__init__(self, None, api)
+
+    def run(self):
+
+        # Get Home TimeLine
+        try:
+            statuses = \
+                self.api.GetHomeTimeline(since_id=self.settings.value('last_id/'
+                     + self.api.base_url + '_GetHomeTimeline'))
+            self.removeAlreadyInCache(statuses)
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses) > 0:
+                self.newStatuses.emit([status.id for status in
+                        statuses])
+                self.settings.setValue('last_id/' + self.api.base_url
+                        + '_GetHomeTimeline', statuses[0].id)
         except twitter.TwitterError, e:
             self.errors.emit(e)
             print e
@@ -194,7 +230,7 @@ class KhweeteurRetweetedByMeWorker(KhweeteurRefreshWorker):
         try:
             statuses = \
                 self.api.GetRetweetedByMe(since_id=self.settings.value('last_id/'
-                     + self.api.base_url + '_GetRetweetedByMe_last_id'))
+                     + self.api.base_url + '_GetRetweetedByMe'))
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
@@ -225,16 +261,16 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
         # Get Retweeted of me
 
         try:
+            print 'DEBUG Last Know Retweeted of me id:',self.settings.value('last_id/' + self.api.base_url + '_GetRetweetsOfMe'),':',self.api.base_url
             statuses = []
+#FIXME
+#            mystatuses = \
+#                self.api.GetRetweetsOfMe(since_id=self.settings.value('last_id/'
+#                     + self.api.base_url + '_GetRetweetsOfMe'))
             mystatuses = \
-                self.api.GetRetweetsOfMe(since_id=self.settings.value('last_id/'
-                     + self.api.base_url + '_GetRetweetsOfMe_last_id'))
+                self.api.GetRetweetsOfMe()
             for mystatus in mystatuses:
                 statuses.extend(self.api.GetRetweetsForStatus(mystatus.id))
-            self.removeAlreadyInCache(statuses)
-            self.downloadProfilesImage(statuses)
-            self.applyOrigin(self.api, statuses)
-            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses) > 0:
@@ -242,6 +278,14 @@ class KhweeteurRetweetsOfMeWorker(KhweeteurRefreshWorker):
                         statuses])
                 self.settings.setValue('last_id/' + self.api.base_url
                         + '_GetRetweetsOfMe', statuses[0].id)
+                print 'DEBUG Last Know Retweeted of me id we register:',statuses[0].id
+            self.removeAlreadyInCache(statuses)
+            self.downloadProfilesImage(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.serialize(statuses)
+            if len(statuses) > 0:
+                self.newStatuses.emit([status.id for status in
+                        statuses])
         except twitter.TwitterError, e:
             self.errors.emit(e)
         except:
@@ -296,17 +340,18 @@ class KhweeteurDMWorker(KhweeteurRefreshWorker):
             statuses = \
                 self.api.GetDirectMessages(since_id=self.settings.value('last_id/'
                      + self.api.base_url + '_DirectMessages'))
+            statuses.sort()
+            statuses.reverse()
+            if len(statuses) > 0:
+                self.settings.setValue('last_id/' + self.api.base_url
+                        + '_DirectMessages', statuses[0].id)
             self.removeAlreadyInCache(statuses)
             self.downloadProfilesImage(statuses)
             self.applyOrigin(self.api, statuses)
             self.serialize(statuses)
-            statuses.sort()
-            statuses.reverse()
             if len(statuses) > 0:
                 self.newStatuses.emit([status.id for status in
                         statuses])
-                self.settings.setValue('last_id/' + self.api.base_url
-                        + '_DirectMessages', statuses[0].id)
         except twitter.TwitterError, e:
             self.errors.emit(e)
         except:
@@ -325,19 +370,22 @@ class KhweeteurMentionWorker(KhweeteurRefreshWorker):
         try:
             statuses = \
                 self.api.GetMentions(since_id=self.settings.value('last_id/'
-                     + self.api.base_url + '_GetMentions'))
-            self.removeAlreadyInCache(statuses)
+                     + self.api.base_url + '_GetMentions'), \
+                     include_rts = True)
             self.downloadProfilesImage(statuses)
-            self.applyOrigin(self.api, statuses)
-            self.getRepliesContent(self.api, statuses)
-            self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
             if len(statuses) > 0:
-                self.newStatuses.emit([status.id for status in
-                        statuses])
                 self.settings.setValue('last_id/' + self.api.base_url
                         + '_GetMentions', statuses[0].id)
+            self.removeAlreadyInCache(statuses)
+            self.applyOrigin(self.api, statuses)
+            self.getRepliesContent(self.api, statuses)
+            self.serialize(statuses)
+            if len(statuses) > 0:
+                self.newStatuses.emit([status.id for status in
+                        statuses])
+
         except twitter.TwitterError, e:
             self.errors.emit(e)
         except:
@@ -452,7 +500,7 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker1.start()
 
         if self.settings.value('identica_access_token_key') != None:
-            api2 = twitter.Api(base_url='http://identi.ca/api/',
+            api2 = twitter.Api(base_url='https://identi.ca/api/',
                                username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                access_token_key=str(self.settings.value('identica_access_token_key'
@@ -506,19 +554,19 @@ class KhweeteurWorker(QThread):
                 api)
         refresh_retweetsofme_worker.errors.connect(self.errors)
         refresh_retweetsofme_worker.newStatuses.connect(self.transmitNewStatuses)
-        refresh_retweetsofme_worker.start()
+        refresh_retweetsofme_worker.start() #FIXME
 
         refresh_retweetedbyme_worker = \
             KhweeteurRetweetedByMeWorker(self, api)
         if 'twitter' in api.base_url:
             refresh_retweetedbyme_worker.errors.connect(self.errors)
             refresh_retweetedbyme_worker.newStatuses.connect(self.transmitNewStatuses)
-            refresh_retweetedbyme_worker.start()
+            #refresh_retweetedbyme_worker.start() #FIXME
 
         refresh_replies_worker = KhweeteurRepliesWorker(self, api)
         refresh_replies_worker.errors.connect(self.errors)
         refresh_replies_worker.newStatuses.connect(self.transmitNewStatuses)
-        refresh_replies_worker.start()
+        #refresh_replies_worker.start() #FIXME
 
         refresh_dm_worker = KhweeteurDMWorker(self, api)
         refresh_dm_worker.errors.connect(self.errors)
