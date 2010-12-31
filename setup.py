@@ -62,7 +62,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix for PyQt4 binding, revert to PyQt4 binding, implement a fork of oauth2 to try to fix identi.ca problems',
+      'changelog':'* Fix for PyQt4 binding, , fix the fork of oauth2 to try to fix identi.ca problems, fix some timestamp appearing sometime on screen, fix auth button, add better default pref, add a warning when none auth is set ',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
