@@ -343,7 +343,7 @@ class KhweetsModel(QAbstractListModel):
             return self._items[index.row()][8]
         elif role == ORIGINROLE:
             return self._items[index.row()][9]
-        elif role == Qt.ToolTipRole:
+        elif role == TIMESTAMPROLE:
             return self._items[index.row()][4]
         elif role == Qt.DecorationRole:
             try:

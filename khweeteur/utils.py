@@ -91,6 +91,7 @@ REPLYTEXTROLE = 22
 REPLYIDROLE = 25
 IDROLE = 23
 ORIGINROLE = 24
+TIMESTAMPROLE = 26
 
 def write_report(error):
     '''Function to write error to a report file'''
