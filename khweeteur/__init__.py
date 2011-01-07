@@ -1056,14 +1056,19 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr('&About'), self.do_about)
 
+    @pyqtSlot()
     def twitpic_upload(self):
         message = 'Test'
         import twitpic
         import oauth2 as oauth
+        import simplejson
 
         filename =  QFileDialog.getOpenFileName(self,
                             "Khweeteur",'/home/user/MyDocs')
-        if not (filename == ''):
+
+        twitpic_message, ok = QInputDialog.getText(self, self.tr('Twitpic Message'), self.tr('Enter the twitpic message :'))
+
+        if ((not (filename == '')) and ok) :
             try:
                 api = \
                     twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
@@ -1073,7 +1078,7 @@ class KhweeteurWin(QMainWindow):
                         access_token_secret=str(self.settings.value('twitter_access_token_secret'
                         )))
                         
-                twitpic = twitpic.TwitPicOAuthClient(
+                twitpic_client = twitpic.TwitPicOAuthClient(
                     consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
                     consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
                     access_token = api._oauth_token.to_string(),
@@ -1083,19 +1088,24 @@ class KhweeteurWin(QMainWindow):
                 # methods - read, create, update, remove
                 params = {}
                 params['media'] = 'file://'+filename
-                params['message'] = (unicode(self.tb_text.toPlainText()).encode('utf-8'))
-                response = twitpic.create('upload', params)
-
-                data = simplejson.loads(response)
+                params['message'] = twitpic_message #(unicode(self.tb_text.toPlainText()).encode('utf-8'))
+                response = twitpic_client.create('upload', params)
+                print response
+                #data = simplejson.loads(response)
                 
-                                
+                if response.has_key('url'):
+                    self.notifications.info('Image successfully posted on TwitPic as' + response['url'])
+                    self.tb_text.insertPlainText(response['url'])
+
+            except twitpic.TwitPicError, err:
+                self.notifications.warn('An error occur while posting image on TwitPic : '+err.reason)                                    
             except:
                 #FIXME
                 import traceback
                 traceback.print_exc()
-                print 'Grrrr'
-                pass
+                self.notifications.warn('An error occur while posting image on TwitPic')
 
+    @pyqtSlot()
     def del_search(self):
         keywords = self.settings.value('savedSearch')
         if not keywords:
@@ -1112,6 +1122,7 @@ class KhweeteurWin(QMainWindow):
         self.settings.setValue('savedSearch', keywords)
         self.close()
 
+    @pyqtSlot()
     def save_search(self):
         keywords = self.settings.value('savedSearch')
         if not keywords:
