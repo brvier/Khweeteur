@@ -500,7 +500,7 @@ class KhweeteurWorker(QThread):
             self.refresh_search_worker1.start()
 
         if self.settings.value('identica_access_token_key') != None:
-            api2 = twitter.Api(base_url='https://identi.ca/api/',
+            api2 = twitter.Api(base_url='http://identi.ca/api',
                                username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                access_token_key=str(self.settings.value('identica_access_token_key'
@@ -625,7 +625,7 @@ class KhweeteurWorker(QThread):
             if bool(int(self.settings.value('identica_access_token'))):
                 if not hasattr(self, 'identica_api'):
                     self.identica_api = \
-                        twitter.Api(base_url='http://identi.ca/api/',
+                        twitter.Api(base_url='http://identi.ca/api',
                                     username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                     password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                                     access_token_key=str(self.settings.value('identica_access_token_key'

@@ -101,10 +101,10 @@ class KhweeteurActionWorker(QThread):
                                 latitude=latitude, longitude=longitude)
                     self.info.emit('Tweet sent to Twitter')
 
-            if 'http://identi.ca/api/' == self.tb_text_replysource \
+            if 'http://identi.ca/api' == self.tb_text_replysource \
                 or self.tb_text_replyid == 0:
                 if bool(int(self.settings.value('identica_access_token'))):
-                    api = twitter.Api(base_url='http://identi.ca/api/',
+                    api = twitter.Api(base_url='http://identi.ca/api',
                             username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                             password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
                             access_token_key=str(self.settings.value('identica_access_token_key'

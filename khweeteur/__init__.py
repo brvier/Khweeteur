@@ -136,7 +136,7 @@ class KhweeteurAbout(QMainWindow):
             aboutScrollArea = QScrollArea(self)
             aboutScrollArea.setWidgetResizable(True)
             awidget = QWidget(aboutScrollArea)
-            awidget.setMinimumSize(480, 1300)
+            awidget.setMinimumSize(480, 1400)
             awidget.setSizePolicy(QSizePolicy.Expanding,
                                   QSizePolicy.Expanding)
             aboutScrollArea.setSizePolicy(QSizePolicy.Expanding,
@@ -194,6 +194,8 @@ class KhweeteurAbout(QMainWindow):
                                    <br>teotwaki on twitter
                                    <br>Jaffa on maemo.org
                                    <br>creip on Twitter
+                                   <br>zcopley on #statusnet
+                                   <br>jordan_c on #statusnet
                                    </center>''')
                    % __version__)
         aboutLayout.addWidget(aboutLabel)
@@ -605,14 +607,14 @@ class KhweeteurWin(QMainWindow):
                                         ) % (user_screenname, str(e)))
                                 print e
 
-                    if 'http://identi.ca/api/' \
+                    if 'http://identi.ca/api' \
                         == self.tweetsModel.data(index,
                             role=ORIGINROLE):
                         try:
                             if self.settings.value('identica_access_token_key'
                                     ) != None:
                                 api = \
-                                    twitter.Api(base_url='http://identi.ca/api/'
+                                    twitter.Api(base_url='http://identi.ca/api'
                                         ,
                                         username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                         password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
@@ -691,14 +693,14 @@ class KhweeteurWin(QMainWindow):
                                         ) % (user_screenname, str(e)))
                                 print e
 
-                    if 'http://identi.ca/api/' \
+                    if 'http://identi.ca/api' \
                         == self.tweetsModel.data(index,
                             role=ORIGINROLE):
                         try:
                             if self.settings.value('identica_access_token_key'
                                     ) != None:
                                 api = \
-                                    twitter.Api(base_url='http://identi.ca/api/'
+                                    twitter.Api(base_url='http://identi.ca/api'
                                         ,
                                         username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                         password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
@@ -772,13 +774,13 @@ class KhweeteurWin(QMainWindow):
                                     ) + str(e))
                             print e
 
-                if 'http://identi.ca/api/' \
+                if 'http://identi.ca/api' \
                     == self.tweetsModel.data(index, role=ORIGINROLE):
                     try:
                         if self.settings.value('identica_access_token_key'
                                 ) != None:
                             api = \
-                                twitter.Api(base_url='http://identi.ca/api/'
+                                twitter.Api(base_url='http://identi.ca/api'
                                     ,
                                     username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                     password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
@@ -853,13 +855,13 @@ class KhweeteurWin(QMainWindow):
                                      + str(e))
                             print e
 
-                if 'http://identi.ca/api/' \
+                if 'http://identi.ca/api' \
                     == self.tweetsModel.data(index, role=ORIGINROLE):
                     try:
                         if self.settings.value('identica_access_token_key'
                                 ) != None:
                             api = \
-                                twitter.Api(base_url='http://identi.ca/api/'
+                                twitter.Api(base_url='http://identi.ca/api'
                                     ,
                                     username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
                                     password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
