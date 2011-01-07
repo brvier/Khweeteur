@@ -11,7 +11,7 @@ if not USE_PYSIDE:
 else:
     from PySide.QtCore import QObject
     
-try:
+try:   
     import dbus
     import dbus.service
     from dbus.mainloop.qt import DBusQtMainLoop

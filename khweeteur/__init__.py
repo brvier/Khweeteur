@@ -6,7 +6,7 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
@@ -61,8 +61,12 @@ if not USE_PYSIDE:
                             QSizePolicy, \
                             QVBoxLayout, \
                             QHBoxLayout, \
-                            QInputDialog
-                                                          
+                            QInputDialog, \
+                            QFileDialog, \
+                            QDirModel                            
+                            
+                            
+#    from PyQt4.QtGui import *                                                      
     from PyQt4.QtCore import QTimer, QSettings, \
                              QUrl, \
                              Qt, QObject
@@ -93,7 +97,8 @@ else:
                              QSizePolicy, \
                              QVBoxLayout, \
                              QHBoxLayout, \
-                             QInputDialog
+                             QInputDialog, \
+                             QFileDialog
                              
     try:
         from QtMobility.Location import * #PySide
@@ -282,12 +287,13 @@ class KhweeteurWin(QMainWindow):
 
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide
-        if self.settings.value('twitter_access_token') in ('True','1'):
+        if self.settings.value('twitter_access_token') in ('True','1',1):
             self.settings.setValue('twitter_access_token',1)
         else:
+            print 'Should not happen error 448:',type(self.settings.value('twitter_access_token')),self.settings.value('twitter_access_token')
             self.settings.setValue('twitter_access_token',0)
             
-        if self.settings.value('identica_access_token') in ('True','1'):
+        if self.settings.value('identica_access_token') in ('True','1',1):
             self.settings.setValue('identica_access_token',1)
         else:
             self.settings.setValue('identica_access_token',0)
@@ -1030,8 +1036,8 @@ class KhweeteurWin(QMainWindow):
         fileMenu.addAction(self.tr('&Search'), self.open_search,
                            QKeySequence(self.tr('Ctrl+S', 'Search')))
 
-#        fileMenu.addAction(self.tr('&TwitPic Upload'), self.twitpic_upload,
-#                           QKeySequence(self.tr('Ctrl+T', 'Twitpic Upload')))
+        fileMenu.addAction(self.tr('&TwitPic Upload'), self.twitpic_upload,
+                           QKeySequence(self.tr('Ctrl+T', 'Twitpic Upload')))
 
         if self.search_keyword != None:
             keywords = self.settings.value('savedSearch')
@@ -1048,28 +1054,45 @@ class KhweeteurWin(QMainWindow):
 
         fileMenu.addAction(self.tr('&About'), self.do_about)
 
-#    def twitpic_upload(self):
-#        message = 'Test'
-#        import twitpic2
-#        api = \
-#            twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
-#                password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
-#                access_token_key=str(self.settings.value('twitter_access_token_key'
-#                )),
-#                access_token_secret=str(self.settings.value('twitter_access_token_secret'
-#                )))
-#        twitpic = twitpic2.TwitPicOAuthClient(
-#            consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
-#            consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
-#            access_token = ACCESS_TOKEN, #FIXME
-#            service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
-#            )
-#        # methods - read, create, update, remove
-#        params = []
-#        params['media'] = 'khweeteur.png'
-#        params['message'] = 'Test of python-twitpic module from #Khweeteur'
-#        response = twitpic2.create('upload', params)
-#        print response
+    def twitpic_upload(self):
+        message = 'Test'
+        import twitpic
+        import oauth2 as oauth
+
+        filename =  QFileDialog.getOpenFileName(self,
+                            "Khweeteur",'/home/user/MyDocs')
+        if not (filename == ''):
+            try:
+                api = \
+                    twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+                        password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                        access_token_key=str(self.settings.value('twitter_access_token_key'
+                        )),
+                        access_token_secret=str(self.settings.value('twitter_access_token_secret'
+                        )))
+                        
+                twitpic = twitpic.TwitPicOAuthClient(
+                    consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
+                    consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                    access_token = api._oauth_token.to_string(),
+                    service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
+                    )
+                
+                # methods - read, create, update, remove
+                params = {}
+                params['media'] = 'file://'+filename
+                params['message'] = (unicode(self.tb_text.toPlainText()).encode('utf-8'))
+                response = twitpic.create('upload', params)
+
+                data = simplejson.loads(response)
+                
+                                
+            except:
+                #FIXME
+                import traceback
+                traceback.print_exc()
+                print 'Grrrr'
+                pass
 
     def del_search(self):
         keywords = self.settings.value('savedSearch')

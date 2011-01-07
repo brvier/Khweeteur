@@ -239,6 +239,11 @@ class KhweetsModel(QAbstractListModel):
         if not hasattr(status, 'in_reply_to_status_text'):
             status.in_reply_to_status_text = None
 
+        if hasattr(status, 'retweeted_status'):
+            if status.retweeted_status != None: #Fix truncated RT
+                status.text = status.retweeted_status.text
+                screen_name = 'Retweeted by '+screen_name
+
         # Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text, Origin
 
         self._items.append((  # 0

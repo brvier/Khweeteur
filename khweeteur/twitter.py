@@ -138,7 +138,8 @@ class Status(object):
                truncated=None,
                source=None,
                now=None,
-               origin=None):
+               origin=None,
+               retweeted_status=None):
     '''An object to hold a Twitter status message.
 
     This class is normally instantiated by the twitter.Api class and
@@ -175,6 +176,7 @@ class Status(object):
     self.source = source
     self.origin = origin
     self.rel_created_at = None
+    self.retweeted_status = retweeted_status
 
   def GetCreatedAt(self):
     '''Get the time this status message was posted.
@@ -491,6 +493,11 @@ class Status(object):
     Returns:
       A twitter.Status instance
     '''
+    if 'retweeted_status' in data:
+      retweeted_status = Status.NewFromJsonDict(data['retweeted_status'])
+    else:
+      retweeted_status = None
+
     if 'user' in data:
       user = User.NewFromJsonDict(data['user'])
     else:
@@ -505,7 +512,8 @@ class Status(object):
                   in_reply_to_status_id=data.get('in_reply_to_status_id', None),
                   truncated=data.get('truncated', None),
                   source=data.get('source', None),
-                  user=user)
+                  user=user,
+                  retweeted_status=retweeted_status)
 
 class List(object):
   '''A class representing the List structure used by the twitter API.
