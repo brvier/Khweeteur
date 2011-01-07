@@ -231,6 +231,9 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         if self.show_screenname:
             screenname = index.data(SCREENNAMEROLE)
+            retweet_of = index.data(RETWEETOFROLE)
+            if retweet_of:
+                 screenname = screenname + retweet_of
             painter.setFont(self.miniFont)
             painter.setPen(self.user_color)
             painter.drawText(option.rect.adjusted(70, 10, -10, -9),
@@ -243,7 +246,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
             reply_text = index.data(role=REPLYTEXTROLE)
             if reply_name and reply_text:
-                reply = 'In reply to @' + reply_name + ' : ' \
+                reply = 'In reply to ' + reply_name + ' : ' \
                     + reply_text
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
@@ -253,7 +256,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                         int(Qt.AlignTop) | int(Qt.AlignLeft)
                         | int(Qt.TextWordWrap), reply)
             elif reply_name:
-                reply = 'In reply to @' + reply_name
+                reply = 'In reply to ' + reply_name
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
                 new_rect = \

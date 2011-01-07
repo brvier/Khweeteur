@@ -92,6 +92,7 @@ REPLYIDROLE = 25
 IDROLE = 23
 ORIGINROLE = 24
 TIMESTAMPROLE = 26
+RETWEETOFROLE = 27
 
 def write_report(error):
     '''Function to write error to a report file'''

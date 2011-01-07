@@ -21,6 +21,7 @@ class KhweeteurActionWorker(QThread):
 
     info = pyqtSignal(unicode)
     warn = pyqtSignal(unicode)
+    pictUploaded = pyqtSignal(unicode)
     tweetSent = pyqtSignal()
 
     def __init__(
@@ -45,7 +46,52 @@ class KhweeteurActionWorker(QThread):
             self.tweet()
         elif self.action == 'retweet':
             self.retweet()
+        elif self.action == 'twitpic':
+            self.twitpic_upload()
 
+    def twitpic_upload(self):
+        import twitpic
+        import oauth2 as oauth
+        import simplejson
+
+        try:
+            api = \
+                twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+                    password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                    access_token_key=str(self.settings.value('twitter_access_token_key'
+                    )),
+                    access_token_secret=str(self.settings.value('twitter_access_token_secret'
+                    )))
+                    
+            twitpic_client = twitpic.TwitPicOAuthClient(
+                consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
+                consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                access_token = api._oauth_token.to_string(),
+                service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
+                )
+            
+            # methods - read, create, update, remove
+            params = {}
+            params['media'] = 'file://'+self.data[0]
+            print params
+            params['message'] = self.data[1] #(unicode(self.tb_text.toPlainText()).encode('utf-8'))
+            response = twitpic_client.create('upload', params)
+            print response
+            #data = simplejson.loads(response)
+            
+            if response.has_key('url'):
+                self.info.emit('Image successfully posted on TwitPic as ' + response['url'])
+#                self.tb_text.insertPlainText()
+                self.pictUploaded.emit(response['url'])
+
+        except twitpic.TwitPicError, err:
+            self.warn.emit('An error occur while posting image on TwitPic : '+err.reason)                                    
+        except:
+            #FIXME
+            import traceback
+            traceback.print_exc()
+            self.warn.emit('An error occur while posting image on TwitPic')
+         
     def tweet(self):
         '''Post a tweet'''
 

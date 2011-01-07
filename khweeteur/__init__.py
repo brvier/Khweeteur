@@ -1038,7 +1038,7 @@ class KhweeteurWin(QMainWindow):
         fileMenu.addAction(self.tr('&Search'), self.open_search,
                            QKeySequence(self.tr('Ctrl+S', 'Search')))
 
-        fileMenu.addAction(self.tr('&TwitPic Upload'), self.twitpic_upload,
+        fileMenu.addAction(self.tr('&TwitPic Upload'), self.twitpic_pre_upload,
                            QKeySequence(self.tr('Ctrl+T', 'Twitpic Upload')))
 
         if self.search_keyword != None:
@@ -1057,12 +1057,7 @@ class KhweeteurWin(QMainWindow):
         fileMenu.addAction(self.tr('&About'), self.do_about)
 
     @pyqtSlot()
-    def twitpic_upload(self):
-        message = 'Test'
-        import twitpic
-        import oauth2 as oauth
-        import simplejson
-
+    def twitpic_pre_upload(self):
         filename =  QFileDialog.getOpenFileName(self,
                             "Khweeteur",'/home/user/MyDocs')
 
@@ -1070,40 +1065,32 @@ class KhweeteurWin(QMainWindow):
 
         if ((not (filename == '')) and ok) :
             try:
-                api = \
-                    twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
-                        password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
-                        access_token_key=str(self.settings.value('twitter_access_token_key'
-                        )),
-                        access_token_secret=str(self.settings.value('twitter_access_token_secret'
-                        )))
-                        
-                twitpic_client = twitpic.TwitPicOAuthClient(
-                    consumer_key = KHWEETEUR_TWITTER_CONSUMER_KEY,
-                    consumer_secret = KHWEETEUR_TWITTER_CONSUMER_SECRET,
-                    access_token = api._oauth_token.to_string(),
-                    service_key = 'f9b7357e0dc5473df5f141145e4dceb0'
-                    )
-                
-                # methods - read, create, update, remove
-                params = {}
-                params['media'] = 'file://'+filename
-                params['message'] = twitpic_message #(unicode(self.tb_text.toPlainText()).encode('utf-8'))
-                response = twitpic_client.create('upload', params)
-                print response
-                #data = simplejson.loads(response)
-                
-                if response.has_key('url'):
-                    self.notifications.info('Image successfully posted on TwitPic as' + response['url'])
-                    self.tb_text.insertPlainText(response['url'])
-
-            except twitpic.TwitPicError, err:
-                self.notifications.warn('An error occur while posting image on TwitPic : '+err.reason)                                    
+                if not self.nw.device_has_networking:
+                    self.nw.request_connection_with_tmp_callback(lambda data=((filename,twitpic_message),None,None,None,None):self.twitpic_upload(data))
+                else:
+                    raise StandardError('No network control')
             except:
-                #FIXME
-                import traceback
-                traceback.print_exc()
-                self.notifications.warn('An error occur while posting image on TwitPic')
+                self.twitpic_upload(((filename,twitpic_message),None,None,None,None))
+
+    @pyqtSlot(unicode)
+    def twitpic_post_upload(self,url):
+        self.tb_text.insertPlainText(url)
+        
+    @pyqtSlot(tuple)
+    def twitpic_upload(self,data):
+        self.tb_text.setDisabled(True)
+        self.tb_tweet.setDisabled(True)
+        self.tweetAction = KhweeteurActionWorker(
+            self,
+            'twitpic',
+            data,
+            )
+        self.tweetAction.info.connect(self.notifications.info)
+        self.tweetAction.warn.connect(self.notifications.warn)
+        self.tweetAction.pictUploaded.connect(self.twitpic_post_upload)
+        self.tweetAction.finished.connect(self.tweetSentFinished)
+        self.tweetAction.start()
+
 
     @pyqtSlot()
     def del_search(self):

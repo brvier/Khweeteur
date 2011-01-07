@@ -130,6 +130,7 @@ class KhweetsModel(QAbstractListModel):
                     item[7],
                     item[8],
                     item[9],
+                    item[10],
                     )
             except StandardError, e:
                 print e
@@ -242,7 +243,12 @@ class KhweetsModel(QAbstractListModel):
         if hasattr(status, 'retweeted_status'):
             if status.retweeted_status != None: #Fix truncated RT
                 status.text = status.retweeted_status.text
-                screen_name = 'Retweet of '+ status.retweeted_status.user.screen_name +' by '+screen_name
+                retweet_of = ' : Retweet of ' + status.retweeted_status.user.screen_name
+            else:
+                retweet_of = None
+        else:
+            retweet_of = None
+
 
         # Created_at, Status.id, ScreenName, Text, Rel_Created_at, Profile Image, Reply_ID, Reply_ScreenName, Reply_Text, Origin
 
@@ -256,6 +262,7 @@ class KhweetsModel(QAbstractListModel):
                               # 7
                               # 8
                               # 9
+                              # 10
             status.created_at_in_seconds,
             status.id,
             screen_name,
@@ -266,6 +273,7 @@ class KhweetsModel(QAbstractListModel):
             status.in_reply_to_screen_name,
             status.in_reply_to_status_text,
             status.origin,
+            retweet_of,
             ))
 
         self._uids.append(status.id)
@@ -333,6 +341,7 @@ class KhweetsModel(QAbstractListModel):
         # 7 -> Reply_ScreenName,
         # 8 -> Reply_Text
         # 9 -> Origine
+        # 10 -> Retweet of
 
         if role == Qt.DisplayRole:
             return self._items[index.row()][3]
@@ -348,6 +357,8 @@ class KhweetsModel(QAbstractListModel):
             return self._items[index.row()][8]
         elif role == ORIGINROLE:
             return self._items[index.row()][9]
+        elif role == RETWEETOFROLE:
+            return self._items[index.row()][10]
         elif role == TIMESTAMPROLE:
             return self._items[index.row()][4]
         elif role == Qt.DecorationRole:
