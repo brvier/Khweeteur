@@ -62,7 +62,7 @@ setup(name='khweeteur-experimental',
       'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix random lost of authentification token, fix truncated RT',
+      'changelog':'* Fix random lost of authentification token, fix truncated RT, Add twitpic upload feature, fix a minor bug by removing a / in identi.ca base url',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

@@ -6,15 +6,13 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.12'
+__version__ = '0.1.13'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
 #* Add separate notification for dm and mention
 #* Add list features
-#* Implements Twitpic
 #* Push 0.1.x line to extras
-#* Refactoring, Clean and Comment the code
 #* Add retry on network errors
 
 from utils import *

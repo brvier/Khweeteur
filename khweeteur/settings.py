@@ -121,7 +121,8 @@ class KhweeteurPref(QMainWindow):
     WHITETHEME = 'White'
     COOLWHITETHEME = 'CoolWhite'
     COOLGRAYTHEME = 'CoolGray'
-    THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME]
+    ALTERNATETHEME = 'Alternate'
+    THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME, ALTERNATETHEME]
 
     def __init__(self, parent=None):
         ''' Init the GUI Win'''
