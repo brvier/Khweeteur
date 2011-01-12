@@ -54,8 +54,22 @@ class KhweeteurRefreshWorker(QThread):
     
         return self.folder_path
 
-    def serialize(self, statuses):
+    def setFavoriteInCache(self,tweetid,favorite):
+        folder_path = self.getCacheFolder()
+        try:
+            path=os.path.join(folder_path, str(tweetid))
+            
+            fhandle = open(path, 'rb')
+            status = pickle.load(fhandle)
+            fhandle.close()            
+            status.SetFavorited(favorite)
+            pkl_file = open(path,'wb')
+            pickle.dump(status, pkl_file, pickle.HIGHEST_PROTOCOL)
+            pkl_file.close()
+        except:
+            print 'Serialization error : refresh_worker : setFavoriteInCache'
 
+    def serialize(self, statuses):
         folder_path = self.getCacheFolder()
 
         for status in statuses:
@@ -85,7 +99,6 @@ class KhweeteurRefreshWorker(QThread):
                         pass
 
     def removeAlreadyInCache(self, statuses):
-
         # Load cached statuses
 
         try:

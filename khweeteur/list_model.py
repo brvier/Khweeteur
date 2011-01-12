@@ -218,18 +218,24 @@ class KhweetsModel(QAbstractListModel):
             profile_image = \
                 os.path.basename(status.user.profile_image_url.replace('/'
                                  , '_'))
-            if profile_image:
-                if profile_image not in self._avatars:
-                    try:
-                        self._avatars[profile_image] = \
-                            QPixmap(os.path.join(AVATAR_CACHE_FOLDER,
-                                    profile_image))
-                    except:
-                        import traceback
-                        traceback.print_exc()
         else:
-            screen_name = status.sender_screen_name
-            profile_image = None
+            profile_image = '/opt/usr/share/icons/hicolor/64x64/hildon/general_default_avatar.png'            
+
+        if profile_image:
+            if profile_image not in self._avatars:
+                try:                        
+                    self._avatars[profile_image] = \
+                        QPixmap(os.path.join(AVATAR_CACHE_FOLDER,
+                                profile_image))
+                except:
+                    self._avatars[profile_image] = \
+                        QPixmap(os.path.join(AVATAR_CACHE_FOLDER,
+                                profile_image))
+#                        import traceback
+#                        traceback.print_exc()
+#        else:
+#            screen_name = status.sender_screen_name
+#            profile_image = None
 
         if not hasattr(status, 'in_reply_to_status_id'):
             status.in_reply_to_status_id = None

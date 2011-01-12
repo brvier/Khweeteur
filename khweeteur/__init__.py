@@ -61,8 +61,8 @@ if not USE_PYSIDE:
                             QHBoxLayout, \
                             QInputDialog, \
                             QFileDialog, \
-                            QDirModel                            
-                            
+                            QDirModel, \
+                            QPixmap
                             
 #    from PyQt4.QtGui import *                                                      
     from PyQt4.QtCore import QTimer, QSettings, \
@@ -96,7 +96,9 @@ else:
                              QVBoxLayout, \
                              QHBoxLayout, \
                              QInputDialog, \
-                             QFileDialog
+                             QFileDialog, \
+                             QDirModel, \
+                             QPixmap
                              
     try:
         from QtMobility.Location import * #PySide
@@ -107,8 +109,6 @@ else:
     from PySide.QtCore import QTimer, QSettings, \
                               QUrl, \
                               Qt, QObject
-
-
 
 class KhweeteurAbout(QMainWindow):
 
@@ -223,13 +223,10 @@ class KhweeteurAbout(QMainWindow):
         QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur/bugs'
                                  ))
 
+class KhweetAction(QMainWindow):
 
-class KhweetAction(QDialog):
-
-    def __init__(self, parent=None, title=''):
-        QDialog.__init__(self, parent)
-
-        self.setWindowTitle('Khweeteur : ' + title)
+    def __init__(self, parent=None): 
+        QMainWindow.__init__(self, parent)
 
         self.settings = QSettings()
 
@@ -238,38 +235,164 @@ class KhweetAction(QDialog):
                 if int(self.settings.value('useAutoRotation')) == 2:
                     self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             except:
-                   # No pref yet default is true
+                # No pref yet default is true
                 self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        self.setupGUI()
 
-        _layout = QGridLayout(self)
-        _layout.setSpacing(6)
-        _layout.setMargin(11)
+    def setupGUI(self):
+        
+        self._main_widget = QWidget(self)
+        self._layout = QVBoxLayout(self._main_widget)
 
+        self._head_widget = QWidget(self._main_widget)
+        self._screen_name = QLabel()
+        self._screen_name.setWordWrap(True)
+        self._head_layout = QHBoxLayout(self._head_widget)
+        self._icon = QLabel()
+        
+        self._head_layout.addWidget(self._icon)
+        self._head_layout.addWidget(self._screen_name)
+        self._head_layout.setStretch(1,1)
+        self._head_layout.setSpacing(6)
+        self._head_layout.setMargin(11)
+                        
+        self._head_widget.setLayout(self._head_layout)
+        self._layout.addWidget(self._head_widget)        
+
+        self._text = QLabel()
+        self._text.setWordWrap(True)
+        self._layout.addWidget(self._text)
+        self._layout.setStretch(1,10)
+        self._layout.setStretch(0,1)
+
+        self._text_reply = QLabel()
+        self._text_reply.setWordWrap(True)
+        self._layout.addWidget(self._text_reply)
+        self._layout.setStretch(2,1)
+
+        self._foot_widget = QWidget(self._main_widget)
+        self._foot_layout = QGridLayout(self._foot_widget)        
+        self._foot_layout.setSpacing(6)
+        self._foot_layout.setMargin(11)
+        
         self.reply = QPushButton('Reply')
         self.reply.setText(self.tr('&Reply'))
-        _layout.addWidget(self.reply, 0, 0)
+        self._foot_layout.addWidget(self.reply, 0, 0)
 
         self.retweet = QPushButton('Retweet')
         self.retweet.setText(self.tr('&Retweet'))
-        _layout.addWidget(self.retweet, 0, 1)
+        self._foot_layout.addWidget(self.retweet, 1, 0)
 
         self.destroy_tweet = QPushButton('Destroy')
         self.destroy_tweet.setText(self.tr('&Destroy'))
-        _layout.addWidget(self.destroy_tweet, 1, 1)
+        self._foot_layout.addWidget(self.destroy_tweet, 0, 1)
 
         self.openurl = QPushButton('Open URL')
         self.openurl.setText(self.tr('&Open URL'))
-        _layout.addWidget(self.openurl, 1, 0)
+        self._foot_layout.addWidget(self.openurl, 0, 2)
+
+        self.favorite = QPushButton('Favorite')
+        self.favorite.setText(self.tr('&Favorite'))
+        self.unfavorite = QPushButton('UnFavorite')
+        self.unfavorite.setText(self.tr('&UnFavorite'))
+
+        self._foot_layout.addWidget(self.favorite, 1, 1)
+        self._foot_layout.addWidget(self.unfavorite, 1, 2)
+        self._favorited = QLabel()
+        favorited = QIcon.fromTheme('mediaplayer_internet_radio_favorite.png').pixmap(48,48)
+        self._favorited.setPixmap(favorited)
+        self._head_layout.addWidget(self._favorited)
 
         self.follow = QPushButton('Follow')
         self.follow.setText(self.tr('&Follow'))
-        _layout.addWidget(self.follow, 0, 2)
+        self._head_layout.addWidget(self.follow)
 
         self.unfollow = QPushButton('Unfollow')
         self.unfollow.setText(self.tr('&Unfollow'))
-        _layout.addWidget(self.unfollow, 1, 2)
+        self._head_layout.addWidget(self.unfollow)
 
+        self._foot_widget.setLayout(self._foot_layout)
+        self._layout.addWidget(self._foot_widget)
+        self._main_widget.setLayout(self._layout)
+        self.setCentralWidget(self._main_widget)
 
+    def closeEvent(self,event):
+        event.ignore()
+        self.hide()
+        print 'CloseEvent'
+                               
+    def set(self, parent=None, tweet_id='' ,folder=''):
+#        self.setupGUI()
+        self.tweet_id = tweet_id
+
+        #Load Tweet
+        try:
+            pkl_file = open(os.path.join(folder, unicode(tweet_id)), 'rb')
+            status = pickle.load(pkl_file)
+            pkl_file.close()
+        except:
+            import traceback
+            traceback.print_exc()
+            self.close()
+
+        if hasattr(status,'user'):
+            _screen_name = status.user.name + ' (' + status.user.screen_name+')'
+            icon_path = os.path.basename(status.user.profile_image_url.replace('/' , '_'))
+        else:
+            _screen_name = sender_screen_name
+            icon_path = None
+        _text = status.text
+        
+        self.setWindowTitle('Khweeteur : ' + _screen_name)
+        
+        if icon_path:
+            try:
+                icon = QPixmap(os.path.join(AVATAR_CACHE_FOLDER,
+                                        icon_path))
+                self._icon.setPixmap(icon)
+            except:
+                import traceback
+                traceback.print_exc()
+
+        _text_reply = ''
+        if hasattr(status,'in_reply_to_screen_name'):
+            if status.in_reply_to_screen_name:
+                if status.in_reply_to_status_text:
+                    _text_reply = 'In reply to ' + status.in_reply_to_screen_name + ':' + status.in_reply_to_status_text
+                else:
+                    _text_reply = 'In reply to ' + status.in_reply_to_screen_name
+                
+
+        if hasattr(status, 'retweeted_status'):
+            if status.retweeted_status != None: #Fix truncated RT
+                _text = status.retweeted_status.text
+                _text_reply = 'Retweet of ' + status.retweeted_status.user.screen_name
+                
+        self._screen_name.setText(_screen_name)
+        self._text.setText(_text)
+        if status.favorited:
+            self._favorited.show()
+            self.favorite.hide()
+            self.unfavorite.show()
+        else:
+            self._favorited.hide()
+            self.favorite.show()
+            self.unfavorite.hide()
+        if _text_reply:
+            self._text_reply.setText(_text_reply)
+            self._text_reply.show()
+#            self._text.update()
+        else:
+            self._text_reply.hide()
+
+#        self._text_reply.resize(-1,-1)
+#        self._text.resize(-1,-1)
+#        self._layout.update()
+#        self._main_widget.resize(-1,-1)
+#        self._main_widget.setLayout(self._layout)
+#        self.setCentralWidget(self._main_widget)
+        
 class KhweeteurWin(QMainWindow):
 
     def __init__(self, parent=None, search_keyword=None):
@@ -411,7 +534,7 @@ class KhweeteurWin(QMainWindow):
 #        self.connect(self.tweetsView,
 #                     SIGNAL('doubleClicked(const QModelIndex&)'),
 #                     self.tweet_do_ask_action)
-        self.tweetsView.doubleClicked.connect(self.tweet_do_ask_action)
+        self.tweetsView.clicked.connect(self.tweet_do_ask_action)
         self.tweetsModel = KhweetsModel(self.search_keyword)
         try:  # If pref didn't exist
             self.tweetsModel.setLimit(int(self.settings.value('tweetHistory'
@@ -498,18 +621,22 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def tweet_do_ask_action(self):
-        user = None
         for index in self.tweetsView.selectedIndexes():
-            user = self.tweetsModel.data(index, role=SCREENNAMEROLE)
-        if user:
-            self.tweetActionDialog = KhweetAction(self, user)
-            self.tweetActionDialog.reply.clicked.connect(self.reply)
-            self.tweetActionDialog.openurl.clicked.connect(self.open_url)
-            self.tweetActionDialog.retweet.clicked.connect(self.retweet)
-            self.tweetActionDialog.follow.clicked.connect(self.follow)
-            self.tweetActionDialog.unfollow.clicked.connect(self.unfollow)
-            self.tweetActionDialog.destroy_tweet.clicked.connect(self.destroy_tweet)
-            self.tweetActionDialog.exec_()
+            tweet_id = self.tweetsModel.data(index, role=IDROLE)
+                        
+        if tweet_id:
+            if self.tweetActionDialog ==None:
+                self.tweetActionDialog = KhweetAction(self)
+                self.tweetActionDialog.reply.clicked.connect(self.reply)
+                self.tweetActionDialog.openurl.clicked.connect(self.open_url)
+                self.tweetActionDialog.retweet.clicked.connect(self.retweet)
+                self.tweetActionDialog.follow.clicked.connect(self.follow)
+                self.tweetActionDialog.unfollow.clicked.connect(self.unfollow)
+                self.tweetActionDialog.destroy_tweet.clicked.connect(self.destroy_tweet)
+                self.tweetActionDialog.favorite.clicked.connect(self.favorite)
+                self.tweetActionDialog.unfavorite.clicked.connect(self.unfavorite)
+            self.tweetActionDialog.set(tweet_id=tweet_id, folder=self.tweetsModel.getCacheFolder())
+            self.tweetActionDialog.show()
 
     @pyqtSlot()
     def countCharsAndResize(self):
@@ -535,7 +662,7 @@ class KhweeteurWin(QMainWindow):
     @pyqtSlot()
     def reply(self):
         if self.tweetActionDialog != None:
-            self.tweetActionDialog.accept()
+            self.tweetActionDialog.close()
         for index in self.tweetsView.selectedIndexes():
             user = self.tweetsModel.data(index, role=SCREENNAMEROLE)
             self.tb_text_replyid = self.tweetsModel.data(index,
@@ -548,7 +675,7 @@ class KhweeteurWin(QMainWindow):
     @pyqtSlot()
     def open_url(self):
         import re
-        self.tweetActionDialog.accept()
+        self.tweetActionDialog.close()
         for index in self.tweetsView.selectedIndexes():
             status = self.tweetsModel.data(index)
             try:
@@ -560,7 +687,7 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def follow(self):
-        self.tweetActionDialog.accept()
+        self.tweetActionDialog.close()
         if not self.nw.device_has_networking:
             self.parent().nw.request_connection_with_tmp_callback(self.follow)
         else:
@@ -645,7 +772,8 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def unfollow(self):
-        self.tweetActionDialog.accept()
+        self.tweetActionDialog.close()
+        
         if not self.nw.device_has_networking:
             self.parent().nw.request_connection_with_tmp_callback(self.unfollow)
         else:
@@ -728,9 +856,175 @@ class KhweeteurWin(QMainWindow):
                                 self.notifications.warn(self.tr('Remove %s to friendship failed on Identi.ca : %s'
                                         ) % (user_screenname, str(e)))
                                 print e
+            
+    @pyqtSlot()
+    def favorite(self):
+        self.tweetActionDialog.close()
+        for index in self.tweetsView.selectedIndexes():
+            if QMessageBox.question(self, 'Khweeteur',
+                                    'Mark as Favorited : %s ?'
+                                    % self.tweetsModel.data(index),
+                                    QMessageBox.Yes
+                                    | QMessageBox.Close) \
+                == QMessageBox.Yes:
+                tweetid = self.tweetsModel.data(index, role=IDROLE)
+                if 'twitter' in self.tweetsModel.data(index,
+                        role=ORIGINROLE):
+                    try:
+                        if self.settings.value('twitter_access_token_key'
+                                ) != None:
+                            api = \
+                                twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+                                    password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                                    access_token_key=str(self.settings.value('twitter_access_token_key'
+                                    )),
+                                    access_token_secret=str(self.settings.value('twitter_access_token_secret'
+                                    )))
+                            api.SetUserAgent('Khweeteur')
+                            api.CreateFavorite(tweetid)
+                            KhweeteurRefreshWorker().setFavoriteInCache(tweetid,True)
+                            self.notifications.info(self.tr('Favorite sent to Twitter'))
+                                                     
+                    except (
+                        twitter.TwitterError,
+                        StandardError,
+                        urllib2.HTTPError,
+                        urllib2.httplib.BadStatusLine,
+                        socket.timeout,
+                        socket.sslerror,
+                        ), e:
+                        if type(e) == twitter.TwitterError:
+                            self.notifications.warn(self.tr('Favorite to twitter failed : '
+                                    ) + e.message)
+                            print e.message
+                        else:
+                            self.notifications.warn(self.tr('Favorite to twitter failed : '
+                                    ) + str(e))
+                            print e
+
+                if 'http://identi.ca/api' \
+                    == self.tweetsModel.data(index, role=ORIGINROLE):
+                    try:
+                        if self.settings.value('identica_access_token_key'
+                                ) != None:
+                            api = \
+                                twitter.Api(base_url='http://identi.ca/api'
+                                    ,
+                                    username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                    password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                    access_token_key=str(self.settings.value('identica_access_token_key'
+                                    )),
+                                    access_token_secret=str(self.settings.value('identica_access_token_secret'
+                                    )))
+                            api.SetUserAgent('Khweeteur/%s'
+                                    % __version__)
+                            api.CreateFavorite(tweetid)
+                            KhweeteurRefreshWorker().setFavoriteInCache(tweetid,True)
+                            self.notifications.info(self.tr('Favorite sent to Identi.ca'
+                                    ))
+                    except (
+                        twitter.TwitterError,
+                        StandardError,
+                        urllib2.HTTPError,
+                        urllib2.httplib.BadStatusLine,
+                        socket.timeout,
+                        socket.sslerror,
+                        ), e:
+                        if type(e) == twitter.TwitterError:
+                            self.notifications.warn(self.tr('Favorite to identi.ca failed : '
+                                    ) + e.message)
+                            print e.message
+                        else:
+                            self.notifications.warn(self.tr('Favorite to identi.ca failed : '
+                                    ) + str(e))
+                            print e
+
+    @pyqtSlot()
+    def unfavorite(self):
+        self.tweetActionDialog.close()
+        for index in self.tweetsView.selectedIndexes():
+            if QMessageBox.question(self, 'Khweeteur',
+                                    'Mark as UnFavorited : %s ?'
+                                    % self.tweetsModel.data(index),
+                                    QMessageBox.Yes
+                                    | QMessageBox.Close) \
+                == QMessageBox.Yes:
+                tweetid = self.tweetsModel.data(index, role=IDROLE)
+                if 'twitter' in self.tweetsModel.data(index,
+                        role=ORIGINROLE):
+                    try:
+                        if self.settings.value('twitter_access_token_key'
+                                ) != None:
+                            api = \
+                                twitter.Api(username=KHWEETEUR_TWITTER_CONSUMER_KEY,
+                                    password=KHWEETEUR_TWITTER_CONSUMER_SECRET,
+                                    access_token_key=str(self.settings.value('twitter_access_token_key'
+                                    )),
+                                    access_token_secret=str(self.settings.value('twitter_access_token_secret'
+                                    )))
+                            api.SetUserAgent('Khweeteur')
+                            api.DestroyFavorite(tweetid)
+                            KhweeteurRefreshWorker().setFavoriteInCache(tweetid,False)
+                            self.notifications.info(self.tr('Remove favorite to Twitter'
+                                    ))
+                    except (
+                        twitter.TwitterError,
+                        StandardError,
+                        urllib2.HTTPError,
+                        urllib2.httplib.BadStatusLine,
+                        socket.timeout,
+                        socket.sslerror,
+                        ), e:
+                        if type(e) == twitter.TwitterError:
+                            self.notifications.warn(self.tr('Remove favorite to twitter failed : '
+                                    ) + e.message)
+                            print e.message
+                        else:
+                            self.notifications.warn(self.tr('Remove favorite to twitter failed : '
+                                    ) + str(e))
+                            print e
+
+                if 'http://identi.ca/api' \
+                    == self.tweetsModel.data(index, role=ORIGINROLE):
+                    try:
+                        if self.settings.value('identica_access_token_key'
+                                ) != None:
+                            api = \
+                                twitter.Api(base_url='http://identi.ca/api'
+                                    ,
+                                    username=KHWEETEUR_IDENTICA_CONSUMER_KEY,
+                                    password=KHWEETEUR_IDENTICA_CONSUMER_SECRET,
+                                    access_token_key=str(self.settings.value('identica_access_token_key'
+                                    )),
+                                    access_token_secret=str(self.settings.value('identica_access_token_secret'
+                                    )))
+                            api.SetUserAgent('Khweeteur/%s'
+                                    % __version__)
+                            api.DestroyFavorite(tweetid)
+                            KhweeteurRefreshWorker().setFavoriteInCache(tweetid,False)
+                            self.notifications.info(self.tr('Remove favorite sent to Identi.ca'
+                                    ))
+                    except (
+                        twitter.TwitterError,
+                        StandardError,
+                        urllib2.HTTPError,
+                        urllib2.httplib.BadStatusLine,
+                        socket.timeout,
+                        socket.sslerror,
+                        ), e:
+                        if type(e) == twitter.TwitterError:
+                            self.notifications.warn(self.tr('Remove favorite to identi.ca failed : '
+                                    ) + e.message)
+                            print e.message
+                        else:
+                            self.notifications.warn(self.tr('Remove favorite to identi.ca failed : '
+                                    ) + str(e))
+                            print e
+                            
     @pyqtSlot()
     def retweet(self):
-        self.tweetActionDialog.accept()
+        self.tweetActionDialog.close()
+        
         for index in self.tweetsView.selectedIndexes():
             if QMessageBox.question(self, 'Khweeteur',
                                     'Retweet this : %s ?'
@@ -810,7 +1104,8 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def destroy_tweet(self):
-        self.tweetActionDialog.accept()
+        self.tweetActionDialog.close()
+        
         for index in self.tweetsView.selectedIndexes():
             if QMessageBox.question(self, 'Khweeteur',
                                     self.tr('Destroy this : %s ?')

@@ -437,7 +437,7 @@ class AlternateCustomDelegate(QStyledItemDelegate):
             time = index.data(role=TIMESTAMPROLE)
             painter.setFont(self.miniFont)
             painter.setPen(self.time_color)
-            painter.drawText(option.rect.adjusted(70, 10, -10, -9),
+            painter.drawText(option.rect.adjusted(70, 5, -10, -9),
                              int(Qt.AlignTop) | int(Qt.AlignRight),
                              time)
 

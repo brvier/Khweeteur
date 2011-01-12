@@ -2954,7 +2954,7 @@ class Api(object):
     self._CheckForTwitterError(data)
     return User.NewFromJsonDict(data)
 
-  def CreateFavorite(self, status):
+  def CreateFavorite(self, status_id):
     '''Favorites the status specified in the status parameter as the authenticating user.
     Returns the favorite status when successful.
 
@@ -2965,13 +2965,13 @@ class Api(object):
     Returns:
       A twitter.Status instance representing the newly-marked favorite.
     '''
-    url = '%s/favorites/create/%s.json' % (self.base_url, status.id)
-    json = self._FetchUrl(url, post_data={})
+    url = '%s/favorites/create/%s.json' % (self.base_url, status_id)
+    json = self._FetchUrl(url, post_data={'id':status_id})
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
-  def DestroyFavorite(self, status):
+  def DestroyFavorite(self, status_id):
     '''Un-favorites the status specified in the ID parameter as the authenticating user.
     Returns the un-favorited status in the requested format when successful.
 
@@ -2982,8 +2982,8 @@ class Api(object):
     Returns:
       A twitter.Status instance representing the newly-unmarked favorite.
     '''
-    url = '%s/favorites/destroy/%s.json' % (self.base_url, status.id)
-    json = self._FetchUrl(url, post_data={})
+    url = '%s/favorites/destroy/%s.json' % (self.base_url, status_id)
+    json = self._FetchUrl(url, post_data={'id':status_id})
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
