@@ -255,7 +255,8 @@ class KhweetAction(QMainWindow):
         self._head_layout.addWidget(self._screen_name)
         self._head_layout.setStretch(1,1)
         self._head_layout.setSpacing(6)
-        self._head_layout.setMargin(11)
+        self._head_layout.setMargin(0)
+        self._layout.setMargin(11)
                         
         self._head_widget.setLayout(self._head_layout)
         self._layout.addWidget(self._head_widget)        
@@ -274,7 +275,7 @@ class KhweetAction(QMainWindow):
         self._foot_widget = QWidget(self._main_widget)
         self._foot_layout = QGridLayout(self._foot_widget)        
         self._foot_layout.setSpacing(6)
-        self._foot_layout.setMargin(11)
+        self._foot_layout.setMargin(0)
         
         self.reply = QPushButton('Reply')
         self.reply.setText(self.tr('&Reply'))
@@ -300,7 +301,8 @@ class KhweetAction(QMainWindow):
         self._foot_layout.addWidget(self.favorite, 1, 1)
         self._foot_layout.addWidget(self.unfavorite, 1, 2)
         self._favorited = QLabel()
-        favorited = QIcon.fromTheme('mediaplayer_internet_radio_favorite.png').pixmap(48,48)
+        favorited = QPixmap(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'icons', 'favorite.png'))
         self._favorited.setPixmap(favorited)
         self._head_layout.addWidget(self._favorited)
 
@@ -359,15 +361,15 @@ class KhweetAction(QMainWindow):
         if hasattr(status,'in_reply_to_screen_name'):
             if status.in_reply_to_screen_name:
                 if status.in_reply_to_status_text:
-                    _text_reply = 'In reply to ' + status.in_reply_to_screen_name + ':' + status.in_reply_to_status_text
+                    _text_reply = '<small><i>In reply to ' + status.in_reply_to_screen_name + ' : ' + status.in_reply_to_status_text+'</i></small>'
                 else:
-                    _text_reply = 'In reply to ' + status.in_reply_to_screen_name
+                    _text_reply = '<small><i>In reply to ' + status.in_reply_to_screen_name+'</i></small>'
                 
 
         if hasattr(status, 'retweeted_status'):
             if status.retweeted_status != None: #Fix truncated RT
                 _text = status.retweeted_status.text
-                _text_reply = 'Retweet of ' + status.retweeted_status.user.screen_name
+                _text_reply = '<small><i>Retweet of ' + status.retweeted_status.user.screen_name+'<i></small>'
                 
         self._screen_name.setText(_screen_name)
         self._text.setText(_text)
@@ -382,16 +384,24 @@ class KhweetAction(QMainWindow):
         if _text_reply:
             self._text_reply.setText(_text_reply)
             self._text_reply.show()
-#            self._text.update()
         else:
             self._text_reply.hide()
 
 #        self._text_reply.resize(-1,-1)
 #        self._text.resize(-1,-1)
+#        self._text.update()
+#        self._text.repaint()
+        
+#        self._head_layout.update()
 #        self._layout.update()
-#        self._main_widget.resize(-1,-1)
+#        self._main_widget.repaint()
+#        self.repaint()
 #        self._main_widget.setLayout(self._layout)
 #        self.setCentralWidget(self._main_widget)
+    def do_update(self):
+        self._text.repaint()
+        self._text_reply.repaint()
+        self._screen_name.repaint()
         
 class KhweeteurWin(QMainWindow):
 
@@ -473,6 +483,8 @@ class KhweeteurWin(QMainWindow):
                         self.close()
                         return
 
+        self.notifications = KhweeteurNotification()
+
         QTimer.singleShot(200, self.justAfterInit)
 
     def closeEvent(self, widget, *args):
@@ -480,8 +492,6 @@ class KhweeteurWin(QMainWindow):
             win.close()
 
     def justAfterInit(self):
-
-        self.notifications = KhweeteurNotification()
 
         try:
             from nwmanager import NetworkManager
@@ -637,6 +647,7 @@ class KhweeteurWin(QMainWindow):
                 self.tweetActionDialog.unfavorite.clicked.connect(self.unfavorite)
             self.tweetActionDialog.set(tweet_id=tweet_id, folder=self.tweetsModel.getCacheFolder())
             self.tweetActionDialog.show()
+            self.tweetActionDialog.do_update()
 
     @pyqtSlot()
     def countCharsAndResize(self):
