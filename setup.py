@@ -54,15 +54,15 @@ setup(name='khweeteur',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'1',
-      'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus' if USE_PYSIDE \
-      else 'python2.5, python2.5-mobility-location, python2.5-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus',
+      'buildversion':'2',
+      'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus, python-oauth' if USE_PYSIDE \
+      else 'python2.5, python2.5-mobility-location, python2.5-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus, python-oauth',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Fix random lost of authentification token, fix truncated RT, Add twitpic upload feature, fix a minor bug by removing a / in identi.ca base url',
+      'changelog':'* Remove the tweet action dialog for a more shiny stacked window\n* switch to single click for opening details on a tweet\n* fix bug #593, \n fix bug 588 : missing oauth module',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py
