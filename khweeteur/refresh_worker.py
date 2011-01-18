@@ -553,7 +553,6 @@ class KhweeteurWorker(QThread):
         print 'errors : ', error
 
     def transmitNewStatuses(self, alist):
-#        self.emit(SIGNAL('newStatuses(list)'), list)
         print 'transmitNewStatuses',len(alist)
         self.newStatuses.emit(alist)
 

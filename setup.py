@@ -54,7 +54,7 @@ setup(name='khweeteur',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},      
       options = { 'sdist_maemo':{
-      'buildversion':'2',
+      'buildversion':'1',
       'depends':'python2.5, pyside-mobility, python-pyside, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus, python-oauth' if USE_PYSIDE \
       else 'python2.5, python2.5-mobility-location, python2.5-qt4, python-oauth2, python-simplejson, python-conic, python-imaging, python-dbus, python-oauth',
       'conflicts':'khweeteur-experimental',
@@ -62,7 +62,7 @@ setup(name='khweeteur',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
       'section':'user/network',
-      'changelog':'* Remove the tweet action dialog for a more shiny stacked window\n* switch to single click for opening details on a tweet\n* fix bug #593, \n fix bug 588 : missing oauth module',
+      'changelog':'* fix link between window for stacked window',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur_launch.py

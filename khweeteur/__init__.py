@@ -6,7 +6,7 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.13'
+__version__ = '0.1.16'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
@@ -241,7 +241,6 @@ class KhweetAction(QMainWindow):
         self.setupGUI()
 
     def setupGUI(self):
-        
         self._main_widget = QWidget(self)
         self._layout = QVBoxLayout(self._main_widget)
 
@@ -320,8 +319,10 @@ class KhweetAction(QMainWindow):
         self.setCentralWidget(self._main_widget)
 
     def closeEvent(self,event):
+#        event.accept()
         event.ignore()
         self.hide()
+#        self.close()
         print 'CloseEvent'
                                
     def set(self, parent=None, tweet_id='' ,folder=''):
@@ -339,10 +340,13 @@ class KhweetAction(QMainWindow):
             self.close()
 
         if hasattr(status,'user'):
-            _screen_name = status.user.name + ' (' + status.user.screen_name+')'
+            if hasattr(status.user,'status.user.name'):            
+                _screen_name = status.user.name + ' (' + status.user.screen_name+')'
+            else:
+                _screen_name = status.user.screen_name
             icon_path = os.path.basename(status.user.profile_image_url.replace('/' , '_'))
         else:
-            _screen_name = sender_screen_name
+            _screen_name = status.sender_screen_name
             icon_path = None
         _text = status.text
         
@@ -404,16 +408,15 @@ class KhweetAction(QMainWindow):
         self._screen_name.repaint()
         
 class KhweeteurWin(QMainWindow):
-
     def __init__(self, parent=None, search_keyword=None):
         QMainWindow.__init__(self, None)
-        self.parent = parent
+            
+        self._parent = parent
         self.timer = QTimer()  # Fix bug #451
 
         self.search_keyword = search_keyword
 
         # crappy trick to avoid search win to be garbage collected
-
         self.search_win = []
 
         self.settings = KhweeteurSettings()
@@ -433,8 +436,8 @@ class KhweeteurWin(QMainWindow):
 
         try:
             if int(self.settings.value('useGPS')) == 2:
-                if self.parent != None:
-                    self.parent.positionStart()
+                if self._parent != None:
+                    self._parent.positionStart()
         except:
             pass
 
@@ -478,7 +481,7 @@ class KhweeteurWin(QMainWindow):
                             ), QMessageBox.Yes | QMessageBox.Close) \
                         == QMessageBox.Yes:
                         self.settings.setValue('useGPS', 2)
-                        self.parent.positionStart()
+                        self._parent.positionStart()
                     else:
                         self.close()
                         return
@@ -488,11 +491,15 @@ class KhweeteurWin(QMainWindow):
         QTimer.singleShot(200, self.justAfterInit)
 
     def closeEvent(self, widget, *args):
+#        if self._parent != None:            
+#            self._parent.search_win.remove(self)
         for win in self.search_win:
             win.close()
+#        if self._parent != None:            
+#            self._parent.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+
 
     def justAfterInit(self):
-
         try:
             from nwmanager import NetworkManager
             self.nw = NetworkManager(self.refresh_timeline)
@@ -605,7 +612,6 @@ class KhweeteurWin(QMainWindow):
 
         self.tb_reply = QAction('Reply', self)
         self.tb_reply.setShortcut('Ctrl+M')
-#        self.connect(self.tb_reply, SIGNAL('triggered()'), self.reply)
         self.tb_reply.triggered.connect(self.reply)
         self.addAction(self.tb_reply)
 
@@ -635,7 +641,7 @@ class KhweeteurWin(QMainWindow):
             tweet_id = self.tweetsModel.data(index, role=IDROLE)
                         
         if tweet_id:
-            if self.tweetActionDialog ==None:
+            if self.tweetActionDialog == None:
                 self.tweetActionDialog = KhweetAction(self)
                 self.tweetActionDialog.reply.clicked.connect(self.reply)
                 self.tweetActionDialog.openurl.clicked.connect(self.open_url)
@@ -645,6 +651,8 @@ class KhweeteurWin(QMainWindow):
                 self.tweetActionDialog.destroy_tweet.clicked.connect(self.destroy_tweet)
                 self.tweetActionDialog.favorite.clicked.connect(self.favorite)
                 self.tweetActionDialog.unfavorite.clicked.connect(self.unfavorite)
+#            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+#            self.tweetActionDialog.setAttribute(Qt.WA_Maemo5StackedWindow, True)
             self.tweetActionDialog.set(tweet_id=tweet_id, folder=self.tweetsModel.getCacheFolder())
             self.tweetActionDialog.show()
             self.tweetActionDialog.do_update()
@@ -1320,11 +1328,11 @@ class KhweeteurWin(QMainWindow):
                              )) * 60 * 1000)
         else:
             self.timer.stop()
-        if self.parent != None:  # We are in a search so no need to start gps #Fix bug#399
+        if self._parent != None:  # We are in a search so no need to start gps #Fix bug#399
             if int(self.settings.value('useGPS')) == 2:
-                self.parent.positionStart()
+                self._parent.positionStart()
             else:
-                self.parent.positionStop()
+                self.parent._positionStop()
         for search_win in self.search_win:
             search_win.restartTimer()
 
@@ -1449,7 +1457,7 @@ class KhweeteurWin(QMainWindow):
 
     def do_search(self, search_keyword):
         swin = KhweeteurWin(search_keyword=unicode(search_keyword),
-                            parent=self.parent)
+                            parent=self)
         self.search_win.append(swin)
         swin.show()
 

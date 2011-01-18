@@ -5,7 +5,7 @@
 # Licenced under GPLv3
 
 USE_PYSIDE = True
-USE_PYSIDE = False
+#USE_PYSIDE = False
 
 #Mega Import ! Beurk
 
