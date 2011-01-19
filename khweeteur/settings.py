@@ -304,7 +304,7 @@ class KhweeteurPref(QMainWindow):
                 if isMAEMO:
                     self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
 
-                signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+#                signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
                 oauth_consumer             = oauth.Consumer(key=KHWEETEUR_IDENTICA_CONSUMER_KEY, secret=KHWEETEUR_IDENTICA_CONSUMER_SECRET)
                 oauth_client               = oauth.Client(oauth_consumer)                
 
@@ -338,7 +338,7 @@ class KhweeteurPref(QMainWindow):
                             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator,True)
                         token = oauth.Token(request_token['oauth_token'][0], request_token['oauth_token_secret'][0])
                         token.set_verifier(unicode(pincode.strip()))
-                        body = 'oauth_verifier=%s' % (unicode(pincode.strip()))
+#                        body = 'oauth_verifier=%s' % (unicode(pincode.strip()))
 
                         oauth_client  = oauth.Client(oauth_consumer, token)
                         resp, content = oauth_client.request(ACCESS_TOKEN_URL, method='POST' )

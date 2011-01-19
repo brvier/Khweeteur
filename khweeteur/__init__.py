@@ -6,7 +6,7 @@
 
 '''A simple Twitter client made with pyqt4'''
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 
 #TODOS :
 #* Fix Identi.ca oauth bug
@@ -1373,6 +1373,10 @@ class KhweeteurWin(QMainWindow):
         filename =  QFileDialog.getOpenFileName(self,
                             "Khweeteur",'/home/user/MyDocs')
 
+        #PySide work arround bug #625
+        if type(filename) == tuple:
+            filename = filename[0
+            ]
         twitpic_message, ok = QInputDialog.getText(self, self.tr('Twitpic Message'), self.tr('Enter the twitpic message :'))
 
         if ((not (filename == '')) and ok) :

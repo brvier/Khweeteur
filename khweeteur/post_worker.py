@@ -72,6 +72,7 @@ class KhweeteurActionWorker(QThread):
             
             # methods - read, create, update, remove
             params = {}
+            print self.data[0]
             params['media'] = 'file://'+self.data[0]
             print params
             params['message'] = self.data[1] #(unicode(self.tb_text.toPlainText()).encode('utf-8'))
