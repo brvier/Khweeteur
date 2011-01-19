@@ -74,6 +74,7 @@ if not USE_PYSIDE:
         noQtLocation = False
     except:
         noQtLocation = True
+        print 'oups no pyqt location'
                             
 else:
     from PySide.QtGui import QMainWindow, \
@@ -105,6 +106,8 @@ else:
         noQtLocation = False
     except:
         noQtLocation = True
+        print 'oups no pyside location'
+
                                                      
     from PySide.QtCore import QTimer, QSettings, \
                               QUrl, \
@@ -421,6 +424,23 @@ class KhweeteurWin(QMainWindow):
 
         self.settings = KhweeteurSettings()
 
+        #Bind geoloc
+        parent = self._parent
+        while (type(parent)!=Khweeteur):
+            if hasattr(parent,'_parent'):
+                parent = parent._parent
+            else:
+                if (type(parent)==Khweeteur):
+                    parent = parent._parent                    
+                else:
+                    parent = None
+        print type(parent)
+        if parent != None:
+            self.app = parent
+        else:
+            print 'gps oups !'
+
+        self.coordinates = None                                
         #Crappy fix for old prefs due to change to QVariant
         #Api 2 and PySide
         if self.settings.value('twitter_access_token') in ('True','1',1):
@@ -436,8 +456,7 @@ class KhweeteurWin(QMainWindow):
 
         try:
             if int(self.settings.value('useGPS')) == 2:
-                if self._parent != None:
-                    self._parent.positionStart()
+                self.app.positionStart()
         except:
             pass
 
@@ -481,7 +500,7 @@ class KhweeteurWin(QMainWindow):
                             ), QMessageBox.Yes | QMessageBox.Close) \
                         == QMessageBox.Yes:
                         self.settings.setValue('useGPS', 2)
-                        self._parent.positionStart()
+                        self.app.positionStart()
                     else:
                         self.close()
                         return
@@ -498,7 +517,11 @@ class KhweeteurWin(QMainWindow):
 #        if self._parent != None:            
 #            self._parent.setAttribute(Qt.WA_Maemo5StackedWindow, True)
 
-
+    def updateCoordinates(self,coord):
+        self.coordinates = coord
+        for win in self.search_win:
+            win.updateCoordinates(coord)
+        
     def justAfterInit(self):
         try:
             from nwmanager import NetworkManager
@@ -1227,7 +1250,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text.setDisabled(True)
             self.tb_tweet.setDisabled(True)
             try:
-                geoposition = self.parent.coordinates
+                geoposition = self.coordinates
             except:
                 geoposition = None
             self.tweetAction = KhweeteurActionWorker(
@@ -1261,10 +1284,11 @@ class KhweeteurWin(QMainWindow):
         if isMAEMO:
             self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
         if self.search_keyword == 'GeOSearH':
-            if self.parent.coordinates:
-                geocode = (self.parent.coordinates[0],
-                           self.parent.coordinates[1], '1km')
+            if self.coordinates:
+                geocode = (self.coordinates[0],
+                           self.coordinates[1], '1km')
             else:
+                print self.coordinates
                 geocode = None
         else:
             geocode = None
@@ -1328,11 +1352,11 @@ class KhweeteurWin(QMainWindow):
                              )) * 60 * 1000)
         else:
             self.timer.stop()
-        if self._parent != None:  # We are in a search so no need to start gps #Fix bug#399
+        if self.app != None:  # We are in a search so no need to start gps #Fix bug#399
             if int(self.settings.value('useGPS')) == 2:
-                self._parent.positionStart()
+                self.app.positionStart()
             else:
-                self.parent._positionStop()
+                self.app.positionStop()
         for search_win in self.search_win:
             search_win.restartTimer()
 
@@ -1533,8 +1557,13 @@ class Khweeteur(QApplication):
         '''GPS Callback on update'''
 
         if update.isValid():
-            self.coordinates = (update.coordinate().latitude(),
+            coordinates = (update.coordinate().latitude(),
                                 update.coordinate().longitude())
+            print coordinates
+            if self.win != None:
+                self.win.updateCoordinates(coordinates)
+        else:
+            print 'update not valid'
 
     def handle_signal(self, *args):
         pass  # print 'received signal:', args
