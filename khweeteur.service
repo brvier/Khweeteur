@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=net.khertan.khweeteur
-Exec=/usr/bin/khweeteur_launch.py

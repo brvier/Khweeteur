@@ -1,7 +1,0 @@
-[Desktop Entry]
-Encoding=UTF-8
-Version=1.0
-Type=Application
-Name=Khweeteur
-Exec=/usr/bin/khweeteur_launch.py
-Icon=khweeteur
