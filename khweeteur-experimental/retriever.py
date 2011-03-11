@@ -21,6 +21,42 @@ import os
 import dbus
 import dbus.service
 
+class KhweeteurUpdated(dbus.service.Object):
+    def __init__(self):
+        dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur/NewTweets')
+
+    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+                         signature='us')
+    def emit(self, count, ttype):
+        m_bus = dbus.SystemBus()
+        m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                          '/org/freedesktop/Notifications')
+        iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+        m_id = 0
+
+        if ttype == 'DMs':
+            msg = 'New dms'
+        elif ttype == 'Mentions':
+            msg = 'New mentions'            
+        else:
+            msg = 'New tweets'
+        try:
+            m_id = iface.Notify('Khweeteur',
+                              m_id,
+                              'khweeteur',
+                              msg,
+                              msg,
+                              ['default','call'],
+                              {'category':'khweeteur-new-tweets',
+                              'desktop-entry':'khweeteur',
+                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                              'count':count,
+                              'amount':count},
+                              -1
+                              )
+        except:
+            pass
+
 class KhweeteurRefreshWorker(Thread):
     
     # Signal
@@ -39,33 +75,12 @@ class KhweeteurRefreshWorker(Thread):
         self.consumer_key = consumer_key
 
     def send_notification(self,msg,count):
-        m_bus = dbus.SystemBus()
-        m_notify = m_bus.get_object('org.freedesktop.Notifications',
-                          '/org/freedesktop/Notifications')
-        iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-        m_id = 0
-
-        try:
-            m_id = iface.Notify('Khweeteur',
-                              m_id,
-                              'khweeteur',
-                              'New Tweets',
-                              msg,
-                              ['default','call'],
-                              {'category':'khweeteur-new-tweets',
-                              'desktop-entry':'khweeteur',
-                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
-                              'count':count,
-                              'amount':count},
-                              -1
-                              )
-        except:
-            pass
+        KhweeteurUpdated().emit(count,msg)
     
     def getCacheFolder(self):
         if not hasattr(self,'folder_path'):
             self.folder_path = os.path.join(os.path.expanduser("~"),
-                                 '.khweeteur',
+                                 '.khweeteur','cache',
                                  os.path.normcase(unicode(self.call.replace('/',
                                  '_'))).encode('UTF-8'))
                             
@@ -160,17 +175,19 @@ class KhweeteurRefreshWorker(Thread):
                 pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
                 fhandle.close()
             except:
-                logging.debug('Serialization of %s failed' % (status.id,))                            
+                logging.debug('Serialization of %s failed' % (status.id,))                                    
 
     def run(self):
         settings = QSettings("Khertan Software", "Khweeteur")
         statuses = []
-        
+        logging.debug('Thread Runned')
         try:
             since = settings.value(self.consumer_key + '_' + self.call)
                         
             if self.call == 'HomeTimeline':
                 statuses = self.api.GetHomeTimeline(since_id=since)
+                logging.debug('HomeTimeLine refreshed')                            
+
             elif self.call == 'Mentions':
                 statuses = self.api.GetMentions(since_id=since)
             elif self.call == 'DMs':
@@ -180,7 +197,7 @@ class KhweeteurRefreshWorker(Thread):
                 pass
         except StandardError, err:
             logging.debug(err)
-            print err
+            raise err
         
         self.removeAlreadyInCache(statuses)
         self.downloadProfilesImage(statuses)

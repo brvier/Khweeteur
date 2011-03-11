@@ -6,8 +6,6 @@
 
 '''A Twitter client made with PySide and QML'''
 
-__version__ = '0.2.0'
-
 from PySide.QtGui import *
 from PySide.QtCore import *
 
@@ -18,7 +16,7 @@ import pickle
 import time
 import twitter
 
-AVATAR_CACHE_FOLDER = '/home/user/.khweeteur/cache'
+AVATAR_CACHE_FOLDER = '/home/user/.khweeteur/avatars'
 
 class StatusWrapper(QObject):
     def __init__(self,status):
@@ -68,7 +66,7 @@ class StatusWrapper(QObject):
     in_reply_to_screenname = Property(unicode, _in_reply_to_screenname, notify=changed)
 
 class TweetsListModel(QAbstractListModel):
-    dataChanged = Signal(QModelIndex,QModelIndex)
+#    dataChanged = Signal(QModelIndex,QModelIndex)
 
     COLUMNS = ('status',)
     
@@ -90,7 +88,7 @@ class TweetsListModel(QAbstractListModel):
     def load_list(self,tweetlist):
         print 'load timeline tweets'
         start = time.time()
-        TIMELINE_PATH = '/home/user/.khweeteur/%s' % (tweetlist)
+        TIMELINE_PATH = '/home/user/.khweeteur/cache/%s' % (tweetlist)
         cach_path = TIMELINE_PATH
         uids = glob.glob(cach_path + '/*')[:60]
         statuses = []
@@ -107,9 +105,12 @@ class TweetsListModel(QAbstractListModel):
         print len(statuses) 
         self._statuses = [StatusWrapper(status) for status in statuses]
         self._statuses.sort()
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(0,
-                              len(self._statuses)))
+
+        #FIXME
+        #Wait pyside bug is resolved
+#        self.dataChanged.emit(self.createIndex(0, 1),
+#                              self.createIndex(0,
+#                              len(self._statuses)))
     	
 class Controller(QObject):
     switch_fullscreen = Signal()

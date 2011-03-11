@@ -408,6 +408,12 @@ class Status(object):
   now = property(GetNow, SetNow,
                  doc='The wallclock time for this status instance.')
 
+  def __cmp__(self,other):
+    if self.id == other.id:
+        return 0
+    if self.created_at < other.created_at:
+        return -1
+    return 1
 
   def __lt__(self,other):
     return other and self.created_at < other.created_at

@@ -41,31 +41,12 @@ class KhweeteurWin(QMainWindow):
     def __init__(self,parent=None):
         QMainWindow.__init__(self,parent)
         self.view = QDeclarativeView()
-
-        print 'load tweets'
-        start = time.time()
-        TIMELINE_PATH = '/home/user/.khweeteur/HomeTimeline'
-        cach_path = TIMELINE_PATH
-        uids = glob.glob(cach_path + '/*')[:60]
-        statuses = []
-        for uid in uids:
-            uid = os.path.basename(uid)
-            try:
-                pkl_file = open(os.path.join(cach_path, uid), 'rb')
-                status = pickle.load(pkl_file)
-                pkl_file.close()
-                statuses.append(status)
-            except:
-                pass
-        print time.time() - start
-        print len(statuses) 
-        statusesWrapped = [StatusWrapper(status) for status in statuses]
-        statusesWrapped.sort()
         
         controller = Controller()
         controller.switch_fullscreen.connect(self.switch_fullscreen)
-        statusesList = TweetsListModel(statusesWrapped)
-        controller.switch_list.connect(statusesList.load_list)        
+        statusesList = TweetsListModel()
+        controller.switch_list.connect(statusesList.load_list)
+        statusesList.load_list('HomeTimeline')
          
         self.context = self.view.rootContext()
          
@@ -79,7 +60,26 @@ class KhweeteurWin(QMainWindow):
             self.view.setViewport(glw)
         self.view.setResizeMode(QDeclarativeView.SizeRootObjectToView)	
         self.setCentralWidget(self.view)
-
+        self.listen()
+        
+    def listen(self):
+#        DBusGMainLoop(set_as_default=True)
+        import dbus
+        import dbus.service
+        from dbus.mainloop.qt import DBusQtMainLoop
+        self.dbus_loop = DBusQtMainLoop()
+        dbus.set_default_main_loop(self.dbus_loop)
+        self.bus = dbus.SessionBus() #should connect to system bus instead of session because the former is where the incoming signals come from
+        self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur/NewTweets', dbus_interface='net.khertan.Khweeteur', signal_name=None)
+#        gobject.MainLoop().run()
+         
+    def new_tweets(self,count,msg):
+        print 'New Tweets dbus signal received'
+        print count,msg
+        #TODO
+        #Do something with the signal
+        
+         
     @Slot()
     def switch_fullscreen(self):
         if self.isFullScreen():                   
