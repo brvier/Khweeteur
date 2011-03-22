@@ -16,55 +16,51 @@ Rectangle {
             Rectangle {
                 width: tweetsList.width
                 color: ((index % 2 == 0)?"#222":"#111")
-                height:(((tweetText.height+27)>90)?tweetText.height+27:90)
-            Image {
-                id: tweetAvatar;
-                source: model.status.avatar                
-                x:5;y:10
-                width:70; height:70
-            }
-            Text {
-                id: tweetText
-                x:85;y:5
-//                anchors.top: tweetAvatar.top
-//                anchors.left: tweetAvatar.right
-//                anchors.bottom: tweetAvatar.bottom
-//                anchors.leftMargin: 20
-//                anchors.right: parent.right
-//                anchors.rightMargin: 20
-                font.pixelSize: 24
-                clip: true
-                width:parent.width - 85
-                wrapMode: Text.WordWrap
-                textFormat: Text.RichText
-                text: model.status.text
-                color: "white"
-                onLinkActivated: handleLink (link)
-            }
-            Text {
-                id:tweetDetails
-                anchors.top: tweetText.bottom
-                anchors.left: tweetText.left
-                anchors.bottom: parent.bottom
-                anchors.topMargin: 5
-                font.pixelSize: 12
-                clip: true
-                width:parent.width - 85
-                wrapMode: Text.WordWrap
-                textFormat: Text.RichText
-                text: "<html><span style=\"color:#779dca\">"+model.status.created_at+" by "+model.status.screen_name+"</span>"
-            }
-            function handleLink (link) {
-                console.log("link: "+link)
-                if (link.slice(0,4) == 'http') {
-                    Qt.openUrlExternally (link);
+                //height:(((tweetText.height+27)>90)?tweetText.height+27:90)
+                height:(((tweetText.height + 40)>80)?tweetText.height+40:80)
+                Image {
+                    id: tweetAvatar;
+                    source: model.status.avatar
+                    x:5;y:10
+                    width:60; height:60
                 }
+                Text {
+                    id: tweetText
+                    x:70;y:5
+                    font.pixelSize: 24
+                    //clip: true
+                    width:parent.width - 85
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.RichText
+                    text: model.status.text
+                    color: "white"
+                    onLinkActivated: handleLink (link)
+                }
+                Text {
+                    id:tweetDetails
+                    height: 20
+                    x:70
+                    width:parent.width - 85
+                    anchors.top: tweetText.bottom
+                    anchors.bottom: parent.bottom
+                    anchors.topMargin: 5
+                    font.pixelSize: 12
+                    //clip: true
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.RichText
+                    text: "<html><span style=\"color:#779dca\">"+model.status.created_at+" by "+model.status.screen_name+"</span>"
+                }
+                function handleLink (link) {
+                    console.log("link: "+link)
+                    if (link.slice(0,4) == 'http') {
+                        Qt.openUrlExternally (link);
+                    }
             }
 
             MouseArea {
                 anchors.fill: parent
                 onClicked: { controller.statusSelected(model.status) }
-            }
+                }
             }
         }
     }
@@ -80,23 +76,16 @@ Rectangle {
             GradientStop { position: 1.0; color: "#66000000" }
         }
 
-        ListModel {
-            id: imageModel
+        ListView {
+            id: view
 
-            ListElement { name: "khweeteur.png";txt: "";count:0 }
-            ListElement { name: "";txt: "Timeline" ;count:2}
-            ListElement { name: "";txt: "Mentions" ;count:0 }
-            ListElement { name: "";txt: "DMs" ;count:0}
-            ListElement { name: "";txt: "Search:Maemo" ;count:0}
-            ListElement { name: "";txt: "Search:Meego" ;count:0}
+            anchors.fill: parent; anchors.rightMargin: 200
+            model: toolbarListModel
+            spacing: 10
+            orientation: "Horizontal"
             
-        }
-
-        Component {
-            id: imageDelegate
-
+        delegate: Component {
             Item {
-                id: wrapper
                 width: action.width + image.width;
                 height: 60
                 Rectangle {
@@ -122,9 +111,9 @@ Rectangle {
                     Text {
                         id: action
                         anchors.centerIn: parent
-                        text: txt
+                        text: model.button.label
                         color: "white"
-                        visible: (name=="")
+                        visible: (model.button.src=="")
                         opacity: 0.7
                         }
 
@@ -133,9 +122,9 @@ Rectangle {
                         opacity: 0.7
                         x: 1; y: 1
                         width: 60; height: pickerItem.height - 2
-                        source: name
+                        source: model.button.src
                         asynchronous: true
-                        visible: (name!="")
+                        visible: (model.button.label=="")
                     }
 
                     Rectangle {
@@ -146,27 +135,27 @@ Rectangle {
                         height:30
                         color: "red"
                         radius:5
-                        visible: (count>0)
+                        visible: (model.button.count>0)
                         opacity: 1
                         Text {
                             id: newPostItText
                             anchors.centerIn: parent
-                            text: "10"
+                            text: model.button.count
                             color: "white"
-                            visible: (count>0)
+                            visible: (model.button.count>0)
                             opacity: 1
                         }
                         }
                                             
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: { view.currentIndex = index; controller.toolbar_callback(image.source+action.text); }
+                        onClicked: { view.currentIndex = index; controller.toolbar_callback(model.button.src+model.button.label); }
                     }
 
                     states: [
                         State {
                             name: "selected"
-                            when: wrapper.ListView.isCurrentItem
+                            when: ListView.isCurrentItem
                             PropertyChanges { target: image; opacity: 1 }
                             PropertyChanges { target: newPostIt; visible: false }
                             //PropertyChanges { target: count: 0 }
@@ -182,17 +171,7 @@ Rectangle {
                         NumberAnimation { duration: 250; easing.type: "OutCirc"; properties: "opacity,rotation" }
                     }
                 }
-            }
-        }
-
-        ListView {
-            id: view
-
-            anchors.fill: parent; anchors.rightMargin: 200
-            model: imageModel
-            delegate: imageDelegate
-            spacing: 10
-            orientation: "Horizontal"
+            }}
         }
 
         states: State {

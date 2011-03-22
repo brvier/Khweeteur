@@ -411,7 +411,7 @@ class Status(object):
   def __cmp__(self,other):
     if self.id == other.id:
         return 0
-    if self.created_at < other.created_at:
+    if self.created_at_in_seconds > other.created_at_in_seconds:
         return -1
     return 1
 

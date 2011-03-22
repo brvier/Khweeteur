@@ -4,7 +4,10 @@
 # Licenced under GPLv3
 
 import twitter
+import socket
+socket.setdefaulttimeout(60)
 from urllib import urlretrieve
+
 import urllib2
 import pickle
 try:
@@ -20,50 +23,10 @@ import logging
 import os
 import dbus
 import dbus.service
-
-class KhweeteurUpdated(dbus.service.Object):
-    def __init__(self):
-        dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur/NewTweets')
-
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
-                         signature='us')
-    def emit(self, count, ttype):
-        m_bus = dbus.SystemBus()
-        m_notify = m_bus.get_object('org.freedesktop.Notifications',
-                          '/org/freedesktop/Notifications')
-        iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-        m_id = 0
-
-        if ttype == 'DMs':
-            msg = 'New dms'
-        elif ttype == 'Mentions':
-            msg = 'New mentions'            
-        else:
-            msg = 'New tweets'
-        try:
-            m_id = iface.Notify('Khweeteur',
-                              m_id,
-                              'khweeteur',
-                              msg,
-                              msg,
-                              ['default','call'],
-                              {'category':'khweeteur-new-tweets',
-                              'desktop-entry':'khweeteur',
-                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
-                              'count':count,
-                              'amount':count},
-                              -1
-                              )
-        except:
-            pass
-
-class KhweeteurRefreshWorker(Thread):
-    
-    # Signal
-#    errors = Signal(Exception)
-#    newStatuses = Signal(list)
-
-    def __init__(self,base_url, consumer_key, consumer_secret, access_token, access_secret, call):
+import socket
+       
+class KhweeteurRefreshWorker(Thread):    
+    def __init__(self,base_url, consumer_key, consumer_secret, access_token, access_secret, call, dbus_handler):
         Thread.__init__(self, None)
         self.api = twitter.Api(username=consumer_key,
                                password=consumer_secret,
@@ -73,9 +36,11 @@ class KhweeteurRefreshWorker(Thread):
         self.api.SetUserAgent('Khweeteur')
         self.call = call
         self.consumer_key = consumer_key
+        self.dbus_handler = dbus_handler
+        socket.setdefaulttimeout(60)
 
     def send_notification(self,msg,count):
-        KhweeteurUpdated().emit(count,msg)
+        self.dbus_handler.new_tweets(count,msg)
     
     def getCacheFolder(self):
         if not hasattr(self,'folder_path'):
@@ -111,6 +76,7 @@ class KhweeteurRefreshWorker(Thread):
                         im = im.resize((50, 50))
                         im.save(os.path.splitext(cache)[0] + '.png',
                                 'PNG')
+#                        status.user.profile_image_url = cache
                     except StandardError, err:
                         logging.debug('DownloadProfilImage:'+str(err))
                         print err
@@ -131,18 +97,24 @@ class KhweeteurRefreshWorker(Thread):
             status.origin = self.api.base_url
 
     def getOneReplyContent(self, tid):
-        #Got from cache
+        #Got from cache        
         status = None
-        for root,dirs,files in os.walk(os.path.join(os.path.expanduser("~"),'.khweeteur')):
-            for afile in files:                
+        for root,dirs,files in os.walk(os.path.join(os.path.expanduser("~"),'.khweeteur','cache')):
+            for folder in dirs:
+                logging.debug('getOneReplyContent Folder: %s' % (folder,))
+            for afile in files:
+                logging.debug('getOneReplyContent aFile: %s' % (os.path.join(root,afile),))
                 if unicode(tid)==afile:
-                    fhandle = open(os.path.join(root,afile), 'rb')
-                    status = pickle.load(fhandle)
-                    fhandle.close()
-                    return status.text
+                    try:
+                        fhandle = open(os.path.join(root,afile), 'rb')
+                        status = pickle.load(fhandle)
+                        fhandle.close()
+                        return status.text
+                    except StandardError,err:
+                        logging.debug('getOneReplyContent:'+err)
 
         try:
-            rpath = os.path.join(os.path.expanduser("~"),'.khweeteur','Replies')
+            rpath = os.path.join(os.path.expanduser("~"),'.khweeteur','cache','Replies')
             if not os.path.exists(rpath):
                 os.makedirs(rpath)
     
@@ -152,19 +124,23 @@ class KhweeteurRefreshWorker(Thread):
             pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             fhandle.close()
             return status.text
-        except StandardError, er:
-            logging.debug('getOneReplyContent:'+err)
+        except StandardError, err:
+            logging.debug('getOneReplyContent:'+str(err))
             print err
 
             
     def getRepliesContent(self, statuses):
         for status in statuses:
-            if not hasattr(status, 'in_reply_to_status_id'):
-                status.in_reply_to_status_text = None
-            elif not status.in_reply_to_status_text \
-                and status.in_reply_to_status_id:
-                status.in_reply_to_status_text = \
-                    self.getOneReplyContent(status.in_reply_to_status_id)
+            try:
+                if not hasattr(status, 'in_reply_to_status_id'):
+                    status.in_reply_to_status_text = None
+                elif not status.in_reply_to_status_text \
+                    and status.in_reply_to_status_id:
+                    status.in_reply_to_status_text = \
+                        self.getOneReplyContent(status.in_reply_to_status_id)
+            except StandardError, err:
+                logging.debug('getOneReplyContent:'+err)
+                print err
 
     def serialize(self, statuses):
         folder_path = self.getCacheFolder()
@@ -180,18 +156,23 @@ class KhweeteurRefreshWorker(Thread):
     def run(self):
         settings = QSettings("Khertan Software", "Khweeteur")
         statuses = []
+        
         logging.debug('Thread Runned')
         try:
             since = settings.value(self.consumer_key + '_' + self.call)
                         
             if self.call == 'HomeTimeline':
+                logging.debug('%s running' % self.call)                            
                 statuses = self.api.GetHomeTimeline(since_id=since)
-                logging.debug('HomeTimeLine refreshed')                            
-
+                logging.debug('%s finished' % self.call)                            
             elif self.call == 'Mentions':
+                logging.debug('%s running' % self.call)                            
                 statuses = self.api.GetMentions(since_id=since)
+                logging.debug('%s finished' % self.call)                            
             elif self.call == 'DMs':
+                logging.debug('%s running' % self.call)                            
                 statuses = self.api.GetDirectMessages(since_id=since)
+                logging.debug('%s finished' % self.call)                            
             else:
                 #Its a search ....
                 pass
@@ -200,40 +181,19 @@ class KhweeteurRefreshWorker(Thread):
             raise err
         
         self.removeAlreadyInCache(statuses)
-        self.downloadProfilesImage(statuses)
-        self.applyOrigin(statuses)
-        self.getRepliesContent(statuses)
-        self.serialize(statuses)
-        statuses.sort()
-        statuses.reverse()
         if len(statuses) > 0:
+            logging.debug('%s start download avatars' % self.call)                            
+            self.downloadProfilesImage(statuses)
+            logging.debug('%s start applying origin' % self.call)                            
+            self.applyOrigin(statuses)
+            logging.debug('%s start getreply' % self.call)                            
+            self.getRepliesContent(statuses)
+            logging.debug('%s start serialize' % self.call)                            
+            self.serialize(statuses)
+            statuses.sort()
+            statuses.reverse()
             settings.setValue(self.consumer_key + \
                        '_' + self.call, statuses[0].id)
-            self.send_notification('New %s' % (self.call,),len(statuses))
+            self.send_notification(self.call,len(statuses))
         settings.sync()
-
-if __name__ == "__main__":
-    worker = KhweeteurRefreshWorker(\
-                 'https://api.twitter.com/1',
-                 'uhgjkoA2lggG4Rh0ggUeQ',
-                 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
-                 '15847937-z6jfvVmzrTVRUwoYjuKo6wKv2zyp4EIByjc7bWSs',
-                 '1OklngYcx3Hg8SFC2D9m2NjN0EAIpQjuO3kuxFGkpi8',
-                 'HomeTimeline')
-    worker.start()
-    worker = KhweeteurRefreshWorker(\
-                 'https://api.twitter.com/1',
-                 'uhgjkoA2lggG4Rh0ggUeQ',
-                 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
-                 '15847937-z6jfvVmzrTVRUwoYjuKo6wKv2zyp4EIByjc7bWSs',
-                 '1OklngYcx3Hg8SFC2D9m2NjN0EAIpQjuO3kuxFGkpi8',
-                 'DMs')
-    worker.start()
-    worker = KhweeteurRefreshWorker(\
-                 'https://api.twitter.com/1',
-                 'uhgjkoA2lggG4Rh0ggUeQ',
-                 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
-                 '15847937-z6jfvVmzrTVRUwoYjuKo6wKv2zyp4EIByjc7bWSs',
-                 '1OklngYcx3Hg8SFC2D9m2NjN0EAIpQjuO3kuxFGkpi8',
-                 'Mentions')
-    worker.start()
+        logging.debug('%s refreshed' % self.call)                            

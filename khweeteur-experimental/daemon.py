@@ -18,6 +18,7 @@ from retriever import KhweeteurRefreshWorker
 
 import gobject
 gobject.threads_init()
+import socket
 
 __version__ = '0.2.0'
 
@@ -138,9 +139,14 @@ class Daemon:
             pid = None
     
         if pid:
-            message = "pidfile %s already exist. Daemon already running?\n"
-            sys.stderr.write(message % self.pidfile)
-            sys.exit(1)
+            try:
+                os.kill(pid,0)
+                message = "pidfile %s already exist. Daemon already running?\n"
+                sys.stderr.write(message % self.pidfile)
+                sys.exit(1)
+
+            except OSError, err:
+                sys.stderr.write('pidfile %s already exist. But daemon is dead.\n'  % self.pidfile)
         
         # Start the daemon
         self.daemonize()
@@ -190,19 +196,61 @@ class Daemon:
         daemonized by start() or restart().
         """
 
-class DaemonDBus(dbus.service.Object):
-    '''DBus Object handle dbus callback'''
-    def __init__(self,parent):
-        bus_name = dbus.service.BusName('net.khertan.khweeteur_daemon', bus=dbus.SessionBus())
-        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur_daemon')
-        self.parent = parent
-        
-    @dbus.service.method(dbus_interface='net.khertan.khweeteur_daemon')
-    def retrieve(self):
-        '''Callback called to active the window and reset counter'''
-        self.parent.retrieve()
-        return True
-                    
+#class DaemonDBus(dbus.service.Object):
+#    '''DBus Object handle dbus callback'''
+#    def __init__(self,parent):
+#        bus_name = dbus.service.BusName('net.khertan.khweeteur_daemon', bus=dbus.SessionBus())
+#        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur_daemon')
+#        self.parent = parent
+#        
+#    @dbus.service.method(dbus_interface='net.khertan.khweeteur_daemon')
+#    def retrieve(self):
+#        '''Callback called to active the window and reset counter'''
+#        self.parent.retrieve()
+#        return True
+
+class KhweeteurDBusHandler(dbus.service.Object):
+    def __init__(self):
+        dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur')
+        self.m_id = 0
+
+    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+                         signature='')
+    def refresh_ended(self):
+        pass
+                
+    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+                         signature='us')
+    def new_tweets(self, count, ttype):
+        m_bus = dbus.SystemBus()
+        m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                          '/org/freedesktop/Notifications')
+        iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+        m_id = 0
+
+        if ttype == 'DMs':
+            msg = 'New DMs'
+        elif ttype == 'Mentions':
+            msg = 'New mentions'            
+        else:
+            msg = 'New tweets'
+        try:
+            self.m_id = iface.Notify('Khweeteur',
+                              self.m_id,
+                              'khweeteur',
+                              msg,
+                              msg,
+                              ['default','call'],
+                              {'category':'khweeteur-new-tweets',
+                              'desktop-entry':'khweeteur',
+                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                              'count':count,
+                              'amount':count},
+                              -1
+                              )
+        except:
+            pass
+                                
 class KhweeteurDaemon(Daemon):
     def run(self):        
         logging.basicConfig(level=logging.DEBUG,
@@ -211,20 +259,23 @@ class KhweeteurDaemon(Daemon):
                     filename='/home/user/.khweeteur.log',
                     filemode='w')
 
-        self.dbus_object = DaemonDBus(self)
-        
+#        self.dbus_object = DaemonDBus(self)
+        self.bus = dbus.SessionBus()
+        self.bus.add_signal_receiver(self.retrieve, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.threads = [] #Here to avoid gc
         self.cache_path = os.path.join(os.path.expanduser("~"),\
                                  '.khweeteur','cache')
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
-            
+
+        self.dbus_handler = KhweeteurDBusHandler()
+        
         loop = gobject.MainLoop()
         gobject.timeout_add_seconds(1,self.retrieve)
         logging.debug('Timer added')        
         loop.run()
 
-    def retrieve(self):
+    def retrieve(self,options=None):
         settings = QSettings("Khertan Software", "Khweeteur")
         logging.debug('Setting loaded')
         try:
@@ -246,7 +297,6 @@ class KhweeteurDaemon(Daemon):
                 if refresh_interval<600:
                     refresh_interval = 600
             logging.debug('refresh interval loaded')
-
             #Remove old tweets in cache according to history prefs
             try:
                 keep = int(settings.value('tweetHistory'))
@@ -265,8 +315,8 @@ class KhweeteurDaemon(Daemon):
                             status = pickle.load(pkl_file)
                             pkl_file.close()
                             statuses.append(status)
-                        except:
-                            pass
+                        except StandardError,err:
+                            loggin.debug('Error in cache cleaning: %s' % (err,))
                     statuses.sort()
                     statuses.reverse()
                     for status in statuses[keep:]:
@@ -288,7 +338,7 @@ class KhweeteurDaemon(Daemon):
                                 settings.value('consumer_secret'),
                                 settings.value('token_key'),
                                 settings.value('token_secret'),
-                                'HomeTimeline'
+                                'HomeTimeline',self.dbus_handler
                                 ))
                 except Exception, err:
                     logging.error('Timeline : %s' % str(err))
@@ -300,7 +350,7 @@ class KhweeteurDaemon(Daemon):
                                 settings.value('consumer_secret'),
                                 settings.value('token_key'),
                                 settings.value('token_secret'),
-                                'Mentions'
+                                'Mentions',self.dbus_handler
                                 ))
                 except Exception, err:
                     logging.error('Mentions : %s' % str(err))
@@ -312,7 +362,7 @@ class KhweeteurDaemon(Daemon):
                                 settings.value('consumer_secret'),
                                 settings.value('token_key'),
                                 settings.value('token_secret'),
-                                'DMs'
+                                'DMs',self.dbus_handler
                                 ))
                 except Exception, err:
                     logging.error('DMs : %s' % str(err))
@@ -327,7 +377,12 @@ class KhweeteurDaemon(Daemon):
                     logging.error('Running Thread error')
 
             settings.endArray()
-                        
+
+            while any([thread.isAlive() for thread in self.threads]):
+                time.sleep(1)
+                
+            self.dbus_handler.refresh_ended()
+
             logging.debug('Finished loop')          
                             
         except StandardError,err:

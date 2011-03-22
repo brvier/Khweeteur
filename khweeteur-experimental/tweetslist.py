@@ -15,9 +15,20 @@ import glob
 import pickle
 import time
 import twitter
+import dbus
+import dbus.service
 
 AVATAR_CACHE_FOLDER = '/home/user/.khweeteur/avatars'
 
+class KhweeteurDBusHandler(dbus.service.Object):
+    def __init__(self):
+        dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur/RequireUpdate')
+
+    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+                         signature='')
+    def require_update(self):
+        pass
+        
 class StatusWrapper(QObject):
     def __init__(self,status):
         QObject.__init__(self)
@@ -111,11 +122,69 @@ class TweetsListModel(QAbstractListModel):
 #        self.dataChanged.emit(self.createIndex(0, 1),
 #                              self.createIndex(0,
 #                              len(self._statuses)))
-    	
+
+
+class ButtonWrapper(QObject):
+    def __init__(self,button):
+        QObject.__init__(self)
+        self._button = button
+        
+    def _label(self):
+        return self._button['label']
+
+    def _count(self): 
+        return self._button['count']
+
+    def _src(self): 
+        return self._button['src']
+        
+    @Signal
+    def changed(self):
+        pass
+        
+    label = Property(unicode, _label, notify=changed)
+    src = Property(unicode, _src, notify=changed)
+    count = Property(int, _count, notify=changed)
+
+class ToolbarListModel(QAbstractListModel):
+    COLUMNS = ('button',)
+    def __init__(self,):
+        QAbstractListModel.__init__(self)
+        self._buttons = []
+        self._buttons.append(ButtonWrapper({'label':'','src':'refresh.png','count':0}))
+        self._buttons.append(ButtonWrapper({'label':'Timeline','src':'','count':0}))
+        self._buttons.append(ButtonWrapper({'label':'Mentions','src':'','count':0}))
+        self._buttons.append(ButtonWrapper({'label':'DMs','src':'','count':0}))
+        self.setRoleNames(dict(enumerate(ToolbarListModel.COLUMNS)))
+
+    def rowCount(self,parent=QModelIndex):
+        return len(self._buttons)
+
+    def data(self,index,role):
+        if index.isValid():
+            return self._buttons[index.row()]
+        else:
+            return None
+
+    def setCount(self,msg,count):
+        for button in self._buttons:
+            if button._button['label'] == msg:
+                button._button['count'] = int(count)
+
+        #FIXME
+        #Wait pyside bug is resolved
+#        self.dataChanged.emit(self.createIndex(0, 1),
+#                              self.createIndex(0,
+#                              len(self._statuses)))
+   	
 class Controller(QObject):
     switch_fullscreen = Signal()
     switch_list = Signal(unicode)
-    
+
+    def __init__(self):
+        QObject.__init__(self,None)
+        self.dbus_handler = KhweeteurDBusHandler()
+        
     @Slot(QObject)
     def statusSelected(self, wrapper):
         print 'User clicked on:', wrapper._status.id
@@ -125,7 +194,12 @@ class Controller(QObject):
         print name
         if name.endswith('fullsize.png'):
             self.switch_fullscreen.emit()
-        if name.endswith('Timeline'):
+        elif name.endswith('Timeline'):
+            QApplication.processEvents()
             self.switch_list.emit('HomeTimeline')
-        if name.endswith('Mentions'):
+        elif name.endswith('Mentions'):
+            QApplication.processEvents()
             self.switch_list.emit('Mentions')
+        elif name.endswith('refresh.png'):
+            QApplication.processEvents()
+            self.dbus_handler.require_update()

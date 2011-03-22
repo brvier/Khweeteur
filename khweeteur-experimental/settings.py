@@ -9,7 +9,11 @@ import datetime
 import httplib2
 import re
 
-from PySide.QtGui import QMainWindow, \
+import sip
+sip.setapi('QString', 2)
+sip.setapi('QVariant', 2)
+
+from PyQt4.QtGui import QMainWindow, \
     QSizePolicy, \
     QSpinBox, \
     QVBoxLayout, \
@@ -34,13 +38,15 @@ from PySide.QtGui import QMainWindow, \
     QMessageBox, \
     QPlainTextEdit
                          
-from PySide.QtCore import Qt, \
+from PyQt4.QtCore import Qt, \
     QUrl, \
     QAbstractListModel, \
     QSettings, \
     QModelIndex, \
-    Signal
-          
+    pyqtSignal
+
+Signal = pyqtSignal
+   
 SUPPORTED_ACCOUNTS = [{'name':'Twitter',
                            'consumer_key':'uhgjkoA2lggG4Rh0ggUeQ',
                            'consumer_secret':'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
@@ -65,7 +71,7 @@ try:
 except:
     from cgi import parse_qs
 
-from PySide.QtWebKit import *
+from PyQt4.QtWebKit import *
 
 class OAuthView(QWebView):
     gotpin = Signal(unicode)
