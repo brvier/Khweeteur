@@ -1,6 +1,6 @@
 import sys
-from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt
+from PySide.QtGui import *
+from PySide.QtCore import Qt
 
 class QBadgeButton (QPushButton):
 
@@ -85,6 +85,8 @@ class QToolBadgeButton (QToolButton):
     def paintEvent (self, event):
         QToolButton.paintEvent(self, event)
         p = QPainter(self)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        p.setRenderHint(QPainter.Antialiasing)        
         if self.badge_counter > 0:
             point = self.rect().topRight()
             self.drawBadge(p, point.x()-self.badge_size, point.y(), self.badge_size, str(self.badge_counter), QBrush(self.redGradient))
@@ -125,7 +127,6 @@ if __name__ == '__main__':
     b = QToolBadgeButton(win)
     b.setText("test")
     b.setCounter(22)
-    b.setSize(15)
     toolbar.addWidget(b)
     
     w = QBadgeButton(parent=win)

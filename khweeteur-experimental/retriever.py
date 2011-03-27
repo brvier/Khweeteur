@@ -94,7 +94,7 @@ class KhweeteurRefreshWorker(Thread):
 
     def applyOrigin(self, statuses):
         for status in statuses:
-            status.origin = self.api.base_url
+            status.base_url = self.api.base_url
 
     def getOneReplyContent(self, tid):
         #Got from cache        
@@ -120,7 +120,7 @@ class KhweeteurRefreshWorker(Thread):
     
             status = self.api.GetStatus(tid)
             fhandle = open(os.path.join(os.path.join(rpath,
-                        unicode(status.id)), 'wb'))
+                        unicode(status.id))), 'wb')
             pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             fhandle.close()
             return status.text
@@ -128,7 +128,17 @@ class KhweeteurRefreshWorker(Thread):
             logging.debug('getOneReplyContent:'+str(err))
             print err
 
-            
+    def isMe(self,statuses):
+        try:
+            me = self.api.VerifyCredentials()
+        except StandardError, err:
+            logging.debug('IsMe: %s' % (str(err),))
+        for status in statuses:
+            if status.user.id == me.id:
+                status.is_me = True
+            else:
+                status.is_me = False
+                
     def getRepliesContent(self, statuses):
         for status in statuses:
             try:
@@ -188,6 +198,9 @@ class KhweeteurRefreshWorker(Thread):
             self.applyOrigin(statuses)
             logging.debug('%s start getreply' % self.call)                            
             self.getRepliesContent(statuses)
+            if self.call != 'DMs':
+                logging.debug('%s start isMe' % self.call)
+                self.isMe(statuses)           
             logging.debug('%s start serialize' % self.call)                            
             self.serialize(statuses)
             statuses.sort()

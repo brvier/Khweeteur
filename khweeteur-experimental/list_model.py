@@ -6,9 +6,9 @@
 
 '''A simple Twitter client made with pyqt4 : QModel'''
 
-import sip
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
+#import sip
+#sip.setapi('QString', 2)
+#sip.setapi('QVariant', 2)
 
 import time
 import pickle
@@ -25,17 +25,19 @@ IDROLE = 23
 ORIGINROLE = 24
 TIMESTAMPROLE = 26
 RETWEETOFROLE = 27
+ISMEROLE = 28
 
 
-from PyQt4.QtCore import QAbstractListModel,QModelIndex, \
+from PySide.QtCore import QAbstractListModel,QModelIndex, \
                          QThread, \
                          Qt, \
                          QSettings, \
                          QObject, \
-                         pyqtSignal
+                         Signal
                          
-from PyQt4.QtGui import QPixmap
+from PySide.QtGui import QPixmap
 
+pyqtSignal = Signal
     
 class KhweetsModel(QAbstractListModel):
 
@@ -147,8 +149,11 @@ class KhweetsModel(QAbstractListModel):
 
 
     def load(self,call):
+
+        if self.call != call:
+            self._items=[]
         self.call = call
-        self._items=[]
+
         try:
             folder = self.getCacheFolder()
             uids = glob.glob(folder + u'/*')
@@ -156,27 +161,28 @@ class KhweetsModel(QAbstractListModel):
             avatar_path = os.path.join(os.path.expanduser("~"),
                         '.khweeteur','avatars')
             for uid in uids:
-                pkl_file = open(os.path.join(folder,
-                                str(uid)), 'rb')
-                status = pickleload(pkl_file)
-                pkl_file.close()
-    
-                #Test if status already exists
-                if status not in self._items:
-                    self._uids.append(status.id)
-                    self._items.append(status)
-                    if hasattr(status, 'user'):                                       
-                        profile_image = os.path.basename(status.user.profile_image_url.replace('/'                        
-                                             , '_'))                                                          
-                    else:                                                                                     
-                        profile_image = '/opt/usr/share/icons/hicolor/64x64/hildon/general_default_avatar.png'
-   
-                    if profile_image not in self._avatars:                                                
-                        try:
-                            self._avatars[status.user.profile_image_url] = QPixmap(os.path.join(avatar_path,
-                                        profile_image))                  
-                        except:
-                            pass
+                if uid not in [status.id for status in self._items]:
+                    pkl_file = open(os.path.join(folder,
+                                    str(uid)), 'rb')
+                    status = pickleload(pkl_file)
+                    pkl_file.close()
+        
+                    #Test if status already exists
+                    if status not in self._items:
+                        self._uids.append(status.id)
+                        self._items.append(status)
+                        if hasattr(status, 'user'):                                       
+                            profile_image = os.path.basename(status.user.profile_image_url.replace('/'                        
+                                                 , '_'))                                                          
+                        else:                                                                                     
+                            profile_image = '/opt/usr/share/icons/hicolor/64x64/hildon/general_default_avatar.png'
+       
+                        if profile_image not in self._avatars:                                                
+                            try:
+                                self._avatars[status.user.profile_image_url] = QPixmap(os.path.join(avatar_path,
+                                            profile_image))                  
+                            except:
+                                pass
 
 #            self._items.sort()
             self._items.sort(key=lambda status:status.created_at_in_seconds, reverse=True)
@@ -226,20 +232,29 @@ class KhweetsModel(QAbstractListModel):
         elif role == REPLYTEXTROLE:
             return self._items[index.row()].in_reply_to_status_text
         elif role == ORIGINROLE:
-            return self._items[index.row()].source
+            return self._items[index.row()].base_url
         elif role == RETWEETOFROLE:
 #            return False
             try:
                 return self._items[index.row()].retweeted_status
             except:
                 return None
+        elif role == ISMEROLE:
+            try:
+                return self._items[index.row()].is_me
+            except:
+                return False
         elif role == TIMESTAMPROLE:
-            return self._items[index.row()].relative_created_at
+            try:
+                return self._items[index.row()].relative_created_at
+            except:
+                self.now = time.time()                
+                return self.GetRelativeCreatedAt(self._items[index.row()].created_at_in_seconds)
         elif role == Qt.DecorationRole:
             try:
                 return self._avatars[self._items[index.row()].user.profile_image_url]
-            except KeyError, keye:
-                pass
+            except:
+                return None
         else:
             return None
 

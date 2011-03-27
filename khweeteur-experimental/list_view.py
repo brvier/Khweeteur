@@ -18,15 +18,17 @@ IDROLE = 23
 ORIGINROLE = 24
 TIMESTAMPROLE = 26
 RETWEETOFROLE = 27
+ISMEROLE = 28
 
-from PyQt4.QtGui import QStyledItemDelegate, \
+
+from PySide.QtGui import QStyledItemDelegate, \
                     QListView, \
                     QColor, \
                     QAbstractItemView, \
                     QFontMetrics, \
                     QFont, \
                     QStyle
-from PyQt4.QtCore import Qt, \
+from PySide.QtCore import Qt, \
                      QSize
 
 from settings import KhweeteurPref
@@ -180,6 +182,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         model = index.model()
         tweet = index.data(Qt.DisplayRole)
+        is_me = index.data(ISMEROLE)
 
         # Instantiate font only one time !
 
@@ -203,20 +206,29 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             painter.fillRect(option.rect, option.palette.highlight())
 
         # Draw icon
-
+        
         if self.show_avatar:
             icon = index.data(Qt.DecorationRole)
             if icon != None:
-                painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
+                if is_me:
+                    painter.drawPixmap(x2 -60, y1 + 10, 50, 50, icon)
+                else:
+                    painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
 
         # Draw tweet
 
         painter.setPen(self.text_color)
-        new_rect = \
-            painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                             * 70, 5, -4, 0), int(Qt.AlignTop)
-                             | int(Qt.AlignLeft)
-                             | int(Qt.TextWordWrap), tweet)
+        if is_me:
+            new_rect = \
+                painter.drawText(option.rect.adjusted(4, 5, -70, 0), int(Qt.AlignTop)
+                                 | int(Qt.AlignRight)
+                                 | int(Qt.TextWordWrap), tweet)
+        else:
+            new_rect = \
+                painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                                 * 70, 5, -4, 0), int(Qt.AlignTop)
+                                 | int(Qt.AlignLeft)
+                                 | int(Qt.TextWordWrap), tweet)
 
         # Draw Timeline
 
@@ -224,9 +236,14 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             time = index.data(role=TIMESTAMPROLE)
             painter.setFont(self.miniFont)
             painter.setPen(self.time_color)
-            painter.drawText(option.rect.adjusted(70, 10, -10, -9),
-                             int(Qt.AlignBottom) | int(Qt.AlignRight),
-                             time)
+            if is_me:
+                painter.drawText(option.rect.adjusted(4, 10, -80, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
+                                 time)
+            else:
+                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
+                                 time)
 
         # Draw screenname
 
@@ -234,12 +251,17 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             screenname = index.data(SCREENNAMEROLE)
             retweet_of = index.data(RETWEETOFROLE)
             if retweet_of:
-                 screenname = screenname + retweet_of.user.screen_name
+                 screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
             painter.setFont(self.miniFont)
             painter.setPen(self.user_color)
-            painter.drawText(option.rect.adjusted(70, 10, -10, -9),
-                             int(Qt.AlignBottom) | int(Qt.AlignLeft),
-                             screenname)
+            if is_me:
+                painter.drawText(option.rect.adjusted(4, 10, -70, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
+                                 screenname)
+            else:
+                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
+                                 screenname)
 
         # Draw reply
 
@@ -251,20 +273,32 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                     + reply_text
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
-                new_rect = \
-                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                        * 70, new_rect.height() + 5, -4, 0),
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                        | int(Qt.TextWordWrap), reply)
+                if is_me:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
+                else:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                            * 70, new_rect.height() + 5, -4, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
             elif reply_name:
                 reply = 'In reply to ' + reply_name
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
-                new_rect = \
-                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                        * 70, new_rect.height() + 5, -4, 0),
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                        | int(Qt.TextWordWrap), reply)
+                if is_me:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
+                else:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                            * 70, new_rect.height() + 5, -4, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
 
         # Draw line
 

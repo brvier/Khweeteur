@@ -9,11 +9,11 @@ import datetime
 import httplib2
 import re
 
-import sip
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
+#import sip
+#sip.setapi('QString', 2)
+#sip.setapi('QVariant', 2)
 
-from PyQt4.QtGui import QMainWindow, \
+from PySide.QtGui import QMainWindow, \
     QSizePolicy, \
     QSpinBox, \
     QVBoxLayout, \
@@ -38,14 +38,14 @@ from PyQt4.QtGui import QMainWindow, \
     QMessageBox, \
     QPlainTextEdit
                          
-from PyQt4.QtCore import Qt, \
+from PySide.QtCore import Qt, \
     QUrl, \
     QAbstractListModel, \
     QSettings, \
     QModelIndex, \
-    pyqtSignal
+    Signal
 
-Signal = pyqtSignal
+#Signal = pyqtSignal
    
 SUPPORTED_ACCOUNTS = [{'name':'Twitter',
                            'consumer_key':'uhgjkoA2lggG4Rh0ggUeQ',

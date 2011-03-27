@@ -7,6 +7,8 @@
 #sip.setapi('QString', 2)
 #sip.setapi('QVariant', 2)
 
+from __future__ import with_statement
+
 import sys, time
 from PySide.QtCore import QSettings
 import atexit, os
@@ -15,12 +17,14 @@ from signal import SIGTERM
 import logging
 
 from retriever import KhweeteurRefreshWorker
-
+from settings import SUPPORTED_ACCOUNTS
 import gobject
 gobject.threads_init()
 import socket
+import pickle
+import re
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -196,19 +200,6 @@ class Daemon:
         daemonized by start() or restart().
         """
 
-#class DaemonDBus(dbus.service.Object):
-#    '''DBus Object handle dbus callback'''
-#    def __init__(self,parent):
-#        bus_name = dbus.service.BusName('net.khertan.khweeteur_daemon', bus=dbus.SessionBus())
-#        dbus.service.Object.__init__(self, bus_name, '/net/khertan/khweeteur_daemon')
-#        self.parent = parent
-#        
-#    @dbus.service.method(dbus_interface='net.khertan.khweeteur_daemon')
-#    def retrieve(self):
-#        '''Callback called to active the window and reset counter'''
-#        self.parent.retrieve()
-#        return True
-
 class KhweeteurDBusHandler(dbus.service.Object):
     def __init__(self):
         dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur')
@@ -222,34 +213,35 @@ class KhweeteurDBusHandler(dbus.service.Object):
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
                          signature='us')
     def new_tweets(self, count, ttype):
-        m_bus = dbus.SystemBus()
-        m_notify = m_bus.get_object('org.freedesktop.Notifications',
-                          '/org/freedesktop/Notifications')
-        iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-        m_id = 0
-
-        if ttype == 'DMs':
-            msg = 'New DMs'
-        elif ttype == 'Mentions':
-            msg = 'New mentions'            
-        else:
-            msg = 'New tweets'
-        try:
-            self.m_id = iface.Notify('Khweeteur',
-                              self.m_id,
-                              'khweeteur',
-                              msg,
-                              msg,
-                              ['default','call'],
-                              {'category':'khweeteur-new-tweets',
-                              'desktop-entry':'khweeteur',
-                              'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
-                              'count':count,
-                              'amount':count},
-                              -1
-                              )
-        except:
-            pass
+        if ttype in ('Messages', 'DMs'):
+            m_bus = dbus.SystemBus()
+            m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                              '/org/freedesktop/Notifications')
+            iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+            m_id = 0
+    
+            if ttype == 'DMs':
+                msg = 'New DMs'
+            elif ttype == 'Mentions':
+                msg = 'New mentions'            
+            else:
+                msg = 'New tweets'
+            try:
+                self.m_id = iface.Notify('Khweeteur',
+                                  self.m_id,
+                                  'khweeteur',
+                                  msg,
+                                  msg,
+                                  ['default','call'],
+                                  {'category':'khweeteur-new-tweets',
+                                  'desktop-entry':'khweeteur',
+                                  'dbus-callback-default':'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                                  'count':count,
+                                  'amount':count},
+                                  -1
+                                  )
+            except:
+                pass
                                 
 class KhweeteurDaemon(Daemon):
     def run(self):        
@@ -259,22 +251,167 @@ class KhweeteurDaemon(Daemon):
                     filename='/home/user/.khweeteur.log',
                     filemode='w')
 
-#        self.dbus_object = DaemonDBus(self)
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.retrieve, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
+        self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
         self.threads = [] #Here to avoid gc
         self.cache_path = os.path.join(os.path.expanduser("~"),\
                                  '.khweeteur','cache')
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
+        self.post_path = os.path.join(os.path.expanduser("~"),\
+                                 '.khweeteur','topost')
+        if not os.path.exists(self.post_path):
+            os.makedirs(self.post_path)
 
         self.dbus_handler = KhweeteurDBusHandler()
         
         loop = gobject.MainLoop()
-        gobject.timeout_add_seconds(1,self.retrieve)
+        gobject.timeout_add_seconds(1,self.update)
         logging.debug('Timer added')        
         loop.run()
+ 
+    def post_tweet(self, \
+            shorten_url=True,\
+            serialize=True,\
+            text='',\
+            reply_id = '',
+            reply_base_url = '',
+            lattitude = '',
+            longitude = '',
+            retweet_id = '',
+            retweet_base_url = '',
+            ):
+        with open(os.path.join(self.post_path,str(time.time())),'wb') as fhandle:
+            post = {'shorten_url':shorten_url,
+                    'serialize':serialize,
+                    'text':text,
+                    'reply_id':reply_id,
+                    'reply_base_url':reply_base_url,
+                    'lattitude':lattitude,
+                    'longitude':longitude,
+                    'retweet_id':retweet_id,
+                    'retweet_base_url':retweet_id}
+            pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
+        self.do_posts()
 
+    def do_posts(self):
+        settings = QSettings("Khertan Software", "Khweeteur")
+        for item in glob.glob(os.path.join(self.post_path,'*')):
+            with open(item,'rb') as fhandle:
+                post = pickle.load(fhandle)
+                try:
+                    text = post['text']
+                    if post['shorten_url']==1:
+                        urls = re.findall("(?P<url>https?://[^\s]+)",text)
+                        if len(urls) > 0:
+                            import bitly
+                            a = bitly.Api(login='pythonbitly',
+                                  apikey='R_06871db6b7fd31a4242709acaf1b6648'
+                                  )
+
+                            for url in urls:
+                                try:
+                                    short_url = a.shorten(url)
+                                    text = text.replace(url,short_url)
+                                except:
+                                    pass
+                    if post['lattitude'] == '':
+                        post['lattitude'] = None
+                    else:
+                        post['lattitude'] = int(post['lattitude'])
+                    if post['longitude'] == '':
+                        post['longitude'] = None                        
+                    else:
+                        post['longitude'] = int(post['longitude'])
+
+                    if post['reply_id'] != '': #Reply tweet
+                        #Loop on account with same base url
+                        nb_accounts = settings.beginReadArray('accounts')
+                        for index in range(nb_accounts):
+                            settings.setArrayIndex(index)
+                            logging.debug("%s == %s : %s" % (settings.value('base_url'),post['reply_base_url'], str(settings.value('base_url') == post['reply_base_url'])))
+                            if (settings.value('base_url') == post['reply_base_url']) \
+                              and (settings.value('use_for_tweet') == 'true'):
+                                api = \
+                                    twitter.Api(username=settings.value('consumer_key'),
+                                                password=settings.value('consumer_secret'),
+                                                access_token_key=settings.value('token_key'),
+                                                access_token_secret=settings.value('token_secret'),
+                                                base_url=settings.value('base_url'),)
+                                api.SetUserAgent('Khweeteur')
+                                if post['serialize']:
+                                    api.PostSerializedUpdates(text,
+                                            in_reply_to_status_id=int(post['reply_id']),
+                                            latitude=post['lattitude'], longitude=post['longitude'])
+                                else:
+                                    api.PostUpdate(text,
+                                            in_reply_to_status_id=int(post['reply_id']),
+                                            latitude=post['lattitude'], longitude=post['longitude'])
+                        settings.endArray()
+                    else: #Else "simple" tweet
+                        nb_accounts = settings.beginReadArray('accounts')
+                        logging.debug('Nb account for post : %s' % (nb_accounts,))
+                        for index in range(nb_accounts):
+                            settings.setArrayIndex(index)
+#                            logging.debug('use_for_tweet : %s' % (settings.value('use_for_tweet')))
+                            if (settings.value('use_for_tweet') == 'true'):
+#                                logging.debug('username:%s,password:%s,token:%s,secret:%s' % (settings.value('consumer_token'),settings.value('consumer_secret'),settings.value('token_key'), settings.value('token_secret')))
+                                api = twitter.Api(username=settings.value('consumer_key'),
+                                                password=settings.value('consumer_secret'),
+                                                access_token_key=settings.value('token_key'),
+                                                access_token_secret=settings.value('token_secret'),
+                                                base_url=settings.value('base_url'),)
+                                api.SetUserAgent('Khweeteur')
+                                if post['serialize']==1:
+                                    api.PostSerializedUpdates(text,
+                                        latitude=post['lattitude'], longitude=post['longitude'])
+                                else:
+                                    api.PostUpdate(text,
+                                        latitude=post['lattitude'], longitude=post['longitude'])
+                        settings.endArray()                        
+                    os.remove(item)
+                except StandardError, err:
+                    logging.debug('Do_posts : %s' % (str(err),))
+                    raise #can t post, we will the file to do it later                                   
+        
+    def post_twitpic(self,file_path,text):
+        settings = QSettings("Khertan Software", "Khweeteur")
+
+        import twitpic
+        import oauth2 as oauth
+        import simplejson
+
+        nb_accounts = settings.beginReadArray('accounts')
+        for index in range(nb_accounts):
+            settings.setArrayIndex(index)
+            if (settings.value('base_url') == SUPPORTED_ACCOUNTS[0]['base_url']) \
+              and (settings.value('use_for_tweet') == Qt.CheckState):
+                api = twitter.Api(username=settings.value('consumer_key'),
+                           password=settings.value('consumer_secret'),
+                           access_token_key=settings.value('token_key'),
+                           access_token_secret=settings.value('token_secret'),
+                           base_url=SUPPORTED_ACCOUNTS[0]['base_url'])
+                twitpic_client = twitpic.TwitPicOAuthClient(
+                consumer_key = settings.value('consumer_key'),
+                consumer_secret = settings.value('consumer_secret'),
+                access_token = api._oauth_token.to_string(),
+                service_key = 'f9b7357e0dc5473df5f141145e4dceb0')
+
+                params = {}
+                params['media'] = 'file://'+file_path
+                params['message'] = text
+                response = twitpic_client.create('upload', params)
+
+                if response.has_key('url'):
+                    self.post(text=url)                
+
+        settings.endArray()                                    
+
+    def update(self,option=None):
+        self.do_posts()
+        self.retrieve()
+        
     def retrieve(self,options=None):
         settings = QSettings("Khertan Software", "Khweeteur")
         logging.debug('Setting loaded')
@@ -297,34 +434,33 @@ class KhweeteurDaemon(Daemon):
                 if refresh_interval<600:
                     refresh_interval = 600
             logging.debug('refresh interval loaded')
+            
             #Remove old tweets in cache according to history prefs
             try:
                 keep = int(settings.value('tweetHistory'))
             except:
                 keep = 60
-
-            
+           
             for root, folders, files in os.walk(self.cache_path):
                 for folder in folders:
-                    uids = glob.glob(folder)
                     statuses = []
+                    uids = glob.glob(os.path.join(root,folder,'*'))
                     for uid in uids:
                         uid = os.path.basename(uid)
                         try:
-                            pkl_file = open(os.path.join(folder, uid), 'rb')
+                            pkl_file = open(os.path.join(root, folder, uid), 'rb')
                             status = pickle.load(pkl_file)
                             pkl_file.close()
                             statuses.append(status)
                         except StandardError,err:
-                            loggin.debug('Error in cache cleaning: %s' % (err,))
-                    statuses.sort()
-                    statuses.reverse()
+                            logging.debug('Error in cache cleaning: %s,%s' % (err,os.path.join(root, uid)))
+                    statuses.sort(key=lambda status:status.created_at_in_seconds, reverse=True)
                     for status in statuses[keep:]:
                         try:
-                            os.remove(os.path.join(folder,status.id))
-                        except:
-                            logging.debug('Cannot remove : %s' % str(status.id))          
-
+                            os.remove(os.path.join(root,folder,str(status.id)))
+                        except StandardError, err:
+                            logging.debug('Cannot remove : %s : %s' % (str(status.id),str(err)))
+                            
             nb_accounts = settings.beginReadArray('accounts')
             logging.info('Found %s account' % (str(nb_accounts),))
             for index in range(nb_accounts):
@@ -389,7 +525,7 @@ class KhweeteurDaemon(Daemon):
             logging.exception(str(err))
             logging.debug(str(err))
 
-        gobject.timeout_add_seconds(refresh_interval,self.retrieve)
+        gobject.timeout_add_seconds(refresh_interval,self.update)
         return False
 
                          
