@@ -227,8 +227,10 @@ class KhweeteurWin(QMainWindow):
     def enterEvent(self,event):
         """
             Redefine the enter event to refresh recent file list
-        """        
+        """
+        print 'EnterEvent' 
         self.model.refreshTimestamp()
+#        self.model.wantsUpdate()
 
     def listen_dbus(self):
         from dbus.mainloop.qt import DBusQtMainLoop

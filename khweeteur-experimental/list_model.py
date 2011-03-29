@@ -66,45 +66,11 @@ class KhweetsModel(QAbstractListModel):
                                  os.path.normcase(unicode(self.call.replace('/', \
                                  '_'))).encode('UTF-8'))
 
-    def GetRelativeCreatedAt(self, timestamp):
-        '''Get a human redable string representing the posting time
-
-        Returns:
-          A human readable string representing the posting time
-        '''
-
-        fudge = 1.25
-        delta = long(self.now) - long(timestamp)
-
-        if delta < 1 * fudge:
-            return 'about a second ago'
-        elif delta < 60 * (1 / fudge):
-            return 'about %d seconds ago' % delta
-        elif delta < 60 * fudge:
-            return 'about a minute ago'
-        elif delta < 60 * 60 * (1 / fudge):
-            return 'about %d minutes ago' % (delta / 60)
-        elif delta < 60 * 60 * fudge or delta / (60 * 60) == 1:
-            return 'about an hour ago'
-        elif delta < 60 * 60 * 24 * (1 / fudge):
-            return 'about %d hours ago' % (delta / (60 * 60))
-        elif delta < 60 * 60 * 24 * fudge or delta / (60 * 60 * 24) \
-            == 1:
-            return 'about a day ago'
-        else:
-            return 'about %d days ago' % (delta / (60 * 60 * 24))
-
     def rowCount(self, parent=QModelIndex()):
         return len(self._items)
 
     def refreshTimestamp(self):
-#        self.now = time.time()
-#        for status in self._items:
-#            try:
-#                status.relative_created_at = self.GetRelativeCreatedAt(status.created_at_in_seconds)
-#            except StandardError, e:
-#                print e
-
+        self.now = time.time()
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
                               len(self._items)))
@@ -150,6 +116,8 @@ class KhweetsModel(QAbstractListModel):
 
     def load(self,call):
 
+        self.now = time.time()
+        
         if self.call != call:
             self._items=[]
         self.call = call
@@ -184,10 +152,7 @@ class KhweetsModel(QAbstractListModel):
                             except:
                                 pass
 
-#            self._items.sort()
             self._items.sort(key=lambda status:status.created_at_in_seconds, reverse=True)
-#            for status in self._items:
-#                print status.created_at_in_seconds
                 
             self.dataChanged.emit(self.createIndex(0, 0),
                                   self.createIndex(0,
@@ -197,18 +162,6 @@ class KhweetsModel(QAbstractListModel):
             print 'unSerialize : ', e
 
     def data(self, index, role=Qt.DisplayRole):
-
-        # 0 -> Created_at,
-        # 1 -> Status.id,
-        # 2 -> ScreenName,
-        # 3 -> Text,
-        # 4 -> Rel_Created_at,
-        # 5 -> Profile Image,
-        # 6 -> Reply_ID,
-        # 7 -> Reply_ScreenName,
-        # 8 -> Reply_Text
-        # 9 -> Origine
-        # 10 -> Retweet of
 
         if role == Qt.DisplayRole:
             status = self._items[index.row()]
@@ -238,7 +191,6 @@ class KhweetsModel(QAbstractListModel):
         elif role == ORIGINROLE:
             return self._items[index.row()].base_url
         elif role == RETWEETOFROLE:
-#            return False
             try:
                 return self._items[index.row()].retweeted_status
             except:
@@ -249,11 +201,7 @@ class KhweetsModel(QAbstractListModel):
             except:
                 return False
         elif role == TIMESTAMPROLE:
-            try:
-                return self._items[index.row()].GetRelativeCreatedAt()
-            except:
-                self.now = time.time()                
-                return self.GetRelativeCreatedAt(self._items[index.row()].created_at_in_seconds)
+            return self._items[index.row()].GetRelativeCreatedAt(self.now)
                 
         elif role == Qt.DecorationRole:
             try:

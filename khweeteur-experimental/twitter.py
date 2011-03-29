@@ -330,14 +330,14 @@ class Status(object):
   location = property(GetLocation, SetLocation,
                       doc='The geolocation string of this status message')
 
-  def GetRelativeCreatedAt(self):
+  def GetRelativeCreatedAt(self,time_now=time.time()):
     '''Get a human redable string representing the posting time
 
     Returns:
       A human readable string representing the posting time
     '''
     fudge = 1.25
-    delta  = long(self.now) - long(self.created_at_in_seconds)
+    delta  = long(time_now) - long(self.created_at_in_seconds)
 
     if delta < (1 * fudge):
       return 'about a second ago'

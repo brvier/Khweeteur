@@ -309,7 +309,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class AlternateCustomDelegate(QStyledItemDelegate):
+class MiniDefaultCustomDelegate(QStyledItemDelegate):
 
     '''Delegate to do custom draw of the items'''
 
@@ -323,7 +323,7 @@ class AlternateCustomDelegate(QStyledItemDelegate):
         self.show_avatar = True
         self.show_screenname = True
         self.show_timestamp = True
-        self.show_replyto = False
+        self.show_replyto = True
 
         self.bg_color = QColor('#000000')
         self.bg_alternate_color = QColor('#333333')
@@ -354,7 +354,11 @@ class AlternateCustomDelegate(QStyledItemDelegate):
             # One time is enought sizeHint need to be fast
 
             if not self.fm:
-                self.fm = QFontMetrics(option.font)
+                self.font = QFont(option.font)
+                self.font.setPointSizeF(option.font.pointSizeF()
+                                    * 0.80)
+                self.fm = QFontMetrics(self.font)
+                                    
             height = self.fm.boundingRect(
                 0,
                 0,
@@ -378,7 +382,7 @@ class AlternateCustomDelegate(QStyledItemDelegate):
                         if not self.miniFont:
                             self.miniFont = QFont(option.font)
                             self.miniFont.setPointSizeF(option.font.pointSizeF()
-                                    * 0.80)
+                                    * 0.60)
                         self.minifm = QFontMetrics(self.miniFont)
                     height += self.minifm.boundingRect(
                         0,
@@ -395,7 +399,7 @@ class AlternateCustomDelegate(QStyledItemDelegate):
                         if not self.miniFont:
                             self.miniFont = QFont(option.font)
                             self.miniFont.setPointSizeF(option.font.pointSizeF()
-                                    * 0.80)
+                                    * 0.60)
                         self.minifm = QFontMetrics(self.miniFont)
                     height += self.minifm.boundingRect(
                         0,
@@ -424,28 +428,32 @@ class AlternateCustomDelegate(QStyledItemDelegate):
 #        if not USE_PYSIDE:
         (x1, y1, x2, y2) = option.rect.getCoords()
 #        else:
-#            #Work arround Pyside bug #544
+            #Work arround Pyside bug #544
 #            y1 = option.rect.y()
 #            y2 = y1 + option.rect.height()
 #            x1 = option.rect.x()
 #            x2 = x1 + option.rect.width()
-
+#
         # Ugly hack ?
         if y1 < 0 and y2 < 0:
             return
 
         if not self.fm:
-            self.fm = QFontMetrics(option.font)
+            self.font = QFont(option.font)
+            self.font.setPointSizeF(option.font.pointSizeF()
+                                * 0.80)
+            self.fm = QFontMetrics(self.font)
 
         model = index.model()
         tweet = index.data(Qt.DisplayRole)
+        is_me = index.data(ISMEROLE)
 
         # Instantiate font only one time !
 
         if not self.normFont:
-            self.normFont = QFont(option.font)
+            self.normFont = QFont(self.font)
             self.miniFont = QFont(option.font)
-            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
+            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.60)
 
         painter.save()
 
@@ -466,7 +474,25 @@ class AlternateCustomDelegate(QStyledItemDelegate):
         if self.show_avatar:
             icon = index.data(Qt.DecorationRole)
             if icon != None:
-                painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
+                if is_me:
+                    painter.drawPixmap(x2 -60, y1 + 10, 50, 50, icon)
+                else:
+                    painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
+
+        # Draw tweet
+        painter.setFont(self.normFont)
+        painter.setPen(self.text_color)
+        if is_me:
+            new_rect = \
+                painter.drawText(option.rect.adjusted(4, 5, -70, 0), int(Qt.AlignTop)
+                                 | int(Qt.AlignRight)
+                                 | int(Qt.TextWordWrap), tweet)
+        else:
+            new_rect = \
+                painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                                 * 70, 5, -4, 0), int(Qt.AlignTop)
+                                 | int(Qt.AlignLeft)
+                                 | int(Qt.TextWordWrap), tweet)
 
         # Draw Timeline
 
@@ -474,9 +500,14 @@ class AlternateCustomDelegate(QStyledItemDelegate):
             time = index.data(role=TIMESTAMPROLE)
             painter.setFont(self.miniFont)
             painter.setPen(self.time_color)
-            painter.drawText(option.rect.adjusted(70, 5, -10, -9),
-                             int(Qt.AlignTop) | int(Qt.AlignRight),
-                             time)
+            if is_me:
+                painter.drawText(option.rect.adjusted(4, 10, -80, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
+                                 time)
+            else:
+                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
+                                 time)
 
         # Draw screenname
 
@@ -484,12 +515,17 @@ class AlternateCustomDelegate(QStyledItemDelegate):
             screenname = index.data(SCREENNAMEROLE)
             retweet_of = index.data(RETWEETOFROLE)
             if retweet_of:
-                screenname = screenname + retweet_of
+                screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
             painter.setFont(self.miniFont)
             painter.setPen(self.user_color)
-            new_rect = painter.drawText(option.rect.adjusted(70, 5, -10, -9),
-                             int(Qt.AlignTop) | int(Qt.AlignLeft),
-                             screenname)
+            if is_me:
+                painter.drawText(option.rect.adjusted(4, 10, -70, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
+                                 screenname)
+            else:
+                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
+                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
+                                 screenname)
 
         # Draw reply
 
@@ -501,29 +537,32 @@ class AlternateCustomDelegate(QStyledItemDelegate):
                     + reply_text
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
-                new_rect = \
-                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                        * 70, new_rect.height() + 5, -4, 0),
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                        | int(Qt.TextWordWrap), reply)
+                if is_me:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
+                else:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                            * 70, new_rect.height() + 5, -4, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
             elif reply_name:
                 reply = 'In reply to ' + reply_name
                 painter.setFont(self.miniFont)
                 painter.setPen(self.replyto_color)
-                new_rect = \
-                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                        * 70, new_rect.height() + 5, -4, 0),
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                        | int(Qt.TextWordWrap), reply)
-
-        # Draw tweet
-        painter.setFont(self.normFont)
-        painter.setPen(self.text_color)
-        new_rect = \
-            painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                             * 70, 0, -4, -10), int(Qt.AlignBottom)
-                             | int(Qt.AlignLeft)
-                             | int(Qt.TextWordWrap), tweet)
+                if is_me:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
+                else:
+                    new_rect = \
+                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
+                            * 70, new_rect.height() + 5, -4, 0),
+                            int(Qt.AlignTop) | int(Qt.AlignLeft)
+                            | int(Qt.TextWordWrap), reply)
 
         # Draw line
 
@@ -603,8 +642,8 @@ class KhweetsView(QListView):
             self.custom_delegate = CoolWhiteCustomDelegate(self)
         elif theme == KhweeteurPref.COOLGRAYTHEME:
             self.custom_delegate = CoolGrayCustomDelegate(self)
-        elif theme == KhweeteurPref.ALTERNATETHEME:
-            self.custom_delegate = AlternateCustomDelegate(self)
+        elif theme == KhweeteurPref.MINITHEME:
+            self.custom_delegate = MiniDefaultCustomDelegate(self)
         else:
             self.custom_delegate = DefaultCustomDelegate(self)
         self.setItemDelegate(self.custom_delegate)
