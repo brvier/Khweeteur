@@ -219,6 +219,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
                          signature='us')
     def new_tweets(self, count, ttype):
+        logging.debug('New tweet notification ttype : %s (%s)' % (ttype,str(type(ttype)),))
         if ttype in ('Messages', 'DMs'):
             m_bus = dbus.SystemBus()
             m_notify = m_bus.get_object('org.freedesktop.Notifications',

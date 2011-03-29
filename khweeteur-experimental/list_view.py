@@ -421,14 +421,14 @@ class AlternateCustomDelegate(QStyledItemDelegate):
         ):
         '''Paint our tweet'''
 
-        if not USE_PYSIDE:
-            (x1, y1, x2, y2) = option.rect.getCoords()
-        else:
-            #Work arround Pyside bug #544
-            y1 = option.rect.y()
-            y2 = y1 + option.rect.height()
-            x1 = option.rect.x()
-            x2 = x1 + option.rect.width()
+#        if not USE_PYSIDE:
+        (x1, y1, x2, y2) = option.rect.getCoords()
+#        else:
+#            #Work arround Pyside bug #544
+#            y1 = option.rect.y()
+#            y2 = y1 + option.rect.height()
+#            x1 = option.rect.x()
+#            x2 = x1 + option.rect.width()
 
         # Ugly hack ?
         if y1 < 0 and y2 < 0:

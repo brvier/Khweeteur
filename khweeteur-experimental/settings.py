@@ -183,11 +183,11 @@ class KhweeteurAccount():
 class KhweeteurPref(QMainWindow):
     save = Signal()
     
-    DEFAULTTHEME = 'Default'
-    WHITETHEME = 'White'
-    COOLWHITETHEME = 'CoolWhite'
-    COOLGRAYTHEME = 'CoolGray'
-    ALTERNATETHEME = 'Alternate'
+    DEFAULTTHEME = u'Default'
+    WHITETHEME = u'White'
+    COOLWHITETHEME = u'CoolWhite'
+    COOLGRAYTHEME = u'CoolGray'
+    ALTERNATETHEME = u'Alternate'
     THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME, ALTERNATETHEME]
 
     def __init__(self, parent=None):
@@ -199,6 +199,7 @@ class KhweeteurPref(QMainWindow):
 
         self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)            
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setWindowTitle("Khweeteur Prefs")
 
         self._setupGUI()
@@ -227,7 +228,7 @@ class KhweeteurPref(QMainWindow):
         else:
             self.refresh_value.setValue(10)
             
-        if self.settings.contains("useDaemon"):
+        if self.settings.contains("useNotification"):
             self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value("useNotification"))))
         else:
             self.useNotification_value.setCheckState(Qt.CheckState(2))
@@ -242,7 +243,7 @@ class KhweeteurPref(QMainWindow):
         else:
             self.useBitly_value.setCheckState(Qt.CheckState(2))
             
-        if not self.settings.contains("theme"):
+        if self.settings.contains("theme"):
             if not self.settings.value("theme") in self.THEMES:
                 self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
         else:
@@ -371,7 +372,7 @@ class KhweeteurPref(QMainWindow):
 
     def closeEvent(self,widget,*args):
         ''' close event called when closing window'''
-        self.savePrefs()
+        self.savePrefs()        
 
     def _setupGUI(self):
         ''' Create the gui content of the window'''

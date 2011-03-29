@@ -70,6 +70,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
 class Khweeteur(QApplication):
     def __init__(self):
         QApplication.__init__(self,sys.argv)
+        self.setOrganizationName("Khertan Software")
+        self.setOrganizationDomain("khertan.net")
+        self.setApplicationName("Khweeteur")
+        
         self.run()
 
     def run(self):
@@ -116,6 +120,8 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_back)
         self.edit_tb_action.append(self.tb_back)
         self.action_tb_action.append(self.tb_back)
+
+        self.setupMenu()
 
         #Twitpic button
         self.tb_twitpic = QAction(QIcon.fromTheme('tasklaunch_images'
@@ -417,8 +423,13 @@ class KhweeteurWin(QMainWindow):
 
     def showPrefs(self):
         khtsettings = KhweeteurPref(parent=self)
+        khtsettings.save.connect(self.refreshPrefs)
         khtsettings.show()
 
+    @pyqtSlot()
+    def refreshPrefs(self):
+        self.view.refreshCustomDelegate()
+                
     def showAbout(self):
         pass
         
