@@ -33,6 +33,8 @@ import time
 from list_view import *
 from list_model import *
 
+import re
+
 pyqtSignal = Signal
 pyqtSlot = Slot
 
@@ -45,17 +47,22 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def require_update(self,optional=None):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
 
+#    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+#            signature='ss')
+#    def post_retweet(self, tid='',t_base_url=''):
+#        pass
+
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
             signature='uusssssss')
     def post_tweet(self, \
             shorten_url=1,\
             serialize=1,\
-            text=None,\
-            reply_id = 0, 
+            text='',\
+            reply_id = '0', 
             reply_base_url = '',
-            lattitude = 0,
-            longitude = 0,
-            retweet_id = 0,
+            lattitude = '0',
+            longitude = '0',
+            retweet_id = '0',
             retweet_base_url = '',
             ):
         pass
@@ -121,6 +128,8 @@ class KhweeteurWin(QMainWindow):
         self.tb_text = QPlainTextEdit()
         self.tb_text_reply_id = 0
         self.tb_text_reply_base_url = ''
+#        self.tb_text_retweet_id = 0
+#        self.tb_text_retweet_base_url = ''
         self.tb_text.setFixedHeight(66)
         self.edit_tb_action.append(self.toolbar.addWidget(self.tb_text))
 
@@ -175,6 +184,7 @@ class KhweeteurWin(QMainWindow):
         #Retweet (Action)
         self.tb_retweet = QAction('Retweet', self)
         self.toolbar.addAction(self.tb_retweet)
+        self.tb_retweet.triggered.connect(self.do_tb_retweet)
         self.action_tb_action.append(self.tb_retweet)
 
         #Follow (Action)
@@ -195,6 +205,7 @@ class KhweeteurWin(QMainWindow):
         #Open URLs (Action)
         self.tb_urls = QAction('Open URLs', self)
         self.toolbar.addAction(self.tb_urls)
+        self.tb_urls.triggered.connect(self.do_tb_openurl)
         self.action_tb_action.append(self.tb_urls)
 
         #Delete (Action)
@@ -206,6 +217,12 @@ class KhweeteurWin(QMainWindow):
         
         self.model.load('HomeTimeline')
         self.setCentralWidget(self.view)
+
+    def enterEvent(self,event):
+        """
+            Redefine the enter event to refresh recent file list
+        """        
+        self.model.refreshTimestamp()
 
     def listen_dbus(self):
         from dbus.mainloop.qt import DBusQtMainLoop
@@ -294,6 +311,18 @@ class KhweeteurWin(QMainWindow):
         pass
         
     @pyqtSlot()
+    def do_tb_openurl(self):
+        for index in self.view.selectedIndexes():
+            status = self.model.data(index)
+            try:
+                urls = re.findall("(?P<url>https?://[^\s]+)", status)
+                for url in urls:                  
+                    QDesktopServices.openUrl(QUrl(url))
+            except:
+                raise
+#                    QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur/bugs'
+        
+    @pyqtSlot()
     def do_tb_send(self):
         self.dbus_handler.post_tweet( \
             1,#shorten_url=\
@@ -303,7 +332,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_reply_base_url,  #reply_base_url = 
             '', #lattitude =
             '', #longitude = 
-            '', #retweet_id = 
+            '0', #retweet_id = 
             '', #retweet_base_url = 
             )
         self.switch_tb_default()
@@ -321,6 +350,27 @@ class KhweeteurWin(QMainWindow):
             self.tb_text_reply_id = tweet_id
             self.tb_text_reply_base_url = tweet_source
             self.switch_tb_edit()
+
+    @pyqtSlot()
+    def do_tb_retweet(self):
+        tweet_id = None
+        for index in self.view.selectedIndexes():
+            tweet_id = self.model.data(index, role=IDROLE)
+            tweet_source = self.model.data(index, role=ORIGINROLE)
+        if tweet_id:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                0,#serialize=\
+                '',#text=\
+                '0', #reply_id =  
+                '',  #reply_base_url = 
+                '', #lattitude =
+                '', #longitude = 
+                str(tweet_id), #retweet_id = 
+                tweet_source, #retweet_base_url = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()
 
     @pyqtSlot()
     def show_mentions(self):
@@ -353,6 +403,25 @@ class KhweeteurWin(QMainWindow):
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(370, s.height() + fr.height()
                                   - cr.height() - 1))
+
+    def setupMenu(self):
+        """
+            Initialization of the maemo menu
+        """
+        
+        fileMenu =  QMenu(self.tr("&Menu"), self)
+        self.menuBar().addMenu(fileMenu)
+
+        fileMenu.addAction(self.tr("&Preferences..."), self.showPrefs)
+        fileMenu.addAction(self.tr("&About"), self.showAbout)
+
+    def showPrefs(self):
+        khtsettings = KhweeteurPref(parent=self)
+        khtsettings.show()
+
+    def showAbout(self):
+        pass
+        
 if __name__ == '__main__':
     os.system('python %s start' % os.path.join(os.path.dirname(__file__),'daemon.py'))
     app = Khweeteur()     

@@ -37,7 +37,7 @@ from PySide.QtGui import QMainWindow, \
     QIcon, \
     QMessageBox, \
     QPlainTextEdit
-                         
+
 from PySide.QtCore import Qt, \
     QUrl, \
     QAbstractListModel, \
@@ -71,12 +71,14 @@ try:
 except:
     from cgi import parse_qs
 
-from PyQt4.QtWebKit import *
+from PySide.QtWebKit import *
+
 
 class OAuthView(QWebView):
     gotpin = Signal(unicode)
-    def __init__(self, parent=None, account_type={},use_for_tweet=False):  
-        QWebView.__init__(self,parent)  
+
+    def __init__(self, parent=None, account_type={}, use_for_tweet=False):
+        QWebView.__init__(self, parent)  
         self.loggedIn = False  
         self.account_type = account_type
         self.use_for_tweet = use_for_tweet
@@ -97,89 +99,86 @@ class OAuthView(QWebView):
 
         regex = re.compile('.*<div.*oauth_pin.*>(.*)<')
         res = regex.findall(self.page().mainFrame().toHtml())
-        if len(res)>0:
+        if len(res) > 0:
             self.pin = res[0]
             
-        self.loggedIn = (self.pin not in (None,''))
+        self.loggedIn = (self.pin not in (None, ''))
 
         if self.loggedIn:  
             self.loadFinished.disconnect(self._loadFinished)
             self.gotpin.emit(self.pin)
 
-class AccountDlg( QDialog):
+
+class AccountDlg(QDialog):
     """ Find and replace dialog """
-    add_account = Signal(dict,bool)
+    add_account = Signal(dict, bool)
     
     def __init__(self, parent=None):
-        QDialog.__init__(self,parent)
+        QDialog.__init__(self, parent)
         self.setWindowTitle("Add account")
 
         self.accounts_type = QComboBox()
         for account_type in SUPPORTED_ACCOUNTS:
             self.accounts_type.addItem(account_type['name'])
             
-        self.use_for_tweet =  QCheckBox("Use for posting")
+        self.use_for_tweet = QCheckBox("Use for posting")
 
-        self.add =  QPushButton("&Add")
+        self.add = QPushButton("&Add")
         
-        gridLayout =  QGridLayout()
+        gridLayout = QGridLayout()
         gridLayout.addWidget(self.accounts_type, 0, 0)
         gridLayout.addWidget(self.use_for_tweet, 0, 1)
         gridLayout.addWidget(self.add, 1, 2)
         self.setLayout(gridLayout)
-#        self.twitterAccount.clicked.connect(self.switchType)
-#        self.identicaAccount.clicked.connect(self.switchType)
         self.add.clicked.connect(self.addit)        
         
-#    def switchType(self):
-#        if self.twitterAccount.isChecked():
-#           self.identicaAccount.setChecked(0) 
-#        elif self.identicaAccount.isChecked():
-#           self.twitterAccount.setChecked(0) 
-
     def addit(self):
         index = self.accounts_type.currentIndex()
         self.add_account.emit(SUPPORTED_ACCOUNTS[index],
                               self.use_for_tweet.isChecked())
         self.hide()
 
-        
+
 class AccountsModel(QAbstractListModel):
-    dataChanged = Signal(QModelIndex,QModelIndex)
+    dataChanged = Signal(QModelIndex, QModelIndex)
     
     def __init__(self):
         QAbstractListModel.__init__(self)
         self._items = []
 
-    def set(self,mlist):
-        self._items =mlist
+    def set(self, mlist):
+        self._items = mlist
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
                               len(self._items)))
         
-    def rowCount(self, parent = QModelIndex()):
+    def rowCount(self, parent=QModelIndex()):
         return len(self._items)
         
-    def data(self, index, role = Qt.DisplayRole):
+    def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return self._items[index.row()].name
         else:
             return None
 
+
 class AccountsView(QListView):
-    def __init__(self, parent = None):
+
+    def __init__(self, parent=None):
         QListView.__init__(self, parent)   
         self.setEditTriggers(QAbstractItemView.SelectedClicked)
-            
+
+
 class KhweeteurAccount():
-    def __init__(self, name='Unknow', consumer_key='', consumer_secret='', token_key='', token_secret='', use_for_tweet=True, base_url='' ):
-       self.consumer_key = consumer_key
-       self.consumer_secret = consumer_secret
-       self.token_key = token_key
-       self.token_secret = token_secret
-       self.use_for_tweet = use_for_tweet
-       self.base_url = base_url
-       self.name = name
+
+    def __init__(self, name='Unknow', consumer_key='', consumer_secret='', token_key='', token_secret='', use_for_tweet=True, base_url=''):
+        self.consumer_key = consumer_key
+        self.consumer_secret = consumer_secret
+        self.token_key = token_key
+        self.token_secret = token_secret
+        self.use_for_tweet = use_for_tweet
+        self.base_url = base_url
+        self.name = name
         
 class KhweeteurPref(QMainWindow):
     save = Signal()
@@ -268,11 +267,11 @@ class KhweeteurPref(QMainWindow):
             self.settings.setArrayIndex(index)
             self.settings.setValue("name", account.name)
             self.settings.setValue("consumer_key", account.consumer_key)
-            self.settings.setValue("consumer_secret", account.consumer_secret )
-            self.settings.setValue("token_key", account.token_key )
-            self.settings.setValue("token_secret",  account.token_secret )
-            self.settings.setValue("use_for_tweet", account.use_for_tweet )
-            self.settings.setValue("base_url", account.base_url )
+            self.settings.setValue("consumer_secret", account.consumer_secret)
+            self.settings.setValue("token_key", account.token_key)
+            self.settings.setValue("token_secret", account.token_secret)
+            self.settings.setValue("use_for_tweet", account.use_for_tweet)
+            self.settings.setValue("base_url", account.base_url)
         self.settings.endArray()
         
         self.settings.setValue('refreshInterval', self.refresh_value.value())
@@ -295,14 +294,14 @@ class KhweeteurPref(QMainWindow):
         token.set_verifier(unicode(pincode.strip()))
 
         signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
-        oauth_consumer             = oauth.Consumer(key=self.oauth_webview.account_type['consumer_key'], secret=self.oauth_webview.account_type['consumer_secret'])
-        oauth_client               = oauth.Client(oauth_consumer)                
+        oauth_consumer = oauth.Consumer(key=self.oauth_webview.account_type['consumer_key'], secret=self.oauth_webview.account_type['consumer_secret'])
+        oauth_client = oauth.Client(oauth_consumer)                
 
 
         try:
-            oauth_client  = oauth.Client(oauth_consumer, token)
+            oauth_client = oauth.Client(oauth_consumer, token)
             resp, content = oauth_client.request(self.oauth_webview.account_type['access_token_url'], method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
-            access_token  = (parse_qs(content))
+            access_token = (parse_qs(content))
 
             print access_token['oauth_token'][0]
             
@@ -334,8 +333,8 @@ class KhweeteurPref(QMainWindow):
         print account_type,use_for_tweet
 
         signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
-        oauth_consumer             = oauth.Consumer(key=account_type['consumer_key'], secret=account_type['consumer_secret'])
-        oauth_client               = oauth.Client(oauth_consumer)                
+        oauth_consumer = oauth.Consumer(key=account_type['consumer_key'], secret=account_type['consumer_secret'])
+        oauth_client = oauth.Client(oauth_consumer)                
 
         #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
         body = 'oauth_callback=oob'
@@ -348,7 +347,7 @@ class KhweeteurPref(QMainWindow):
             else:
                 request_token = (parse_qs(content))            
         
-            self.oauth_webview=OAuthView(self,account_type,use_for_tweet)
+            self.oauth_webview = OAuthView(self, account_type, use_for_tweet)
             self.oauth_webview.open((QUrl('%s?oauth_token=%s' % (account_type['authorization_url'], request_token['oauth_token'][0]))))
             self.oauth_webview.request_token = request_token
 
@@ -365,22 +364,11 @@ class KhweeteurPref(QMainWindow):
             KhweeteurNotification().warn(self.tr('Server not found : %s :') % unicode(err))
             
     def delete_account(self, index):
-        if QMessageBox.question(self,'Delete account', 'Are you sure you want to delete this account ?', QMessageBox.Yes | QMessageBox.Close) ==  QMessageBox.Yes:
+        if QMessageBox.question(self,'Delete account', 'Are you sure you want to delete this account ?', QMessageBox.Yes | QMessageBox.Close) == QMessageBox.Yes:
             for index in self.accounts_view.selectedIndexes():
                 del self.accounts[index.row()]
             self.accounts_model.set(self.accounts)
-        
-#    def save_account(self, index, name, consumer_key, consumer_secret, token_key, token_secret, use_for_tweet, base_url):
-#        self.accounts[index].name = name
-#        self.accounts[index].consumer_key = consumer_key
-#        self.accounts[index].consumer_secret = consumer_secret
-#        self.accounts[index].token_key = token_key
-#        self.accounts[index].token_secret = token_secret
-#        self.accounts[index].use_for_tweet = use_for_tweet
-#        self.accounts[index].base_url = base_url
-#        self.accounts_model.set(self.accounts)
-#        self.savePrefs()
-        
+
     def closeEvent(self,widget,*args):
         ''' close event called when closing window'''
         self.savePrefs()
@@ -391,8 +379,8 @@ class KhweeteurPref(QMainWindow):
         self.scrollArea.setWidgetResizable(True)
         self.aWidget = QWidget(self.scrollArea)
         self.aWidget.setMinimumSize(480,1000)
-        self.aWidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.scrollArea.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scrollArea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scrollArea.setWidget(self.aWidget)
         #Available on maemo but should be too on Meego
         try:
@@ -403,7 +391,7 @@ class KhweeteurPref(QMainWindow):
 
         self._main_layout = QVBoxLayout(self.aWidget)
         self._umain_layout = QGridLayout()
-        self.aWidget.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self._umain_layout.addWidget(QLabel(self.tr('Refresh Interval (Minutes) :')),3,0)
         self.refresh_value = QSpinBox()

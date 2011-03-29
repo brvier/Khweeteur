@@ -29,7 +29,8 @@ from PySide.QtGui import QStyledItemDelegate, \
                     QFont, \
                     QStyle
 from PySide.QtCore import Qt, \
-                     QSize
+                     QSize, \
+                     QSettings
 
 from settings import KhweeteurPref
 
@@ -86,8 +87,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
 
-	uid = str(index.data(role=IDROLE)) + 'x' + \
-		str(option.rect.width())
+        uid = str(index.data(role=IDROLE)) + 'x' + \
+            str(option.rect.width())
         try:
             return self.memoized_size[uid]
         except:
@@ -206,7 +207,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             painter.fillRect(option.rect, option.palette.highlight())
 
         # Draw icon
-        
+
         if self.show_avatar:
             icon = index.data(Qt.DecorationRole)
             if icon != None:
@@ -251,7 +252,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             screenname = index.data(SCREENNAMEROLE)
             retweet_of = index.data(RETWEETOFROLE)
             if retweet_of:
-                 screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
+                screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
             painter.setFont(self.miniFont)
             painter.setPen(self.user_color)
             if is_me:
@@ -306,7 +307,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter.drawLine(x1, y2, x2, y2)
 
         painter.restore()
-        
+
+
 class AlternateCustomDelegate(QStyledItemDelegate):
 
     '''Delegate to do custom draw of the items'''
@@ -341,8 +343,8 @@ class AlternateCustomDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
 
-	uid = str(index.data(role=IDROLE)) + 'x' + \
-		str(option.rect.width())
+        uid = str(index.data(role=IDROLE)) + 'x' + \
+            str(option.rect.width())
         try:
             return self.memoized_size[uid]
         except:
@@ -482,7 +484,7 @@ class AlternateCustomDelegate(QStyledItemDelegate):
             screenname = index.data(SCREENNAMEROLE)
             retweet_of = index.data(RETWEETOFROLE)
             if retweet_of:
-                 screenname = screenname + retweet_of
+                screenname = screenname + retweet_of
             painter.setFont(self.miniFont)
             painter.setPen(self.user_color)
             new_rect = painter.drawText(option.rect.adjusted(70, 5, -10, -9),
@@ -519,10 +521,10 @@ class AlternateCustomDelegate(QStyledItemDelegate):
         painter.setPen(self.text_color)
         new_rect = \
             painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                             * 70,  0, -4, -10), int(Qt.AlignBottom)
+                             * 70, 0, -4, -10), int(Qt.AlignBottom)
                              | int(Qt.AlignLeft)
                              | int(Qt.TextWordWrap), tweet)
-                             
+
         # Draw line
 
         painter.setPen(self.separator_color)
@@ -590,8 +592,8 @@ class KhweetsView(QListView):
             QListView.keyPressEvent(self, event)
 
     def refreshCustomDelegate(self):
-#        theme = self.parent().settings.value('theme')
-        theme = KhweeteurPref.DEFAULTTHEME
+        settings = QSettings("Khertan Software", "Khweeteur")
+        theme = settings.value('theme')
         if theme == KhweeteurPref.WHITETHEME:
             self.custom_delegate = WhiteCustomDelegate(self)
         elif theme == KhweeteurPref.DEFAULTTHEME:

@@ -24,8 +24,9 @@ import os
 import dbus
 import dbus.service
 import socket
-       
-class KhweeteurRefreshWorker(Thread):    
+
+
+class KhweeteurRefreshWorker(Thread):
     def __init__(self,base_url, consumer_key, consumer_secret, access_token, access_secret, call, dbus_handler):
         Thread.__init__(self, None)
         self.api = twitter.Api(username=consumer_key,
@@ -41,14 +42,14 @@ class KhweeteurRefreshWorker(Thread):
 
     def send_notification(self,msg,count):
         self.dbus_handler.new_tweets(count,msg)
-    
+
     def getCacheFolder(self):
         if not hasattr(self,'folder_path'):
             self.folder_path = os.path.join(os.path.expanduser("~"),
                                  '.khweeteur','cache',
                                  os.path.normcase(unicode(self.call.replace('/',
                                  '_'))).encode('UTF-8'))
-                            
+
             if not os.path.isdir(self.folder_path):
                 try:
                     os.makedirs(self.folder_path)
@@ -65,9 +66,7 @@ class KhweeteurRefreshWorker(Thread):
             
         for status in statuses:
             if type(status) != twitter.DirectMessage:
-                cache = os.path.join(avatar_path,
-                        os.path.basename(status.user.profile_image_url.replace('/'
-                        , '_')))
+                cache = os.path.join(avatar_path, os.path.basename(status.user.profile_image_url.replace('/', '_')))
                 if not os.path.exists(cache):
                     try:
                         urlretrieve(status.user.profile_image_url,
@@ -78,7 +77,7 @@ class KhweeteurRefreshWorker(Thread):
                                 'PNG')
 #                        status.user.profile_image_url = cache
                     except StandardError, err:
-                        logging.debug('DownloadProfilImage:'+str(err))
+                        logging.debug('DownloadProfilImage:' + str(err))
                         print err
 
     def removeAlreadyInCache(self, statuses):
@@ -104,14 +103,14 @@ class KhweeteurRefreshWorker(Thread):
                 logging.debug('getOneReplyContent Folder: %s' % (folder,))
             for afile in files:
                 logging.debug('getOneReplyContent aFile: %s' % (os.path.join(root,afile),))
-                if unicode(tid)==afile:
+                if unicode(tid) == afile:
                     try:
                         fhandle = open(os.path.join(root,afile), 'rb')
                         status = pickle.load(fhandle)
                         fhandle.close()
                         return status.text
                     except StandardError,err:
-                        logging.debug('getOneReplyContent:'+err)
+                        logging.debug('getOneReplyContent:' + err)
 
         try:
             rpath = os.path.join(os.path.expanduser("~"),'.khweeteur','cache','Replies')
@@ -125,7 +124,7 @@ class KhweeteurRefreshWorker(Thread):
             fhandle.close()
             return status.text
         except StandardError, err:
-            logging.debug('getOneReplyContent:'+str(err))
+            logging.debug('getOneReplyContent:' + str(err))
             print err
 
     def isMe(self,statuses):
@@ -149,7 +148,7 @@ class KhweeteurRefreshWorker(Thread):
                     status.in_reply_to_status_text = \
                         self.getOneReplyContent(status.in_reply_to_status_id)
             except StandardError, err:
-                logging.debug('getOneReplyContent:'+err)
+                logging.debug('getOneReplyContent:' + err)
                 print err
 
     def serialize(self, statuses):

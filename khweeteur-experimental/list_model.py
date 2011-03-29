@@ -98,12 +98,12 @@ class KhweetsModel(QAbstractListModel):
         return len(self._items)
 
     def refreshTimestamp(self):
-        self.now = time.time()
-        for status in self._items:
-            try:
-                status.relative_created_at = self.GetRelativeCreatedAt(status.created_at)
-            except StandardError, e:
-                print e
+#        self.now = time.time()
+#        for status in self._items:
+#            try:
+#                status.relative_created_at = self.GetRelativeCreatedAt(status.created_at_in_seconds)
+#            except StandardError, e:
+#                print e
 
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
@@ -211,7 +211,11 @@ class KhweetsModel(QAbstractListModel):
         # 10 -> Retweet of
 
         if role == Qt.DisplayRole:
-            return self._items[index.row()].text
+            status = self._items[index.row()]
+            if status.truncated:
+                return status.retweeted_status.text
+            else:
+                return status.text
         elif role == SCREENNAMEROLE:
             try:
                 return self._items[index.row()].user.screen_name
@@ -246,10 +250,11 @@ class KhweetsModel(QAbstractListModel):
                 return False
         elif role == TIMESTAMPROLE:
             try:
-                return self._items[index.row()].relative_created_at
+                return self._items[index.row()].GetRelativeCreatedAt()
             except:
                 self.now = time.time()                
                 return self.GetRelativeCreatedAt(self._items[index.row()].created_at_in_seconds)
+                
         elif role == Qt.DecorationRole:
             try:
                 return self._avatars[self._items[index.row()].user.profile_image_url]

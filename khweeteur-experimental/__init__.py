@@ -37,7 +37,7 @@ class Khweeteur(QApplication):
 
     def run(self):
         self.win = KhweeteurWin()
-        self.win.show()
+        self.win.showFullScreen()
         
 class KhweeteurWin(QMainWindow):
     def __init__(self,parent=None):

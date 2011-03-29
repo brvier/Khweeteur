@@ -119,9 +119,9 @@ class TweetsListModel(QAbstractListModel):
 
         #FIXME
         #Wait pyside bug is resolved
-#        self.dataChanged.emit(self.createIndex(0, 1),
-#                              self.createIndex(0,
-#                              len(self._statuses)))
+        self.dataChanged.emit(self.createIndex(0, 1),
+                              self.createIndex(0,
+                              len(self._statuses)))
 
 
 class ButtonWrapper(QObject):
