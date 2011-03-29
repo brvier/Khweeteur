@@ -265,6 +265,7 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(True)        
         self.msg_button.setChecked(False)
         self.mention_button.setChecked(False)
+        self.view.scrollToTop()
         self.model.load('HomeTimeline')
 
     @pyqtSlot()
@@ -384,6 +385,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(True)
         self.msg_button.setChecked(False)
         self.home_button.setChecked(False)
+        self.view.scrollToTop()
         self.model.load('Mentions')
 
     @pyqtSlot()
@@ -392,6 +394,7 @@ class KhweeteurWin(QMainWindow):
         self.msg_button.setChecked(True)
         self.home_button.setChecked(False)
         self.mention_button.setChecked(False)
+        self.view.scrollToTop()
         self.model.load('DMs')
         
     @pyqtSlot()

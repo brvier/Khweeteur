@@ -586,6 +586,7 @@ class KhweetsView(QListView):
 
     def keyPressEvent(self, event):
         if event.key() not in (Qt.Key_Up, Qt.Key_Down):
+            self.parent().switch_tb_edit()
             self.parent().tb_text.setFocus()
             self.parent().tb_text.keyPressEvent(event)
         else:
