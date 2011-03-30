@@ -47,11 +47,6 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def require_update(self,optional=None):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
 
-#    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
-#            signature='ss')
-#    def post_retweet(self, tid='',t_base_url=''):
-#        pass
-
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
             signature='uusssssss')
     def post_tweet(self, \
@@ -230,7 +225,6 @@ class KhweeteurWin(QMainWindow):
         """
         print 'EnterEvent' 
         self.model.refreshTimestamp()
-#        self.model.wantsUpdate()
 
     def listen_dbus(self):
         from dbus.mainloop.qt import DBusQtMainLoop
@@ -249,13 +243,13 @@ class KhweeteurWin(QMainWindow):
         print 'New Tweets dbus signal received'
         print count,msg
         if msg == 'HomeTimeline':
-            self.home_button.setCounter(count)
+            self.home_button.setCounter(self.home_button.getCounter()+count)
             QApplication.processEvents()
         elif msg == 'Mentions':
-            self.mention_button.setCounter(count)
+            self.mention_button.setCounter(self.mention_button.getCounter()+count)
             QApplication.processEvents()
         elif msg == 'DMs':
-            self.msg_button.setCounter(count)
+            self.msg_button.setCounter(self.msg_button.getCounter()+count)
             QApplication.processEvents()
 
         if self.model.call == msg:
@@ -329,7 +323,6 @@ class KhweeteurWin(QMainWindow):
                     QDesktopServices.openUrl(QUrl(url))
             except:
                 raise
-#                    QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur/bugs'
         
     @pyqtSlot()
     def do_tb_send(self):
@@ -439,6 +432,10 @@ class KhweeteurWin(QMainWindow):
         pass
         
 if __name__ == '__main__':
-    os.system('python %s start' % os.path.join(os.path.dirname(__file__),'daemon.py'))
-    app = Khweeteur()     
+    from subprocess import Popen
+    #os.system('python %s start' % os.path.join(os.path.dirname(__file__),'daemon.py'))
+    print time.time()
+    Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
+    print time.time()
+    app = Khweeteur()    
     app.exec_()

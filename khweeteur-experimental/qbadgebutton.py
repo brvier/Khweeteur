@@ -27,6 +27,9 @@ class QBadgeButton (QPushButton):
         self.badge_counter = counter
         self.update()
         
+    def getCounter (self):
+        return self.badge_counter
+        
     def paintEvent (self, event):
         QPushButton.paintEvent(self, event)
         p = QPainter(self)
@@ -81,6 +84,9 @@ class QToolBadgeButton (QToolButton):
         
     def setCounter (self, counter):
         self.badge_counter = counter
+
+    def getCounter (self):
+        return self.badge_counter
         
     def paintEvent (self, event):
         QToolButton.paintEvent(self, event)

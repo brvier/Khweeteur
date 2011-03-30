@@ -220,7 +220,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
                          signature='us')
     def new_tweets(self, count, ttype):
         logging.debug('New tweet notification ttype : %s (%s)' % (ttype,str(type(ttype)),))
-        if ttype in ('Messages', 'DMs'):
+        if ttype in ('Mentions', 'DMs'):
             m_bus = dbus.SystemBus()
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
                               '/org/freedesktop/Notifications')
@@ -262,7 +262,6 @@ class KhweeteurDaemon(Daemon):
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.retrieve, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
-#        self.bus.add_signal_receiver(self.re_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_retweet')
         self.threads = [] #Here to avoid gc 
 
         #Cache Folder
@@ -379,9 +378,7 @@ class KhweeteurDaemon(Daemon):
                         logging.debug('Nb account for post : %s' % (nb_accounts,))
                         for index in range(nb_accounts):
                             settings.setArrayIndex(index)
-#                            logging.debug('use_for_tweet : %s' % (settings.value('use_for_tweet')))
                             if (settings.value('use_for_tweet') == 'true'):
-#                                logging.debug('username:%s,password:%s,token:%s,secret:%s' % (settings.value('consumer_token'),settings.value('consumer_secret'),settings.value('token_key'), settings.value('token_secret')))
                                 api = twitter.Api(username=settings.value('consumer_key'),
                                                 password=settings.value('consumer_secret'),
                                                 access_token_key=settings.value('token_key'),
@@ -398,7 +395,7 @@ class KhweeteurDaemon(Daemon):
                     os.remove(item)
                 except StandardError, err:
                     logging.debug('Do_posts : %s' % (str(err),))
-                    raise #can t post, we will the file to do it later                                   
+                    raise #can t post, we will keep the file to do it later                                   
         
     def post_twitpic(self, file_path, text):
         settings = QSettings("Khertan Software", "Khweeteur")
@@ -448,7 +445,6 @@ class KhweeteurDaemon(Daemon):
         logging.debug('refresh interval loaded')
 
         self.do_posts()
-#        self.do_rts()
         self.retrieve()
         gobject.timeout_add_seconds(refresh_interval, self.update)
         return False
