@@ -303,16 +303,37 @@ class KhweeteurDaemon(Daemon):
                     'longitude': longitude,
                     'retweet_id': retweet_id,
                     'retweet_base_url': retweet_base_url}
+            logging.debug('%s' % (post.__repr__(),))
             pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
         self.do_posts()
 
+    def get_api(self,account):
+        api = \
+            twitter.Api(username=account['consumer_key'],
+                        password=account['consumer_secret'],
+                        access_token_key=account['token_key'],
+                        access_token_secret=account['token_secret'],
+                        base_url=account['base_url'],)
+        api.SetUserAgent('Khweeteur')
+
+        return api
+
     def do_posts(self):
-        settings = QSettings("Khertan Software", "Khweeteur")        
+        settings = QSettings("Khertan Software", "Khweeteur")
+        accounts = []
+        nb_accounts = settings.beginReadArray('accounts')
+        for index in range(nb_accounts):
+            settings.setArrayIndex(index)
+            accounts.append(dict((key, settings.value(key)) for key in settings.allKeys()))            
+        settings.endArray()                        
+
+        logging.debug('Number of account : %s' % len(accounts))
+
         for item in glob.glob(os.path.join(self.post_path, '*')):
             logging.debug('Try to post %s' % (item,))
-            with open(item, 'rb') as fhandle:
-                post = pickle.load(fhandle)
-                try:
+            try:
+                with open(item, 'rb') as fhandle:
+                    post = pickle.load(fhandle)
                     text = post['text']
                     if post['shorten_url'] == 1:
                         urls = re.findall("(?P<url>https?://[^\s]+)", text)
@@ -335,21 +356,15 @@ class KhweeteurDaemon(Daemon):
                         post['longitude'] = None                        
                     else:
                         post['longitude'] = int(post['longitude'])
-                    if post['reply_id'] != '0': #Reply tweet
-                        #Loop on account with same base url
-                        nb_accounts = settings.beginReadArray('accounts')
-                        for index in range(nb_accounts):
-                            settings.setArrayIndex(index)
-                            if (settings.value('base_url') == post['reply_base_url']) \
-                              and (settings.value('use_for_tweet') == 'true'):
-                                api = \
-                                    twitter.Api(username=settings.value('consumer_key'),
-                                                password=settings.value('consumer_secret'),
-                                                access_token_key=settings.value('token_key'),
-                                                access_token_secret=settings.value('token_secret'),
-                                                base_url=settings.value('base_url'),)
-                                api.SetUserAgent('Khweeteur')
-                                if post['serialize']:
+
+                    #Loop on accounts
+                    for account in accounts:
+                        #Reply
+                        if post['reply_id'] != '0': #Reply tweet
+                            if account['base_url'] == post['reply_base_url'] \
+                              and account['use_for_tweet'] == 'true':
+                                api = self.get_api(account)
+                                if post['serialize'] == 1:
                                     api.PostSerializedUpdates(text,
                                             in_reply_to_status_id=int(post['reply_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
@@ -357,47 +372,40 @@ class KhweeteurDaemon(Daemon):
                                     api.PostUpdate(text,
                                             in_reply_to_status_id=int(post['reply_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
-                        settings.endArray()
-                    elif post['retweet_id'] != '0': #Reply tweet
-                        #Loop on account with same base url
-                        nb_accounts = settings.beginReadArray('accounts')
-                        for index in range(nb_accounts):
-                            settings.setArrayIndex(index)
-                            if (settings.value('base_url') == post['retweet_base_url']) \
-                              and (settings.value('use_for_tweet') == 'true'):
-                                api = \
-                                    twitter.Api(username=settings.value('consumer_key'),
-                                                password=settings.value('consumer_secret'),
-                                                access_token_key=settings.value('token_key'),
-                                                access_token_secret=settings.value('token_secret'),
-                                                base_url=settings.value('base_url'),)
-                                api.SetUserAgent('Khweeteur')
-                                api.PostRetweet(tweet_id=int(post['retweet_id']))
-                        settings.endArray()
-                    else: #Else "simple" tweet
-                        nb_accounts = settings.beginReadArray('accounts')
-                        logging.debug('Nb account for post : %s' % (nb_accounts,))
-                        for index in range(nb_accounts):
-                            settings.setArrayIndex(index)
-                            if (settings.value('use_for_tweet') == 'true'):
-                                api = twitter.Api(username=settings.value('consumer_key'),
-                                                password=settings.value('consumer_secret'),
-                                                access_token_key=settings.value('token_key'),
-                                                access_token_secret=settings.value('token_secret'),
-                                                base_url=settings.value('base_url'),)
-                                api.SetUserAgent('Khweeteur')
+                                logging.debug('Posted reply %s' % (text,))
+                        elif post['retweet_id'] != '0':
+                            #Retweet
+                                if account['base_url'] == post['retweet_base_url'] \
+                                  and account['use_for_tweet'] == 'true':
+                                    api = self.get_api(account)
+                                    api.PostRetweet(tweet_id=int(post['retweet_id']))
+                                    logging.debug('Posted retweet %s' % (post['retweet_id'],))
+                        else:
+                            #Else "simple" tweet
+                            if account['use_for_tweet'] == 'true':
+                                api = self.get_api(account)
                                 if post['serialize'] == 1:
                                     api.PostSerializedUpdates(text,
                                         latitude=post['lattitude'], longitude=post['longitude'])
                                 else:
                                     api.PostUpdate(text,
                                         latitude=post['lattitude'], longitude=post['longitude'])
-                        settings.endArray()                        
+                                logging.debug('Posted %s' % (text,))
+
                     os.remove(item)
-                except StandardError, err:
-                    logging.debug('Do_posts : %s' % (str(err),))
-                    raise #can t post, we will keep the file to do it later                                   
-        
+
+            except twitter.TwitterError, err:
+                if err.message == 'Status is a duplicate':
+                    os.remove(item)
+                else:
+                    logging.error('Do_posts : %s' % (err.message,))                           
+            except StandardError, err:
+                logging.error('Do_posts : %s' % (str(err),))
+                #Emitting the error will block the other tweet post
+                #raise #can t post, we will keep the file to do it later                                   
+            except:
+                logging.error('Do_posts : Unknow error')
+                
     def post_twitpic(self, file_path, text):
         settings = QSettings("Khertan Software", "Khweeteur")
 

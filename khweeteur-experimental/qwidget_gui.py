@@ -300,6 +300,7 @@ class KhweeteurWin(QMainWindow):
         print mode,type(mode)
         for item in self.list_tb_action:
             item.setVisible(mode == 0)
+            self.view.setFocus()            
         for item in self.edit_tb_action:
             item.setVisible(mode == 1)
             if mode == 1:
@@ -359,6 +360,15 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             tweet_id = self.model.data(index, role=IDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            print 'protected ?',self.model.data(index, role=PROTECTEDROLE),type(self.model.data(index, role=PROTECTEDROLE))
+            if self.model.data(index, role=PROTECTEDROLE):
+                screenname = self.model.data(index, role=SCREENNAMEROLE)
+                QMessageBox.warning(self,
+                   "Khweeteur - Retweet",
+                   "%s protect his tweets you can't retweet them" % screenname,
+                   QMessageBox.Close                   
+                   )
+
         if tweet_id:
             self.dbus_handler.post_tweet( \
                 0,#shorten_url=\

@@ -26,6 +26,7 @@ ORIGINROLE = 24
 TIMESTAMPROLE = 26
 RETWEETOFROLE = 27
 ISMEROLE = 28
+PROTECTEDROLE = 28
 
 
 from PySide.QtCore import QAbstractListModel,QModelIndex, \
@@ -200,8 +201,12 @@ class KhweetsModel(QAbstractListModel):
                 return self._items[index.row()].is_me
             except:
                 return False
+                
         elif role == TIMESTAMPROLE:
             return self._items[index.row()].GetRelativeCreatedAt(self.now)
+                
+        elif role == PROTECTEDROLE:
+            return self._items[index.row()].user.protected
                 
         elif role == Qt.DecorationRole:
             try:
