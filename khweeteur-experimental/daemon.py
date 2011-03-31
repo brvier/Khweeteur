@@ -260,7 +260,7 @@ class KhweeteurDaemon(Daemon):
                     filemode='w')
 
         self.bus = dbus.SessionBus()
-        self.bus.add_signal_receiver(self.retrieve, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
+        self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
         self.threads = [] #Here to avoid gc 
 
@@ -307,8 +307,9 @@ class KhweeteurDaemon(Daemon):
         self.do_posts()
 
     def do_posts(self):
-        settings = QSettings("Khertan Software", "Khweeteur")
+        settings = QSettings("Khertan Software", "Khweeteur")        
         for item in glob.glob(os.path.join(self.post_path, '*')):
+            logging.debug('Try to post %s' % (item,))
             with open(item, 'rb') as fhandle:
                 post = pickle.load(fhandle)
                 try:
@@ -461,7 +462,7 @@ class KhweeteurDaemon(Daemon):
             for thread in self.threads:
                 if not thread.isAlive():
                     self.threads.remove(thread)
-                    logging.error('Removed a thread')
+                    logging.debug('Removed a thread')
                         
             #Remove old tweets in cache according to history prefs
             try:
