@@ -240,8 +240,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_text = QPlainTextEdit()
         self.tb_text_reply_id = 0
         self.tb_text_reply_base_url = ''
-#        self.tb_text_retweet_id = 0
-#        self.tb_text_retweet_base_url = ''
         self.tb_text.setFixedHeight(66)
         self.edit_tb_action.append(self.toolbar.addWidget(self.tb_text))
 
@@ -267,7 +265,7 @@ class KhweeteurWin(QMainWindow):
 
         #Home (Default)
         self.home_button = QToolBadgeButton(self)
-	self.home_button.setText("Home")
+        self.home_button.setText("Home")
         self.home_button.setCheckable(True)
         self.home_button.setChecked(True)
         self.home_button.clicked.connect(self.show_hometimeline)
@@ -275,18 +273,26 @@ class KhweeteurWin(QMainWindow):
 
         #Mentions (Default)
         self.mention_button = QToolBadgeButton(self)
-	self.mention_button.setText("Mentions")
+        self.mention_button.setText("Mentions")
         self.mention_button.setCheckable(True)
         self.mention_button.clicked.connect(self.show_mentions)
         self.list_tb_action.append(self.toolbar.addWidget(self.mention_button))
 
         #DM (Default)
         self.msg_button = QToolBadgeButton(self)
-	self.msg_button.setText("DMs")
+        self.msg_button.setText("DMs")
         self.msg_button.setCheckable(True)
         self.msg_button.clicked.connect(self.show_dms)
         self.list_tb_action.append(self.toolbar.addWidget(self.msg_button))
-
+        
+        #Search (Default)
+        self.search_button = QToolBadgeButton(self)
+        self.search_button.setText("")
+        self.search_button.setIcon(QIcon.fromTheme('general_search'))
+        self.search_button.setCheckable(True)
+        self.search_button.clicked.connect(self.show_search)
+        self.list_tb_action.append(self.toolbar.addWidget(self.search_button))
+        
         #Reply button (Action)
         self.tb_reply = QAction('Reply', self)
         self.toolbar.addAction(self.tb_reply)
@@ -370,6 +376,10 @@ class KhweeteurWin(QMainWindow):
         if self.model.call == msg:
             self.model.load(msg)
 
+    @pyqtSlot()
+    def show_search(self):
+        pass
+        
     @pyqtSlot()
     def show_hometimeline(self):
         self.home_button.setCounter(0)
@@ -642,9 +652,6 @@ class KhweeteurWin(QMainWindow):
         
 if __name__ == '__main__':
     from subprocess import Popen
-    #os.system('python %s start' % os.path.join(os.path.dirname(__file__),'daemon.py'))
-    print time.time()
     Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
-    print time.time()
     app = Khweeteur()    
     app.exec_()
