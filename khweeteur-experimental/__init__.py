@@ -7,6 +7,7 @@
 '''A Twitter client made with Python and Qt'''
 
 from qwidget_gui import Khweeteur
+import os.path
 
 if __name__ == '__main__':
     from subprocess import Popen
