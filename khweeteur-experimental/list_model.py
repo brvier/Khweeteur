@@ -166,9 +166,12 @@ class KhweetsModel(QAbstractListModel):
 
         if role == Qt.DisplayRole:
             status = self._items[index.row()]
-            if status.truncated:
-                return status.retweeted_status.text
-            else:
+            try:
+                if status.truncated:
+                    return status.retweeted_status.text
+                else:
+                    return status.text                    
+            except:
                 return status.text
         elif role == SCREENNAMEROLE:
             try:

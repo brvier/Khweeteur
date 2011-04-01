@@ -498,7 +498,7 @@ class KhweeteurWin(QMainWindow):
             '' if self.geoloc_source==None else self.geoloc_source[0], #lattitude =
             '' if self.geoloc_source==None else self.geoloc_source[1], #longitude = 
             '' if is_not_reply else self.tb_text_reply_base_url, #base_url
-            'post' if is_not_reply else 'reply', #action
+            'tweet' if is_not_reply else 'reply', #action
             '' if is_not_reply else str(self.tb_text_reply_id),)
         self.switch_tb_default()
         self.dbus_handler.require_update()
