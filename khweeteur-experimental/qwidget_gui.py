@@ -399,19 +399,30 @@ class KhweeteurWin(QMainWindow):
         elif msg == 'DMs':
             self.msg_button.setCounter(self.msg_button.getCounter()+count)
             QApplication.processEvents()
+        elif msg.startswith('Search:'):
+            self.msg_button.setCounter(self.tb_search_button.getCounter()+count)
+            QApplication.processEvents()
 
         if self.model.call == msg:
             self.model.load(msg)
 
     @pyqtSlot()
     def show_search(self):
-        pass
+        terms = self.sender().text()
+        print 'show_search %s' % (terms,)
+        self.home_button.setChecked(False)        
+        self.msg_button.setChecked(False)
+        self.tb_search_button.setChecked(True)
+        self.mention_button.setChecked(False)
+        self.view.scrollToTop()
+        self.model.load('Search:'+terms)
         
     @pyqtSlot()
     def show_hometimeline(self):
         self.home_button.setCounter(0)
         self.home_button.setChecked(True)        
         self.msg_button.setChecked(False)
+        self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('HomeTimeline')
@@ -623,6 +634,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setCounter(0)
         self.mention_button.setChecked(True)
         self.msg_button.setChecked(False)
+        self.tb_search_button.setChecked(False)
         self.home_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Mentions')
@@ -632,6 +644,7 @@ class KhweeteurWin(QMainWindow):
         self.msg_button.setCounter(0)
         self.msg_button.setChecked(True)
         self.home_button.setChecked(False)
+        self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('DMs')
@@ -661,7 +674,7 @@ class KhweeteurWin(QMainWindow):
         nb_searches = settings.beginReadArray('searches')
         for index in range(nb_searches):
             settings.setArrayIndex(index)
-            self.tb_search_menu.addAction(settings.value('terms'))
+            self.tb_search_menu.addAction(settings.value('terms'), self.show_search)
         settings.endArray()                        
 
     def newSearchAsk(self):
@@ -670,9 +683,18 @@ class KhweeteurWin(QMainWindow):
                 self.tr('Enter the search keyword(s) :'))
         if ok == 1:
             #FIXME : Create the search
-            self.tb_search_menu.addAction(search_terms)
-            for action in self.tb_search_menu.actions():
-                print action, type(action), dir(action)
+            self.tb_search_menu.addAction(search_terms, self.show_search)
+            settings = QSettings()
+            nb_searches = settings.beginWriteArray('searches')
+            for index,action in enumerate(self.tb_search_menu.actions()):
+                #pass the first which are the new option
+                if index==0:
+                    continue
+                settings.setArrayIndex(index-1)
+                settings.setValue('terms',action.text())
+            settings.endArray()   
+            settings.sync()
+            self.dbus_handler.require_update()
         
     def setupMenu(self):
         """

@@ -182,9 +182,14 @@ class KhweeteurRefreshWorker(Thread):
                 logging.debug('%s running' % self.call)                            
                 statuses = self.api.GetDirectMessages(since_id=since)
                 logging.debug('%s finished' % self.call)                            
-            else:
-                #Its a search ....
-                pass
+            #Its a search .... or a list
+            elif self.call.startswith('Search:'):
+                logging.debug('%s running' % self.call)
+                statuses = self.api.GetSearch(since_id=since, term=self.call.split(':')[1])
+                logging.debug('%s finished' % self.call)
+            else:   
+                logging.error('Unknow call : %s' % (self.call,))
+                
         except StandardError, err:
             logging.debug(err)
             raise err

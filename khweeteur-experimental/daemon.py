@@ -523,12 +523,18 @@ class KhweeteurDaemon(Daemon):
                             os.remove(os.path.join(root, folder, str(status.id)))
                         except StandardError, err:
                             logging.debug('Cannot remove : %s : %s' % (str(status.id), str(err)))
-                            
+
+            nb_searches = settings.beginReadArray('searches')
+            searches = []
+            for index in range(nb_searches):
+                settings.setArrayIndex(index)
+                searches.append(settings.value('terms'))
+            settings.endArray()
+            
             nb_accounts = settings.beginReadArray('accounts')
             logging.info('Found %s account' % (str(nb_accounts),))
             for index in range(nb_accounts):
                 settings.setArrayIndex(index)
-
                 #Worker
                 try:                               
                     self.threads.append(KhweeteurRefreshWorker(\
@@ -562,6 +568,20 @@ class KhweeteurDaemon(Daemon):
                                 'DMs', self.dbus_handler))
                 except Exception, err:
                     logging.error('DMs : %s' % str(err))
+
+                #Start searches thread
+                for terms in searches:
+                    try:                               
+                        self.threads.append(KhweeteurRefreshWorker(\
+                                    settings.value('base_url'),
+                                    settings.value('consumer_key'),
+                                    settings.value('consumer_secret'),
+                                    settings.value('token_key'),
+                                    settings.value('token_secret'),
+                                    'Search:'+terms, self.dbus_handler))
+                    except Exception, err:
+                        logging.error('Search %s: %s' % (terms,str(err)))
+
                 try:                               
                     for idx, thread in enumerate(self.threads):
                         logging.debug('Try to run Thread : %s' % str(thread))
