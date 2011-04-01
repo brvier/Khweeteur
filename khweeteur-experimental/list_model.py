@@ -27,7 +27,7 @@ TIMESTAMPROLE = 26
 RETWEETOFROLE = 27
 ISMEROLE = 28
 PROTECTEDROLE = 28
-
+USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel,QModelIndex, \
                          QThread, \
@@ -207,6 +207,9 @@ class KhweetsModel(QAbstractListModel):
                 
         elif role == PROTECTEDROLE:
             return self._items[index.row()].user.protected
+
+        elif role == USERIDROLE:
+            return self._items[index.row()].user.id
                 
         elif role == Qt.DecorationRole:
             try:

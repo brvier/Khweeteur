@@ -26,7 +26,7 @@ import socket
 import pickle
 import re
 
-__version__ = '0.2.1'
+__version__ = '0.5.0'
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -286,23 +286,21 @@ class KhweeteurDaemon(Daemon):
             shorten_url=True,\
             serialize=True,\
             text='',\
-            reply_id='',
-            reply_base_url='',
             lattitude='',
             longitude='',
-            retweet_id='',
-            retweet_base_url='',
+            base_url='',
+            action='',
+            tweet_id='',
             ):
         with open(os.path.join(self.post_path, str(time.time())), 'wb') as fhandle:
             post = {'shorten_url': shorten_url,
                     'serialize': serialize,
                     'text': text,
-                    'reply_id': reply_id,
-                    'reply_base_url': reply_base_url,
                     'lattitude': lattitude,
                     'longitude': longitude,
-                    'retweet_id': retweet_id,
-                    'retweet_base_url': retweet_base_url}
+                    'base_url': base_url,
+                    'action': action,
+                    'tweet_id': tweet_id,}
             logging.debug('%s' % (post.__repr__(),))
             pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
         self.do_posts()
@@ -360,27 +358,27 @@ class KhweeteurDaemon(Daemon):
                     #Loop on accounts
                     for account in accounts:
                         #Reply
-                        if post['reply_id'] != '0': #Reply tweet
-                            if account['base_url'] == post['reply_base_url'] \
+                        if post['action'] == 'reply': #Reply tweet
+                            if account['base_url'] == post['base_url'] \
                               and account['use_for_tweet'] == 'true':
                                 api = self.get_api(account)
                                 if post['serialize'] == 1:
                                     api.PostSerializedUpdates(text,
-                                            in_reply_to_status_id=int(post['reply_id']),
+                                            in_reply_to_status_id=int(post['tweet_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
                                 else:
                                     api.PostUpdate(text,
-                                            in_reply_to_status_id=int(post['reply_id']),
+                                            in_reply_to_status_id=int(post['tweet_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
                                 logging.debug('Posted reply %s' % (text,))
-                        elif post['retweet_id'] != '0':
+                        elif post['action'] == 'retweet':
                             #Retweet
-                                if account['base_url'] == post['retweet_base_url'] \
+                                if account['base_url'] == post['base_url'] \
                                   and account['use_for_tweet'] == 'true':
                                     api = self.get_api(account)
-                                    api.PostRetweet(tweet_id=int(post['retweet_id']))
-                                    logging.debug('Posted retweet %s' % (post['retweet_id'],))
-                        else:
+                                    api.PostRetweet(tweet_id=int(post['tweet_id']))
+                                    logging.debug('Posted retweet %s' % (post['tweet_id'],))
+                        elif post['action'] == 'tweet':
                             #Else "simple" tweet
                             if account['use_for_tweet'] == 'true':
                                 api = self.get_api(account)
@@ -391,6 +389,34 @@ class KhweeteurDaemon(Daemon):
                                     api.PostUpdate(text,
                                         latitude=post['lattitude'], longitude=post['longitude'])
                                 logging.debug('Posted %s' % (text,))
+                        elif post['action'] == 'delete':
+                            if account['base_url'] == post['base_url']:
+                                api = self.get_api(account)
+                                api.DestroyStatus(int(post['tweet_id']))
+                                path = os.path.join(os.path.expanduser('~'), \
+                                    '.khweeteur', \
+                                    'cache', \
+                                    'HomeTimeline', \
+                                    post['tweet_id'])
+                                os.remove(path)
+                                logging.debug('Deleted %s' % (post['tweet_id'],))                                
+                        elif post['action'] == 'favorite':
+                            if account['base_url'] == post['base_url']:
+                                api = self.get_api(account)
+                                api.CreateFavorite(int(post['tweet_id']))
+                                logging.debug('Favorited %s' % (post['tweet_id'],))                                
+                        elif post['action'] == 'follow':
+                            if account['base_url'] == post['base_url']:
+                                api = self.get_api(account)
+                                api.CreateFriendship(int(post['tweet_id']))
+                                logging.debug('Follow %s' % (post['tweet_id'],))                                
+                        elif post['action'] == 'unfollow':
+                            if account['base_url'] == post['base_url']:
+                                api = self.get_api(account)
+                                api.DestroyFriendship(int(post['tweet_id']))
+                                logging.debug('Follow %s' % (post['tweet_id'],))                                
+                        else:
+                            logging.error('Unknow action : %s' % post['action'])
 
                     os.remove(item)
 

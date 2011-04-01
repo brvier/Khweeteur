@@ -228,8 +228,8 @@ class KhweeteurPref(QMainWindow):
         else:
             self.refresh_value.setValue(10)
             
-        if self.settings.contains("useNotification"):
-            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value("useNotification"))))
+        if self.settings.contains("useDaemon"):
+            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value("useDaemon"))))
         else:
             self.useNotification_value.setCheckState(Qt.CheckState(2))
             

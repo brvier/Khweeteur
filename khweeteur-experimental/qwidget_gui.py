@@ -48,20 +48,131 @@ class KhweeteurDBusHandler(dbus.service.Object):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
-            signature='uusssssss')
+            signature='uussssss')
     def post_tweet(self, \
             shorten_url=1,\
             serialize=1,\
             text='',\
-            reply_id = '0', 
-            reply_base_url = '',
-            lattitude = '0',
-            longitude = '0',
-            retweet_id = '0',
-            retweet_base_url = '',
+            lattitude='0',
+            longitude='0',
+            base_url = '',
+            action = '',
+            tweet_id = '0',            
             ):
         pass
 
+class KhweeteurAbout(QMainWindow):
+
+    '''About Window'''
+
+    def __init__(self, parent=None):
+        QMainWindow.__init__(self, parent)
+        self.parent = parent
+
+        self.settings = QSettings()
+
+        try:  # Preferences not set yet
+            if int(self.settings.value('useAutoRotation')) == 2:
+                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+        except:
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+
+        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        self.setWindowTitle(self.tr('Khweeteur About'))
+
+        try:
+            aboutScrollArea = QScrollArea(self)
+            aboutScrollArea.setWidgetResizable(True)
+            awidget = QWidget(aboutScrollArea)
+            awidget.setMinimumSize(480, 1400)
+            awidget.setSizePolicy(QSizePolicy.Expanding,
+                                  QSizePolicy.Expanding)
+            aboutScrollArea.setSizePolicy(QSizePolicy.Expanding,
+                    QSizePolicy.Expanding)
+
+        # Kinetic scroller is available on Maemo and should be on meego
+
+            try:
+                scroller = aboutScrollArea.property('kineticScroller')
+                scroller.setEnabled(True)
+            except:
+                pass
+
+            aboutLayout = QVBoxLayout(awidget)
+        except:
+            awidget = QWidget(self)
+            aboutLayout = QVBoxLayout(awidget)
+
+        aboutIcon = QLabel()
+        try:
+            aboutIcon.setPixmap(QIcon.fromTheme('khweeteur'
+                                ).pixmap(128, 128))
+        except:
+            aboutIcon.setPixmap(QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                'icons', 'khweeteur.png')).pixmap(128,
+                                128))
+
+        aboutIcon.setAlignment(Qt.AlignCenter or Qt.AlignHCenter)
+        aboutIcon.resize(128, 128)
+        aboutLayout.addWidget(aboutIcon)
+
+        aboutLabel = \
+            QLabel(self.tr('''<center><b>Khweeteur</b> %s
+                                   <br><br>An easy to use twitter client
+                                   <br><br>Licenced under GPLv3
+                                   <br>By Beno&icirc;t HERVIER (Khertan)
+                                   <br><br><b>Khweeteur try to be simple and fast
+                                   <br>identi.ca and twitter client</b>
+                                   <br><br><b>Features</b>
+                                   <br>Support multiple account
+                                   <br>Notify DMs and Mentions even when not launched                                   
+                                   <br>Reply, Retweet, Follow/Unfollow user, Favorite, Delete your tweet                                   
+                                   <br>Disconnected mode, action will be done when you recover network                                   
+                                   <br>Twitpic upload                                   
+                                   <br>Automated OAuth authentification
+                                   <br><br><b>Shortcuts :</b>
+                                   <br>Control-R : Refresh current view
+                                   <br>Control-M : Reply to selected tweet
+                                   <br>Control-Up : To scroll to top
+                                   <br>Control-Bottom : To scroll to bottom
+                                   <br><br><b>Thanks to :</b>
+                                   <br>ddoodie on #pyqt
+                                   <br>xnt14 on #maemo
+                                   <br>trebormints on twitter
+                                   <br>moubaildotcom on twitter
+                                   <br>teotwaki on twitter
+                                   <br>Jaffa on maemo.org
+                                   <br>creip on Twitter
+                                   <br>zcopley on #statusnet
+                                   <br>jordan_c on #statusnet
+                                   </center>''')
+                   % __version__)
+        aboutLayout.addWidget(aboutLabel)
+        self.bugtracker_button = QPushButton(self.tr('BugTracker'))
+        self.bugtracker_button.clicked.connect(self.open_bugtracker)
+        self.website_button = QPushButton(self.tr('Website'))
+        self.website_button.clicked.connect(self.open_website)
+        awidget2 = QWidget()
+        buttonLayout = QHBoxLayout(awidget2)
+        buttonLayout.addWidget(self.bugtracker_button)
+        buttonLayout.addWidget(self.website_button)
+        aboutLayout.addWidget(awidget2)
+
+        try:
+            awidget.setLayout(aboutLayout)
+            aboutScrollArea.setWidget(awidget)
+            self.setCentralWidget(aboutScrollArea)
+        except:
+            self.setCentralWidget(awidget)
+
+        self.show()
+
+    def open_website(self):
+        QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur'))
+
+    def open_bugtracker(self):
+        QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur/bugs'
+                                 ))        
 class Khweeteur(QApplication):
     def __init__(self):
         QApplication.__init__(self,sys.argv)
@@ -190,16 +301,19 @@ class KhweeteurWin(QMainWindow):
 
         #Follow (Action)
         self.tb_follow = QAction('Follow', self)
+        self.tb_follow.triggered.connect(self.do_tb_follow)
         self.toolbar.addAction(self.tb_follow)
         self.action_tb_action.append(self.tb_follow)
 
         #UnFollow (Action)
         self.tb_unfollow = QAction('Unfollow', self)
+        self.tb_unfollow.triggered.connect(self.do_tb_unfollow)
         self.toolbar.addAction(self.tb_unfollow)
         self.action_tb_action.append(self.tb_unfollow)
 
         #Favorite (Action)
         self.tb_favorite = QAction('Favorite', self)
+        self.tb_favorite.triggered.connect(self.do_tb_favorite)
         self.toolbar.addAction(self.tb_favorite)
         self.action_tb_action.append(self.tb_favorite)
 
@@ -212,6 +326,7 @@ class KhweeteurWin(QMainWindow):
         #Delete (Action)
         self.tb_delete = QAction('Delete', self)
         self.toolbar.addAction(self.tb_delete)
+        self.tb_delete.triggered.connect(self.do_tb_delete)
         self.action_tb_action.append(self.tb_delete)
 
         self.switch_tb_default()
@@ -327,17 +442,16 @@ class KhweeteurWin(QMainWindow):
         
     @pyqtSlot()
     def do_tb_send(self):
+        is_not_reply = self.tb_text_reply_id==0
         self.dbus_handler.post_tweet( \
             1,#shorten_url=\
             1,#serialize=\
             self.tb_text.toPlainText(),#text=\
-            str(self.tb_text_reply_id), #reply_id =  
-            self.tb_text_reply_base_url,  #reply_base_url = 
             '', #lattitude =
             '', #longitude = 
-            '0', #retweet_id = 
-            '', #retweet_base_url = 
-            )
+            '' if is_not_reply else self.tb_text_reply_base_url, #base_url
+            'post' if is_not_reply else 'reply', #action
+            '' if is_not_reply else str(self.tb_text_reply_id),)
         self.switch_tb_default()
         self.dbus_handler.require_update()
 
@@ -374,12 +488,95 @@ class KhweeteurWin(QMainWindow):
                 0,#shorten_url=\
                 0,#serialize=\
                 '',#text=\
-                '0', #reply_id =  
-                '',  #reply_base_url = 
                 '', #lattitude =
                 '', #longitude = 
-                str(tweet_id), #retweet_id = 
-                tweet_source, #retweet_base_url = 
+                tweet_source, #base_url = 
+                'retweet',
+                str(tweet_id), #tweet_id = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()
+
+    @pyqtSlot()
+    def do_tb_delete(self):
+        tweet_id = None
+        for index in self.view.selectedIndexes():
+            tweet_id = self.model.data(index, role=IDROLE)
+            tweet_source = self.model.data(index, role=ORIGINROLE)
+            
+        if tweet_id:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                0,#serialize=\
+                '',#text=\
+                '', #lattitude =
+                '', #longitude = 
+                tweet_source, #base_url = 
+                'delete',
+                str(tweet_id), #tweet_id = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()
+
+    @pyqtSlot()
+    def do_tb_favorite(self):
+        tweet_id = None
+        for index in self.view.selectedIndexes():
+            tweet_id = self.model.data(index, role=IDROLE)
+            tweet_source = self.model.data(index, role=ORIGINROLE)
+            
+        if tweet_id:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                0,#serialize=\
+                '',#text=\
+                '', #lattitude =
+                '', #longitude = 
+                tweet_source, #base_url = 
+                'favorite',
+                str(tweet_id), #tweet_id = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()
+
+    @pyqtSlot()
+    def do_tb_follow(self):
+        user_id = None
+        for index in self.view.selectedIndexes():
+            user_id = self.model.data(index, role=USERIDROLE)
+            tweet_source = self.model.data(index, role=ORIGINROLE)
+            
+        if user_id:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                0,#serialize=\
+                '',#text=\
+                '', #lattitude =
+                '', #longitude = 
+                tweet_source, #base_url = 
+                'follow',
+                str(user_id), #tweet_id = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()
+
+    @pyqtSlot()
+    def do_tb_unfollow(self):
+        user_id = None
+        for index in self.view.selectedIndexes():
+            user_id = self.model.data(index, role=USERIDROLE)
+            tweet_source = self.model.data(index, role=ORIGINROLE)
+            
+        if user_id:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                0,#serialize=\
+                '',#text=\
+                '', #lattitude =
+                '', #longitude = 
+                tweet_source, #base_url = 
+                'unfollow',
+                str(user_id), #tweet_id = 
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
@@ -439,7 +636,9 @@ class KhweeteurWin(QMainWindow):
         self.view.refreshCustomDelegate()
                 
     def showAbout(self):
-        pass
+        if not hasattr(self,'aboutWin'):
+            self.aboutWin = KhweeteurAbout(self)
+        self.aboutWin.show()
         
 if __name__ == '__main__':
     from subprocess import Popen
