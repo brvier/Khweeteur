@@ -35,6 +35,8 @@ from list_model import *
 
 import re
 
+from QtMobility.Location import *
+
 pyqtSignal = Signal
 pyqtSlot = Slot
 
@@ -285,22 +287,30 @@ class KhweeteurWin(QMainWindow):
         self.msg_button.clicked.connect(self.show_dms)
         self.list_tb_action.append(self.toolbar.addWidget(self.msg_button))
         
+        #Search Button
+        self.tb_search_menu = QMenu()
+        self.loadSearchMenu()
+        
         #Search (Default)
-        self.search_button = QToolBadgeButton(self)
-        self.search_button.setText("")
-        self.search_button.setIcon(QIcon.fromTheme('general_search'))
-        self.search_button.setCheckable(True)
-        self.search_button.clicked.connect(self.show_search)
-        self.list_tb_action.append(self.toolbar.addWidget(self.search_button))
+        self.tb_search_button = QToolBadgeButton(self)
+        self.tb_search_button.setText("")
+        self.tb_search_button.setIcon(QIcon.fromTheme('general_search'))
+        self.tb_search_button.setMenu(self.tb_search_menu)
+        self.tb_search_button.setPopupMode(QToolButton.InstantPopup)
+        self.tb_search_button.setCheckable(True)
+        self.tb_search_button.clicked.connect(self.show_search)
+        self.list_tb_action.append(self.toolbar.addWidget(self.tb_search_button))
         
         #Reply button (Action)
         self.tb_reply = QAction('Reply', self)
+        self.tb_reply.setShortcut('Ctrl+M')
         self.toolbar.addAction(self.tb_reply)
         self.tb_reply.triggered.connect(self.do_tb_reply)
         self.action_tb_action.append(self.tb_reply)
 
         #Retweet (Action)
         self.tb_retweet = QAction('Retweet', self)
+        self.tb_retweet.setShortcut('Ctrl+P')
         self.toolbar.addAction(self.tb_retweet)
         self.tb_retweet.triggered.connect(self.do_tb_retweet)
         self.action_tb_action.append(self.tb_retweet)
@@ -325,6 +335,7 @@ class KhweeteurWin(QMainWindow):
 
         #Open URLs (Action)
         self.tb_urls = QAction('Open URLs', self)
+        self.tb_urls.setShortcut('Ctrl+O')
         self.toolbar.addAction(self.tb_urls)
         self.tb_urls.triggered.connect(self.do_tb_openurl)
         self.action_tb_action.append(self.tb_urls)
@@ -335,10 +346,26 @@ class KhweeteurWin(QMainWindow):
         self.tb_delete.triggered.connect(self.do_tb_delete)
         self.action_tb_action.append(self.tb_delete)
 
+        # Actions not in toolbar
+
+        self.tb_scrolltop = QAction('Scroll to top', self)
+        self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
+        self.tb_scrolltop.triggered.connect(self.view.scrollToTop)
+        self.addAction(self.tb_scrolltop)
+
+        self.tb_scrollbottom = QAction('Scroll to bottom', self)
+        self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
+        self.tb_scrollbottom.triggered.connect(self.view.scrollToBottom)
+        self.addAction(self.tb_scrollbottom)
+        
         self.switch_tb_default()
         
         self.model.load('HomeTimeline')
         self.setCentralWidget(self.view)
+        
+        QApplication.processEvents()
+        
+        self.geolocDoStart()
 
     def enterEvent(self,event):
         """
@@ -457,8 +484,8 @@ class KhweeteurWin(QMainWindow):
             1,#shorten_url=\
             1,#serialize=\
             self.tb_text.toPlainText(),#text=\
-            '', #lattitude =
-            '', #longitude = 
+            '' if self.geoloc_source==None else self.geoloc_source[0], #lattitude =
+            '' if self.geoloc_source==None else self.geoloc_source[1], #longitude = 
             '' if is_not_reply else self.tb_text_reply_base_url, #base_url
             'post' if is_not_reply else 'reply', #action
             '' if is_not_reply else str(self.tb_text_reply_id),)
@@ -624,7 +651,29 @@ class KhweeteurWin(QMainWindow):
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(370, s.height() + fr.height()
                                   - cr.height() - 1))
+                                  
+    def loadSearchMenu(self):
+        settings = QSettings()
+        searches = []
+        self.tb_search_menu.clear ()
+        self.tb_search_menu.addAction(QIcon.fromTheme('general_add'), 'New', self.newSearchAsk)
 
+        nb_searches = settings.beginReadArray('searches')
+        for index in range(nb_searches):
+            settings.setArrayIndex(index)
+            self.tb_search_menu.addAction(settings.value('terms'))
+        settings.endArray()                        
+
+    def newSearchAsk(self):
+        (search_terms, ok) = QInputDialog.getText(self,
+                self.tr('Search'),
+                self.tr('Enter the search keyword(s) :'))
+        if ok == 1:
+            #FIXME : Create the search
+            self.tb_search_menu.addAction(search_terms)
+            for action in self.tb_search_menu.actions():
+                print action, type(action), dir(action)
+        
     def setupMenu(self):
         """
             Initialization of the maemo menu
@@ -636,6 +685,7 @@ class KhweeteurWin(QMainWindow):
         fileMenu.addAction(self.tr("&Preferences..."), self.showPrefs)
         fileMenu.addAction(self.tr("&About"), self.showAbout)
 
+    @pyqtSlot()        
     def showPrefs(self):
         khtsettings = KhweeteurPref(parent=self)
         khtsettings.save.connect(self.refreshPrefs)
@@ -644,12 +694,49 @@ class KhweeteurWin(QMainWindow):
     @pyqtSlot()
     def refreshPrefs(self):
         self.view.refreshCustomDelegate()
-                
+        self.geolocDoStart()
+        
+    @pyqtSlot()
     def showAbout(self):
         if not hasattr(self,'aboutWin'):
             self.aboutWin = KhweeteurAbout(self)
         self.aboutWin.show()
+
+        settings = QSettings()
         
+    def geolocDoStart(self):
+        settings = QSettings()
+        self.geoloc_source = None
+        if settings.contains('useGPS'):
+            if settings.value('useGPS') == 'true':
+                self.geolocStart()
+        
+    def geolocStart(self):
+        '''Start the GPS with a 50000 refresh_rate'''
+        self.geoloc_coordinates = None
+        if self.geoloc_source is None:
+            self.geoloc_source = \
+                QGeoPositionInfoSource.createDefaultSource(None)
+            if self.geoloc_source is not None:
+                self.geoloc_source.setUpdateInterval(50000)
+                self.geoloc_source.positionUpdated.connect(self.geolocUpdated)
+                self.geoloc_source.startUpdates()
+
+    def geolocStop(self):
+        '''Stop the GPS'''
+        self.geoloc_coordinates = None
+        if self.geoloc_source is not None:
+            self.geoloc_source.stopUpdates()
+            self.geoloc_source = None
+
+    def geolocUpdated(self, update):
+        '''GPS Callback on update'''
+        if update.isValid():
+            self.geoloc_coordinates = (update.coordinate().latitude(),
+                                update.coordinate().longitude())
+        else:
+            print 'GPS Update not valid'
+            
 if __name__ == '__main__':
     from subprocess import Popen
     Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
