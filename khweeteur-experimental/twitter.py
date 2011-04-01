@@ -1505,6 +1505,36 @@ class DirectMessage(object):
                                    doc="The time this direct message was "
                                        "posted, in seconds since the epoch")
 
+  def GetRelativeCreatedAt(self,time_now=time.time()):
+    '''Get a human redable string representing the posting time
+
+    Returns:
+      A human readable string representing the posting time
+    '''
+    fudge = 1.25
+    delta  = long(time_now) - long(self.created_at_in_seconds)
+
+    if delta < (1 * fudge):
+      return 'about a second ago'
+    elif delta < (60 * (1/fudge)):
+      return 'about %d seconds ago' % (delta)
+    elif delta < (60 * fudge):
+      return 'about a minute ago'
+    elif delta < (60 * 60 * (1/fudge)):
+      return 'about %d minutes ago' % (delta / 60)
+    elif delta < (60 * 60 * fudge) or delta / (60 * 60) == 1:
+      return 'about an hour ago'
+    elif delta < (60 * 60 * 24 * (1/fudge)):
+      return 'about %d hours ago' % (delta / (60 * 60))
+    elif delta < (60 * 60 * 24 * fudge) or delta / (60 * 60 * 24) == 1:
+      return 'about a day ago'
+    else:
+      return 'about %d days ago' % (delta / (60 * 60 * 24))
+
+  relative_created_at = property(GetRelativeCreatedAt,
+                                 doc='Get a human readable string representing'
+                                     'the posting time')
+
   def GetSenderId(self):
     '''Get the unique sender id of this direct message.
 

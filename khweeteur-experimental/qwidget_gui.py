@@ -400,7 +400,7 @@ class KhweeteurWin(QMainWindow):
             self.msg_button.setCounter(self.msg_button.getCounter()+count)
             QApplication.processEvents()
         elif msg.startswith('Search:'):
-            self.msg_button.setCounter(self.tb_search_button.getCounter()+count)
+            self.tb_search_button.setCounter(self.tb_search_button.getCounter()+count)
             QApplication.processEvents()
 
         if self.model.call == msg:
