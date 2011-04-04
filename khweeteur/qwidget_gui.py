@@ -48,6 +48,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
     def require_update(self,optional=None):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
+        print 'DEBUG : require_update'
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
             signature='uussssss')
@@ -61,6 +62,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
             action = '',
             tweet_id = '0',            
             ):
+        print 'DEBUG : post_tweet'
         pass
 
 class KhweeteurAbout(QMainWindow):
@@ -380,11 +382,12 @@ class KhweeteurWin(QMainWindow):
         dbus.set_default_main_loop(self.dbus_loop)
         self.bus = dbus.SessionBus()
         #Connect the new tweet signal
-        self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='new_tweets')        
-        self.bus.add_signal_receiver(self.stop_spinning, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='refresh_ended')        
+        self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='new_tweets')
+        self.bus.add_signal_receiver(self.stop_spinning, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
 
     def stop_spinning(self):
+        print 'DEBUG : stop_spinning'
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , False)
         
     def new_tweets(self,count,msg):
@@ -404,12 +407,16 @@ class KhweeteurWin(QMainWindow):
             QApplication.processEvents()
 
         if self.model.call == msg:
+            print 'DEBUG : new_tweets model.load'
             self.model.load(msg)
+            print 'DEBUG : new_tweet end model.load'
+
+        print 'DEBUG : end new_tweet'
 
     @pyqtSlot()
     def show_search(self):
         terms = self.sender().text()
-        print 'show_search %s' % (terms,)
+        self.tb_search_button.setCounter(0)
         self.home_button.setChecked(False)        
         self.msg_button.setChecked(False)
         self.tb_search_button.setChecked(True)

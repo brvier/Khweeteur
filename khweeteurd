@@ -1,0 +1,15 @@
+start on stopped rcS
+
+console output
+
+respawn
+
+pre-start script
+    if [ ! -d /var/run/khweeteurd ] ; then
+        mkdir /var/run/khweeteurd
+        chmod 777 /var/run/khweeteurd
+    fi
+end script
+
+exec /usr/bin/khweeteur -D
+

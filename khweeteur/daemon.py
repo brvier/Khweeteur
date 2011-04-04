@@ -608,7 +608,7 @@ class KhweeteurDaemon(Daemon):
                          
 if __name__ == "__main__":
     install_excepthook(__version__)
-    daemon = KhweeteurDaemon('/tmp/khweeteur.pid')
+    daemon = KhweeteurDaemon('/var/run/khweeteurd/khweeteurd.pid')
     if len(sys.argv) == 2:
             if 'start' == sys.argv[1]:
                     daemon.start()
