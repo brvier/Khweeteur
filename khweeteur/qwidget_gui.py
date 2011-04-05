@@ -366,7 +366,7 @@ class KhweeteurWin(QMainWindow):
         self.setWindowTitle('Khweeteur:Home')
         self.setCentralWidget(self.view)
         
-        QApplication.processEvents()
+#        QApplication.processEvents()
         
         self.geolocDoStart()
 
@@ -396,21 +396,23 @@ class KhweeteurWin(QMainWindow):
         print count,msg
         if msg == 'HomeTimeline':
             self.home_button.setCounter(self.home_button.getCounter()+count)
-#            QApplication.processEvents()
+            self.home_button.update()
         elif msg == 'Mentions':
             self.mention_button.setCounter(self.mention_button.getCounter()+count)
-#            QApplication.processEvents()
+            self.mention_button.update()
         elif msg == 'DMs':
             self.msg_button.setCounter(self.msg_button.getCounter()+count)
-#            QApplication.processEvents()
+            self.msg_button.update()
         elif msg.startswith('Search:'):
             self.tb_search_button.setCounter(self.tb_search_button.getCounter()+count)
-#            QApplication.processEvents()
+            self.tb_search_button.update()
 
         if self.model.call == msg:
             print 'DEBUG : new_tweets model.load'
             self.model.load(msg)
             print 'DEBUG : new_tweet end model.load'
+
+#        QApplication.processEvents()
 
         print 'DEBUG : end new_tweet'
 
