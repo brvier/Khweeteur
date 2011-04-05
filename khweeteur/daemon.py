@@ -303,7 +303,7 @@ class KhweeteurDaemon(Daemon):
                     'tweet_id': tweet_id,}
             logging.debug('%s' % (post.__repr__(),))
             pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
-        self.do_posts()
+#        self.do_posts() #Else we loop when action create a post
 
     def get_api(self,account):
         api = \
@@ -346,11 +346,11 @@ class KhweeteurDaemon(Daemon):
                                     text = text.replace(url, short_url)
                                 except:
                                     pass
-                    if post['lattitude'] == '':
+                    if not post['lattitude']:
                         post['lattitude'] = None
                     else:
                         post['lattitude'] = int(post['lattitude'])
-                    if post['longitude'] == '':
+                    if not post['longitude']:
                         post['longitude'] = None                        
                     else:
                         post['longitude'] = int(post['longitude'])
@@ -415,18 +415,48 @@ class KhweeteurDaemon(Daemon):
                                 api = self.get_api(account)
                                 api.DestroyFriendship(int(post['tweet_id']))
                                 logging.debug('Follow %s' % (post['tweet_id'],))                                
+                        elif post['action'] == 'twitpic':
+                            if account['base_url'] == SUPPORTED_ACCOUNTS[0]['base_url']:
+                                api = self.get_api(account)
+                                import twitpic
+                                twitpic_client = twitpic.TwitPicOAuthClient(
+                                    consumer_key=api._username,
+                                    consumer_secret=api._password,
+                                    access_token=api._oauth_token.to_string(),
+                                    service_key='f9b7357e0dc5473df5f141145e4dceb0')
+                                params = {}
+                                params['media'] = 'file://' + post['base_url']
+                                params['message'] = post['text']
+                                response = twitpic_client.create('upload', params)
+                                if 'url' in response:
+                                    self.post_tweet(post['serialize'],
+                                        post['shorten_url'],
+                                        unicode(response['url'])+u':'+post['text'],
+                                        post['lattitude'],
+                                        post['longitude'],
+                                        '',
+                                        'tweet',
+                                        '')                                        
+                                else:
+                                    raise StandardError('No twitpic url')
+                            
                         else:
                             logging.error('Unknow action : %s' % post['action'])
 
                     os.remove(item)
 
             except twitter.TwitterError, err:
-                if err.message == 'Status is a duplicate':
+                if err.message == 'Status is a duplicate.':
                     os.remove(item)
                 else:
                     logging.error('Do_posts : %s' % (err.message,))                           
             except StandardError, err:
                 logging.error('Do_posts : %s' % (str(err),))
+                import traceback
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
+                                          exc_traceback)))
+
                 #Emitting the error will block the other tweet post
                 #raise #can t post, we will keep the file to do it later                                   
             except:
@@ -461,7 +491,7 @@ class KhweeteurDaemon(Daemon):
                 response = twitpic_client.create('upload', params)
 
                 if 'url' in response:
-                    self.post(text=url)                
+                    self.post(text=url + 'message')
 
         settings.endArray()                                    
 

@@ -363,6 +363,7 @@ class KhweeteurWin(QMainWindow):
         self.switch_tb_default()
         
         self.model.load('HomeTimeline')
+        self.setWindowTitle('Khweeteur:Home')
         self.setCentralWidget(self.view)
         
         QApplication.processEvents()
@@ -423,6 +424,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Search:'+terms)
+        self.setWindowTitle('Khweeteur:'+terms)
         
     @pyqtSlot()
     def show_hometimeline(self):
@@ -433,6 +435,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('HomeTimeline')
+        self.setWindowTitle('Khweeteur:Home')
 
     @pyqtSlot()
     def switch_tb_default(self):
@@ -482,8 +485,38 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def do_tb_twitpic(self):
-        pass
-        
+        text = self.tb_text.toPlainText()
+
+        if not text:
+            QMessageBox.warning(self,
+               "Khweeteur - Twitpic",
+               "Please enter a text before posting a picture.",
+               QMessageBox.Close                   
+               )
+            return
+
+        filename =  QFileDialog.getOpenFileName(self,
+                            "Khweeteur",'/home/user/MyDocs')
+
+        #PySide work arround bug #625
+        if type(filename) == tuple:
+            filename = filename[0
+            ]
+
+        if filename:
+            self.dbus_handler.post_tweet( \
+                0,#shorten_url=\
+                1,#serialize=\
+                text,#text=\
+                '' if self.geoloc_source==None else self.geoloc_source[0], #lattitude =
+                '' if self.geoloc_source==None else self.geoloc_source[1], #longitude = 
+                filename, #base_url = 
+                'twitpic',
+                '', #tweet_id = 
+                )
+            self.switch_tb_default()
+            self.dbus_handler.require_update()                
+                    
     @pyqtSlot()
     def do_tb_openurl(self):
         for index in self.view.selectedIndexes():
@@ -492,6 +525,7 @@ class KhweeteurWin(QMainWindow):
                 urls = re.findall("(?P<url>https?://[^\s]+)", status)
                 for url in urls:                  
                     QDesktopServices.openUrl(QUrl(url))
+                self.switch_tb_default()
             except:
                 raise
         
@@ -645,6 +679,7 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Mentions')
+        self.setWindowTitle('Khweeteur:Mentions')
 
     @pyqtSlot()
     def show_dms(self):
@@ -655,6 +690,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('DMs')
+        self.setWindowTitle('Khweeteur:DMs')
         
     @pyqtSlot()
     def countCharsAndResize(self):
