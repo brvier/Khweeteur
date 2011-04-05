@@ -396,16 +396,16 @@ class KhweeteurWin(QMainWindow):
         print count,msg
         if msg == 'HomeTimeline':
             self.home_button.setCounter(self.home_button.getCounter()+count)
-            QApplication.processEvents()
+#            QApplication.processEvents()
         elif msg == 'Mentions':
             self.mention_button.setCounter(self.mention_button.getCounter()+count)
-            QApplication.processEvents()
+#            QApplication.processEvents()
         elif msg == 'DMs':
             self.msg_button.setCounter(self.msg_button.getCounter()+count)
-            QApplication.processEvents()
+#            QApplication.processEvents()
         elif msg.startswith('Search:'):
             self.tb_search_button.setCounter(self.tb_search_button.getCounter()+count)
-            QApplication.processEvents()
+#            QApplication.processEvents()
 
         if self.model.call == msg:
             print 'DEBUG : new_tweets model.load'

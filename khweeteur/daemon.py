@@ -431,7 +431,7 @@ class KhweeteurDaemon(Daemon):
                                 if 'url' in response:
                                     self.post_tweet(post['serialize'],
                                         post['shorten_url'],
-                                        unicode(response['url'])+u':'+post['text'],
+                                        unicode(response['url'])+u' : '+post['text'],
                                         post['lattitude'],
                                         post['longitude'],
                                         '',
