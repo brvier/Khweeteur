@@ -1,20 +1,17 @@
 description "Khweeteur Daemon"
 author "Benoit HERVIER <khertan@khertan.net>"
 
-start on started dbus
+console none
 
+start on started hildon-desktop
 stop on starting shutdown
-
-console output
-
-respawn
-
+service                  
+               
 pre-start script
     if [ ! -d /var/run/khweeteurd ] ; then
-        mkdir /var/run/khweeteurd
-        chmod 777 /var/run/khweeteurd
-    fi
-end script
-
-exec su -c "/usr/bin/khweeteur -D" user
-
+        mkdir /var/run/khweeteurd         
+        chmod 777 /var/run/khweeteurd     
+    fi                                    
+end script                                
+                                     
+exec su user -c "/usr/bin/khweeteur -D"
