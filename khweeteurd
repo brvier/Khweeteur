@@ -1,4 +1,9 @@
-start on stopped rcS
+description "Khweeteur Daemon"
+author "Benoit HERVIER <khertan@khertan.net>"
+
+start on started dbus
+
+stop on starting shutdown
 
 console output
 
@@ -11,5 +16,5 @@ pre-start script
     fi
 end script
 
-exec /usr/bin/khweeteur -D
+exec su -c "/usr/bin/khweeteur -D" user
 
