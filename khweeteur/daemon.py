@@ -462,39 +462,6 @@ class KhweeteurDaemon(Daemon):
             except:
                 logging.error('Do_posts : Unknow error')
                 
-    def post_twitpic(self, file_path, text):
-        settings = QSettings("Khertan Software", "Khweeteur")
-
-        import twitpic
-        import oauth2 as oauth
-        import simplejson
-
-        nb_accounts = settings.beginReadArray('accounts')
-        for index in range(nb_accounts):
-            settings.setArrayIndex(index)
-            if (settings.value('base_url') == SUPPORTED_ACCOUNTS[0]['base_url']) \
-              and (settings.value('use_for_tweet') == Qt.CheckState):
-                api = twitter.Api(username=settings.value('consumer_key'),
-                           password=settings.value('consumer_secret'),
-                           access_token_key=settings.value('token_key'),
-                           access_token_secret=settings.value('token_secret'),
-                           base_url=SUPPORTED_ACCOUNTS[0]['base_url'])
-                twitpic_client = twitpic.TwitPicOAuthClient(
-                    consumer_key=settings.value('consumer_key'),
-                    consumer_secret=settings.value('consumer_secret'),
-                    access_token=api._oauth_token.to_string(),
-                    service_key='f9b7357e0dc5473df5f141145e4dceb0')
-
-                params = {}
-                params['media'] = 'file://' + file_path
-                params['message'] = text
-                response = twitpic_client.create('upload', params)
-
-                if 'url' in response:
-                    self.post(text=url + 'message')
-
-        settings.endArray()                                    
-
     def update(self, option=None):
         settings = QSettings("Khertan Software", "Khweeteur")
         logging.debug('Setting loaded')
