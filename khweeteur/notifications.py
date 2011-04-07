@@ -47,11 +47,10 @@ class KhweeteurNotification(QObject):
     def info(self, message):
         '''Display an information banner'''
         if not noDBUS:
-            if isMAEMO:
-                try:
-                    self.iface.SystemNoteInfoprint('Khweeteur : '+message)
-                except:
-                    pass
+            try:
+                self.iface.SystemNoteInfoprint('Khweeteur : '+message)
+            except:
+                pass
         else:
             if pynotify.init("Khweeteur"):
                 n = pynotify.Notification(message, message)
