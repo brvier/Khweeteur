@@ -60,10 +60,10 @@ class StatusWrapper(QObject):
     def changed(self):
         pass
 
-    def __cmp__(obj1,obj2):
-        if obj1._status.created_at == obj2._status.created_at:
+    def __cmp__(self,obj2):
+        if self._status.created_at == obj2._status.created_at:
             return 0
-        if obj1._status.created_at > obj2._status.created_at:
+        if self._status.created_at > obj2._status.created_at:
             return -1
         else:
             return 1
