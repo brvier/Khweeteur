@@ -48,7 +48,6 @@ class KhweeteurDBusHandler(dbus.service.Object):
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
     def require_update(self,optional=None):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
-        print 'DEBUG : require_update'
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
             signature='uussssss')
@@ -62,7 +61,6 @@ class KhweeteurDBusHandler(dbus.service.Object):
             action = '',
             tweet_id = '0',            
             ):
-        print 'DEBUG : post_tweet'
         pass
 
 class KhweeteurAbout(QMainWindow):
@@ -374,7 +372,6 @@ class KhweeteurWin(QMainWindow):
         """
             Redefine the enter event to refresh recent file list
         """
-        print 'EnterEvent' 
         self.model.refreshTimestamp()
 
     def listen_dbus(self):
@@ -388,12 +385,9 @@ class KhweeteurWin(QMainWindow):
         self.dbus_handler = KhweeteurDBusHandler(self)
 
     def stop_spinning(self):
-        print 'DEBUG : stop_spinning'
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , False)
         
     def new_tweets(self,count,msg):
-        print 'New Tweets dbus signal received'
-        print count,msg
         if msg == 'HomeTimeline':
             self.home_button.setCounter(self.home_button.getCounter()+count)
             self.home_button.update()
@@ -408,13 +402,10 @@ class KhweeteurWin(QMainWindow):
             self.tb_search_button.update()
 
         if self.model.call == msg:
-            print 'DEBUG : new_tweets model.load'
             self.model.load(msg)
-            print 'DEBUG : new_tweet end model.load'
 
 #        QApplication.processEvents()
 
-        print 'DEBUG : end new_tweet'
 
     @pyqtSlot()
     def show_search(self):
@@ -426,6 +417,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Search:'+terms)
+        self.delete_search_action.setVisible(True)
         self.setWindowTitle('Khweeteur:'+terms)
         
     @pyqtSlot()
@@ -438,10 +430,10 @@ class KhweeteurWin(QMainWindow):
         self.view.scrollToTop()
         self.model.load('HomeTimeline')
         self.setWindowTitle('Khweeteur:Home')
+        self.delete_search_action.setVisible(False)
 
     @pyqtSlot()
     def switch_tb_default(self):
-        print 'Switch tb default'
         self.tb_text.setPlainText('')
         self.tb_text_reply_id = 0
         self.tb_text_reply_base_url = ''
@@ -450,7 +442,6 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def switch_tb_edit(self):
-        print 'Switch tb edit'
         self.toolbar_mode = 1
         self.switch_tb()
 
@@ -472,7 +463,6 @@ class KhweeteurWin(QMainWindow):
  
     def switch_tb(self):
         mode = self.toolbar_mode
-        print mode,type(mode)
         for item in self.list_tb_action:
             item.setVisible(mode == 0)
             self.view.setFocus()            
@@ -565,7 +555,6 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             tweet_id = self.model.data(index, role=IDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
-            print 'protected ?',self.model.data(index, role=PROTECTEDROLE),type(self.model.data(index, role=PROTECTEDROLE))
             if self.model.data(index, role=PROTECTEDROLE):
                 screenname = self.model.data(index, role=SCREENNAMEROLE)
                 QMessageBox.warning(self,
@@ -682,6 +671,7 @@ class KhweeteurWin(QMainWindow):
         self.view.scrollToTop()
         self.model.load('Mentions')
         self.setWindowTitle('Khweeteur:Mentions')
+        self.delete_search_action.setVisible(False)
 
     @pyqtSlot()
     def show_dms(self):
@@ -693,6 +683,7 @@ class KhweeteurWin(QMainWindow):
         self.view.scrollToTop()
         self.model.load('DMs')
         self.setWindowTitle('Khweeteur:DMs')
+        self.delete_search_action.setVisible(False)
         
     @pyqtSlot()
     def countCharsAndResize(self):
@@ -722,6 +713,33 @@ class KhweeteurWin(QMainWindow):
             self.tb_search_menu.addAction(settings.value('terms'), self.show_search)
         settings.endArray()                        
 
+    @pyqtSlot()
+    def do_delete_search_action(self):
+        try:
+            terms = self.model.call.split(':')[1]
+            for index,action in enumerate(self.tb_search_menu.actions()):
+                if action.text() == terms:
+                    self.tb_search_menu.removeAction(action)
+            self.saveSearchMenuInPrefs()
+            self.loadSearchMenu()
+            self.show_hometimeline()
+            
+        except Exception, err:
+            print err #not a search
+        
+    def saveSearchMenuInPrefs(self):
+        settings = QSettings()
+        nb_searches = settings.beginWriteArray('searches')
+        for index,action in enumerate(self.tb_search_menu.actions()):
+            #pass the first which are the new option
+            if index==0:
+                continue
+            settings.setArrayIndex(index-1)
+            settings.setValue('terms',action.text())
+        settings.endArray()   
+        settings.sync()
+            
+    @pyqtSlot()        
     def newSearchAsk(self):
         (search_terms, ok) = QInputDialog.getText(self,
                 self.tr('Search'),
@@ -729,16 +747,7 @@ class KhweeteurWin(QMainWindow):
         if ok == 1:
             #FIXME : Create the search
             self.tb_search_menu.addAction(search_terms, self.show_search)
-            settings = QSettings()
-            nb_searches = settings.beginWriteArray('searches')
-            for index,action in enumerate(self.tb_search_menu.actions()):
-                #pass the first which are the new option
-                if index==0:
-                    continue
-                settings.setArrayIndex(index-1)
-                settings.setValue('terms',action.text())
-            settings.endArray()   
-            settings.sync()
+            self.saveSearchMenuInPrefs()
             self.dbus_handler.require_update()
         
     def setupMenu(self):
@@ -748,9 +757,12 @@ class KhweeteurWin(QMainWindow):
         
         fileMenu =  QMenu(self.tr("&Menu"), self)
         self.menuBar().addMenu(fileMenu)
-
+        self.delete_search_action = QAction(self.tr("&Delete Search"),self)
+        self.delete_search_action.triggered.connect(self.do_delete_search_action)
         fileMenu.addAction(self.tr("&Preferences..."), self.showPrefs)
         fileMenu.addAction(self.tr("&About"), self.showAbout)
+        fileMenu.addAction(self.delete_search_action)
+        self.delete_search_action.setVisible(False)
 
     @pyqtSlot()        
     def showPrefs(self):
@@ -809,3 +821,8 @@ if __name__ == '__main__':
     Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
     app = Khweeteur()    
     app.exec_()
+    settings = QSettings("Khertan Software", "Khweeteur")
+    if settings.contains('useDaemon'):
+        if settings.value('useDaemon')=='false':
+            Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'stop'])
+            

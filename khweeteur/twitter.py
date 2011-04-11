@@ -2769,6 +2769,49 @@ class Api(object):
     self._CheckForTwitterError(data)
     return [User.NewFromJsonDict(x) for x in data]
 
+  def UsersLookup(self, user_id=None, screen_name=None, users=None):
+    '''Fetch extended information for the specified users.
+
+    Users may be specified either as lists of either user_ids,
+    screen_names, or twitter.User objects. The list of users that
+    are queried is the union of all specified parameters.
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user_id:
+        A list of user_ids to retrieve extended information.
+        [Optional]
+      screen_name:
+        A list of screen_names to retrieve extended information.
+        [Optional]
+      users:
+        A list of twitter.User objects to retrieve extended information.
+        [Optional]
+
+    Returns:
+      A list of twitter.User objects for the requested users
+    '''
+
+    if not self._oauth_consumer:
+      raise TwitterError("The twitter.Api instance must be authenticated.")
+    if not user_id and not screen_name and not users:
+      raise TwitterError("Specify at least on of user_id, screen_name, or users.")
+    url = '%s/users/lookup.json' % self.base_url
+    parameters = {}
+    uids = list()
+    if user_id:
+      uids.extend(user_id)
+    if users:
+      uids.extend([u.id for u in users])
+    if len(uids):
+      parameters['user_id'] = ','.join(["%s" % u for u in uids])
+    if screen_name:
+      parameters['screen_name'] = ','.join(screen_name)
+    json = self._FetchUrl(url, parameters=parameters)
+    data = self._ParseAndCheckTwitter(json)
+    return [User.NewFromJsonDict(u) for u in data]
+
   def GetUser(self, user):
     '''Returns a single user.
 

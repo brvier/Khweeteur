@@ -187,6 +187,17 @@ class KhweeteurRefreshWorker(Thread):
                 logging.debug('%s running' % self.call)
                 statuses = self.api.GetSearch(since_id=since, term=self.call.split(':')[1])
                 logging.debug('%s finished' % self.call)
+            elif 'RetrieveLists' in self.call:
+                logging.debug('%s running' % self.call)
+                #statuses = self.api.GetSearch(since_id=since, term=self.call.split(':')[1])
+                lists = self.api.GetSubscriptions(user = self.api.VerifyCredentials().id)
+                settings.beginWriteArray('lists')
+                for index,list_instance in enumerate(lists):
+                    settings.setArrayIndex(index)
+                    settings.setValue('id',list_instance.id)
+                    settings.setValue('name',list_instance.name)
+                settings.endArray()
+                logging.debug('%s finished' % self.call)
             else:   
                 logging.error('Unknow call : %s' % (self.call,))
                 

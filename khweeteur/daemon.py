@@ -134,6 +134,12 @@ class Daemon:
     def delpid(self):
         os.remove(self.pidfile)
 
+    def startfromprefs(self):
+        settings = QSettings("Khertan Software", "Khweeteur")
+        if settings.contains('useDaemon'):
+            if settings.value('useDaemon') == 'true':
+                self.start()
+                
     def start(self):
         """
         Start the daemon
@@ -579,6 +585,18 @@ class KhweeteurDaemon(Daemon):
                     except Exception, err:
                         logging.error('Search %s: %s' % (terms,str(err)))
 
+                #Start retrieving the list
+                try:
+                        self.threads.append(KhweeteurRefreshWorker(\
+                                    settings.value('base_url'),
+                                    settings.value('consumer_key'),
+                                    settings.value('consumer_secret'),
+                                    settings.value('token_key'),
+                                    settings.value('token_secret'),
+                                    'RetrieveLists', self.dbus_handler))
+                except Exception, err:
+                    logging.error('Retrieving List error %s' % (str(err),))
+
                 try:                               
                     for idx, thread in enumerate(self.threads):
                         logging.debug('Try to run Thread : %s' % str(thread))
@@ -589,6 +607,7 @@ class KhweeteurDaemon(Daemon):
                 except:
                     logging.error('Running Thread error')
 
+            
             settings.endArray()
 
             while any([thread.isAlive() for thread in self.threads]):
@@ -607,6 +626,8 @@ if __name__ == "__main__":
     install_excepthook(__version__)
     daemon = KhweeteurDaemon('/var/run/khweeteurd/khweeteurd.pid')
     if len(sys.argv) == 2:
+            if 'startfromprefs' == sys.argv[1]:
+                    daemon.startfromprefs()
             if 'start' == sys.argv[1]:
                     daemon.start()
             elif 'stop' == sys.argv[1]:

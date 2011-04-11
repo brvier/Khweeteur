@@ -90,7 +90,7 @@ fi
 rm -rf /usr/lib/python2.5/site-packages/khweeteur/*.pyc""",
       'copyright':'gpl'},
       'bdist_rpm':{
-      'requires':'python, python-setuptools, pyside-mobility, python-pyside,python-qt4-core, python-qt4-maemo5, python-oauth2, python-simplejson, python-conic, python-imaging',
+      'requires':'python, python-setuptools, pyside-mobility-location, python-pyside.qtcore, python-pyside.qtgui, python-pyside.qtmaemo5, python-pyside.qtwebkit, pyside-mobility-bearer, python-oauth2, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'icon':'khweeteur.png',
       'group':'Network',}}
