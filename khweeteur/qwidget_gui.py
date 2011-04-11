@@ -372,6 +372,21 @@ class KhweeteurWin(QMainWindow):
         self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
         self.tb_scrollbottom.triggered.connect(self.view.scrollToBottom)
         self.addAction(self.tb_scrollbottom)
+
+        self.tb_zoomin = QAction('ZoomIn', self)
+        self.tb_zoomin.setShortcut(Qt.CTRL + Qt.Key_Left)
+        self.tb_zoomin.triggered.connect(self.view.do_zoom_in)
+        self.addAction(self.tb_zoomin)
+
+        self.tb_zoomout = QAction('ZoomOut', self)
+        self.tb_zoomout.setShortcut(Qt.CTRL + Qt.Key_Right)
+        self.tb_zoomout.triggered.connect(self.view.do_zoom_out)
+        self.addAction(self.tb_zoomout)
+        
+        self.tb_copy = QAction('Copy', self)
+        self.tb_copy.setShortcut(Qt.CTRL + Qt.Key_C)
+        self.tb_copy.triggered.connect(self.do_tb_copy)
+        self.addAction(self.tb_copy)
         
         self.switch_tb_default()
         
@@ -383,6 +398,10 @@ class KhweeteurWin(QMainWindow):
         
         self.geolocDoStart()
 
+    @pyqtSlot()
+    def do_tb_copy(self):
+        pass
+                
     def enterEvent(self,event):
         """
             Redefine the enter event to refresh recent file list

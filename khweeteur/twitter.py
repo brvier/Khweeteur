@@ -2379,7 +2379,7 @@ class Api(object):
     self._CheckForTwitterError(data)
     return Status.NewFromJsonDict(data)
 
-  def PostSerializedUpdates(self, status, continuation=None, **kwargs):
+  def PostSerializedUpdates(self, status, continuation=None, in_reply_to_status_id=None, latitude=None, longitude=None, **kwargs):
     '''Post one or more twitter status messages from the authenticated user.
 
     Unlike api.PostUpdate, this method will post multiple status updates
@@ -2422,6 +2422,9 @@ class Api(object):
                    + str(counter) \
                    + '/' \
                    + str(tot), \
+                   in_reply_to_status_id=in_reply_to_status_id, \
+                   longitude = longitude, \
+                   latitude = latitude, \
                    **kwargs)
           results.append(r)
           counter = counter + 1
@@ -2636,6 +2639,8 @@ class Api(object):
     '''
     url = '%s/%s/lists/%s/statuses.json' % (self.base_url, user, id)
 
+    parameters = {}
+    
     if since_id:
       parameters['since_id'] = since_id
 

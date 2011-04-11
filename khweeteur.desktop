@@ -3,5 +3,5 @@ Encoding=UTF-8
 Version=1.0
 Type=Application
 Name=Khweeteur
-Exec=/usr/bin/khweeteur_launch.py
+Exec=/usr/bin/khweeteur
 Icon=khweeteur

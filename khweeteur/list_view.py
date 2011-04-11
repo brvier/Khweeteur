@@ -36,40 +36,16 @@ from PySide.QtCore import Qt, \
 
 from settings import KhweeteurPref
 
-class WhiteCustomDelegate(QStyledItemDelegate):
-
-    '''Delegate to do custom draw of the items'''
-
-    def __init__(self, parent):
-        '''Initialization'''
-
-        QStyledItemDelegate.__init__(self, parent)
-
-        self.bg_color = QColor('#FFFFFF')
-        self.bg_alternate_color = QColor('#dddddd')
-        self.user_color = QColor('#7AB4F5')
-        self.time_color = QColor('#7AB4F5')
-        self.replyto_color = QColor('#7AB4F5')
-
-        self.text_color = QColor('#000000')
-        self.separator_color = QColor('#000000')
-
-
 class DefaultCustomDelegate(QStyledItemDelegate):
 
     '''Delegate to do custom draw of the items'''
 
     memoized_size = {}
-    memoized_width = {}
 
     def __init__(self, parent):
         '''Initialization'''
 
         QStyledItemDelegate.__init__(self, parent)
-        self.show_avatar = True
-        self.show_screenname = True
-        self.show_timestamp = True
-        self.show_replyto = True
 
         self.bg_color = QColor('#000000')
         self.bg_alternate_color = QColor('#333333')
@@ -79,7 +55,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         self.text_color = QColor('#FFFFFF')
         self.separator_color = QColor('#000000')
-
+        self.fsize = 1.0
+        
         self.fm = None
         self.minifm = None
 
@@ -89,6 +66,13 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.reply_icon = QPixmap(os.path.join(os.path.dirname(__file__),'icons','reply.png'))
         self.retweet_icon = QPixmap(os.path.join(os.path.dirname(__file__),'icons','retweet.png'))
         self.geoloc_icon = QPixmap(os.path.join(os.path.dirname(__file__),'icons','geoloc.png'))
+
+    def doZoomRefresh(self):
+        self.memoized_size.clear()
+        self.fm = None
+        self.minifm = None
+        self.normFont = None
+        self.miniFont = None
 
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
@@ -104,11 +88,13 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             # One time is enought sizeHint need to be fast
 
             if not self.fm:
-                self.fm = QFontMetrics(option.font)
                 self.normFont = QFont(option.font)
+                self.normFont.setPointSizeF(option.font.pointSizeF() * self.fsize)
+                self.fm = QFontMetrics(self.normFont)
+
             if not self.minifm:
                 self.miniFont = QFont(option.font)
-                self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
+                self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80 * self.fsize)
                 self.minifm = QFontMetrics(self.miniFont)
 
             height = self.fm.boundingRect(
@@ -142,7 +128,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                     | int(Qt.TextWordWrap),
                 'LpqAT',
                 ).height()
-            height += 15 #Spacer
+            height += 10 #Spacer
 
             if height < 70:
                 height = 70
@@ -164,11 +150,14 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             return
 
         #Init Font : One time is enough
-        if not self.normFont:
+        if not self.fm:
             self.normFont = QFont(option.font)
-        if not self.miniFont:
+            self.normFont.setPointSizeF(option.font.pointSizeF() * self.fsize)
+
+        if not self.minifm:
             self.miniFont = QFont(option.font)
-            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80)
+            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.80 * self.fsize)
+
 
         #Query data
         model = index.model()
@@ -198,7 +187,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
 
         # Draw screenname        
-#        screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
         painter.setFont(self.miniFont)
         painter.setPen(self.user_color)
         nrect = painter.drawText(option.rect.adjusted(70, 5, -4, -9),
@@ -245,32 +233,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             painter.drawText(option.rect.adjusted(70, nrect.height() + new_rect.height() + 5, -4, -9),
                 int(Qt.AlignTop) | int(Qt.AlignLeft)
                 | int(Qt.TextWordWrap), reply_text)
-#            if is_me:
-#                new_rect = \
-#                    painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
-#                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-#                        | int(Qt.TextWordWrap), reply)
-#            else:
-#                new_rect = \
-#                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-#                        * 70, new_rect.height() + 5, -4, 0),
-#                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-#                        | int(Qt.TextWordWrap), reply)
-#        elif reply_name:
-#            reply = 'In reply to ' + reply_name
-#            painter.setFont(self.miniFont)
-#            painter.setPen(self.replyto_color)
-#            if is_me:
-#                new_rect = \
-#                    painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
-#                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-#                        | int(Qt.TextWordWrap), reply)
-#            else:
-#                new_rect = \
-#                    painter.drawText(option.rect.adjusted(int(self.show_avatar)
-#                        * 70, new_rect.height() + 5, -4, 0),
-#                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-#                        | int(Qt.TextWordWrap), reply)
+
 
         # Draw line separator
         painter.setPen(self.separator_color)
@@ -280,267 +243,33 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class MiniDefaultCustomDelegate(QStyledItemDelegate):
+class WhiteCustomDelegate(DefaultCustomDelegate):
 
     '''Delegate to do custom draw of the items'''
-
-    memoized_size = {}
-    memoized_width = {}
 
     def __init__(self, parent):
         '''Initialization'''
 
-        QStyledItemDelegate.__init__(self, parent)
-        self.show_avatar = True
-        self.show_screenname = True
-        self.show_timestamp = True
-        self.show_replyto = True
+        DefaultCustomDelegate.__init__(self, parent)
 
-        self.bg_color = QColor('#000000')
-        self.bg_alternate_color = QColor('#333333')
+        self.bg_color = QColor('#FFFFFF')
+        self.bg_alternate_color = QColor('#dddddd')
         self.user_color = QColor('#7AB4F5')
         self.time_color = QColor('#7AB4F5')
         self.replyto_color = QColor('#7AB4F5')
 
-        self.text_color = QColor('#FFFFFF')
+        self.text_color = QColor('#000000')
         self.separator_color = QColor('#000000')
+        self.fsize = 1.0
+        
+class MiniDefaultCustomDelegate(DefaultCustomDelegate):
 
-        self.fm = None
-        self.minifm = None
+    '''Delegate to do custom draw of the items'''
 
-        self.normFont = None
-        self.miniFont = None
-
-    def sizeHint(self, option, index):
-        '''Custom size calculation of our items'''
-
-        uid = str(index.data(role=IDROLE)) + 'x' + \
-            str(option.rect.width())
-        try:
-            return self.memoized_size[uid]
-        except:
-            size = QStyledItemDelegate.sizeHint(self, option, index)
-            tweet = index.data(Qt.DisplayRole)
-
-            # One time is enought sizeHint need to be fast
-
-            if not self.fm:
-                self.font = QFont(option.font)
-                self.font.setPointSizeF(option.font.pointSizeF()
-                                    * 0.80)
-                self.fm = QFontMetrics(self.font)
-                                    
-            height = self.fm.boundingRect(
-                0,
-                0,
-                option.rect.width() - 75,
-                800,
-                int(Qt.AlignTop) | int(Qt.AlignLeft)
-                    | int(Qt.TextWordWrap),
-                tweet,
-                ).height() + 40
-
-            if self.show_replyto:
-                reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
-                reply_text = index.data(role=REPLYTEXTROLE)
-                if reply_name and reply_text:
-
-                    # One time is enought sizeHint need to be fast
-
-                    reply = 'In reply to @' + reply_name + ' : ' \
-                        + reply_text
-                    if not self.minifm:
-                        if not self.miniFont:
-                            self.miniFont = QFont(option.font)
-                            self.miniFont.setPointSizeF(option.font.pointSizeF()
-                                    * 0.60)
-                        self.minifm = QFontMetrics(self.miniFont)
-                    height += self.minifm.boundingRect(
-                        0,
-                        0,
-                        option.rect.width() - 75,
-                        800,
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap),
-                        reply,
-                        ).height()
-                elif reply_name:
-                    reply = 'In reply to @' + reply_name
-                    if not self.minifm:
-                        if not self.miniFont:
-                            self.miniFont = QFont(option.font)
-                            self.miniFont.setPointSizeF(option.font.pointSizeF()
-                                    * 0.60)
-                        self.minifm = QFontMetrics(self.miniFont)
-                    height += self.minifm.boundingRect(
-                        0,
-                        0,
-                        option.rect.width() - 75,
-                        800,
-                        int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap),
-                        reply,
-                        ).height()
-
-            if height < 70:
-                height = 70
-
-            self.memoized_size[uid] = QSize(size.width(), height)
-            return self.memoized_size[uid]
-
-    def paint(
-        self,
-        painter,
-        option,
-        index,
-        ):
-        '''Paint our tweet'''
-
-#        if not USE_PYSIDE:
-        (x1, y1, x2, y2) = option.rect.getCoords()
-#        else:
-            #Work arround Pyside bug #544
-#            y1 = option.rect.y()
-#            y2 = y1 + option.rect.height()
-#            x1 = option.rect.x()
-#            x2 = x1 + option.rect.width()
-#
-        # Ugly hack ?
-        if y1 < 0 and y2 < 0:
-            return
-
-        if not self.fm:
-            self.font = QFont(option.font)
-            self.font.setPointSizeF(option.font.pointSizeF()
-                                * 0.80)
-            self.fm = QFontMetrics(self.font)
-
-        model = index.model()
-        tweet = index.data(Qt.DisplayRole)
-        is_me = index.data(ISMEROLE)
-
-        # Instantiate font only one time !
-
-        if not self.normFont:
-            self.normFont = QFont(self.font)
-            self.miniFont = QFont(option.font)
-            self.miniFont.setPointSizeF(option.font.pointSizeF() * 0.60)
-
-        painter.save()
-
-        # Draw alternate ?
-
-        if index.row() % 2 == 0:
-            painter.fillRect(option.rect, self.bg_color)
-        else:
-            painter.fillRect(option.rect, self.bg_alternate_color)
-
-        # highlight selected items
-
-        if option.state & QStyle.State_Selected:
-            painter.fillRect(option.rect, option.palette.highlight())
-
-        # Draw icon
-
-        if self.show_avatar:
-            icon = index.data(Qt.DecorationRole)
-            if icon != None:
-                if is_me:
-                    painter.drawPixmap(x2 -60, y1 + 10, 50, 50, icon)
-                else:
-                    painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
-
-        # Draw tweet
-        painter.setFont(self.normFont)
-        painter.setPen(self.text_color)
-        if is_me:
-            new_rect = \
-                painter.drawText(option.rect.adjusted(4, 5, -70, 0), int(Qt.AlignTop)
-                                 | int(Qt.AlignRight)
-                                 | int(Qt.TextWordWrap), tweet)
-        else:
-            new_rect = \
-                painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                                 * 70, 5, -4, 0), int(Qt.AlignTop)
-                                 | int(Qt.AlignLeft)
-                                 | int(Qt.TextWordWrap), tweet)
-
-        # Draw Timeline
-
-        if self.show_timestamp:
-            time = index.data(role=TIMESTAMPROLE)
-            painter.setFont(self.miniFont)
-            painter.setPen(self.time_color)
-            if is_me:
-                painter.drawText(option.rect.adjusted(4, 10, -80, -9),
-                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
-                                 time)
-            else:
-                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
-                                 int(Qt.AlignBottom) | int(Qt.AlignRight),
-                                 time)
-
-        # Draw screenname
-
-        if self.show_screenname:
-            screenname = index.data(SCREENNAMEROLE)
-            retweet_of = index.data(RETWEETOFROLE)
-            if retweet_of:
-                screenname = '%s : Retweet of %s' % (screenname, retweet_of.user.screen_name)
-            painter.setFont(self.miniFont)
-            painter.setPen(self.user_color)
-            if is_me:
-                painter.drawText(option.rect.adjusted(4, 10, -70, -9),
-                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
-                                 screenname)
-            else:
-                painter.drawText(option.rect.adjusted(70, 10, -10, -9),
-                                 int(Qt.AlignBottom) | int(Qt.AlignLeft),
-                                 screenname)
-
-        # Draw reply
-
-        if self.show_replyto:
-            reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
-            reply_text = index.data(role=REPLYTEXTROLE)
-            if reply_name and reply_text:
-                reply = 'In reply to ' + reply_name + ' : ' \
-                    + reply_text
-                painter.setFont(self.miniFont)
-                painter.setPen(self.replyto_color)
-                if is_me:
-                    new_rect = \
-                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
-                            int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap), reply)
-                else:
-                    new_rect = \
-                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                            * 70, new_rect.height() + 5, -4, 0),
-                            int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap), reply)
-            elif reply_name:
-                reply = 'In reply to ' + reply_name
-                painter.setFont(self.miniFont)
-                painter.setPen(self.replyto_color)
-                if is_me:
-                    new_rect = \
-                        painter.drawText(option.rect.adjusted(4, new_rect.height() + 5, -70, 0),
-                            int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap), reply)
-                else:
-                    new_rect = \
-                        painter.drawText(option.rect.adjusted(int(self.show_avatar)
-                            * 70, new_rect.height() + 5, -4, 0),
-                            int(Qt.AlignTop) | int(Qt.AlignLeft)
-                            | int(Qt.TextWordWrap), reply)
-
-        # Draw line
-
-        painter.setPen(self.separator_color)
-        painter.drawLine(x1, y2, x2, y2)
-
-        painter.restore()
+    def __init__(self, parent):
+        '''Initialization'''
+        DefaultCustomDelegate.__init__(self, parent)
+        self.fsize = 0.8
 
 
 class CoolWhiteCustomDelegate(DefaultCustomDelegate):
@@ -595,13 +324,25 @@ class KhweetsView(QListView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
     def keyPressEvent(self, event):
-        if event.key() not in (Qt.Key_Up, Qt.Key_Down):
+        if (event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Control)):
+            QListView.keyPressEvent(self, event)
+        else:
             self.parent().switch_tb_edit()
             self.parent().tb_text.setFocus()
             self.parent().tb_text.keyPressEvent(event)
-        else:
-            QListView.keyPressEvent(self, event)
 
+    def do_zoom_in(self):
+        print 'do zoom in called'
+        self.custom_delegate.fsize = self.custom_delegate.fsize + 0.1
+        self.custom_delegate.doZoomRefresh()
+        self.parent().resize(-1,-1)
+ 
+    def do_zoom_out(self):
+        print 'do zoom out called'
+        self.custom_delegate.fsize = self.custom_delegate.fsize - 0.1
+        self.custom_delegate.doZoomRefresh()
+        self.parent().resize(-1,-1)
+        
     def refreshCustomDelegate(self):
         settings = QSettings("Khertan Software", "Khweeteur")
         theme = settings.value('theme')
