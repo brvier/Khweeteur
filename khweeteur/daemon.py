@@ -534,6 +534,13 @@ class KhweeteurDaemon(Daemon):
                 searches.append(settings.value('terms'))
             settings.endArray()
             
+            nb_lists = settings.beginReadArray('lists')
+            lists = []
+            for index in range(nb_lists):
+                settings.setArrayIndex(index)
+                lists.append((settings.value('id'),(settings.value('user'))))
+            settings.endArray()
+            
             nb_accounts = settings.beginReadArray('accounts')
             logging.info('Found %s account' % (str(nb_accounts),))
             for index in range(nb_accounts):
@@ -596,6 +603,19 @@ class KhweeteurDaemon(Daemon):
                                     'RetrieveLists', self.dbus_handler))
                 except Exception, err:
                     logging.error('Retrieving List error %s' % (str(err),))
+
+                #Start lists thread
+                for list_id,user in lists:
+                    try:                               
+                        self.threads.append(KhweeteurRefreshWorker(\
+                                    settings.value('base_url'),
+                                    settings.value('consumer_key'),
+                                    settings.value('consumer_secret'),
+                                    settings.value('token_key'),
+                                    settings.value('token_secret'),
+                                    'List:'+user+':'+list_id, self.dbus_handler))
+                    except Exception, err:
+                        logging.error('List %s: %s' % (list_id,str(err)))
 
                 try:                               
                     for idx, thread in enumerate(self.threads):

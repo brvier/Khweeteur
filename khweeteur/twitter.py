@@ -2621,6 +2621,29 @@ class Api(object):
     self._CheckForTwitterError(data)
     return List.NewFromJsonDict(data)
 
+  def GetListStatuses(self, user='', id='', since_id = None):
+    '''Get the status from the given list 
+
+    The twitter.Api instance must be authenticated.
+
+    Args:
+      user:
+        The user to remove the list from.
+      id:
+        The slug or id of the list to remove.
+    Returns:
+      A twitter.List instance representing the removed list.
+    '''
+    url = '%s/%s/lists/%s/statuses.json' % (self.base_url, user, id)
+
+    if since_id:
+      parameters['since_id'] = since_id
+
+    json = self._FetchUrl(url,parameters=parameters, post_data={'_method': 'GET'})
+    data = simplejson.loads(json)
+    self._CheckForTwitterError(data)
+    return [Status.NewFromJsonDict(x) for x in data]
+    
   def CreateSubscription(self, owner, list):
     '''Creates a subscription to a list by the authenticated user
 

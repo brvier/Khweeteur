@@ -290,7 +290,8 @@ class KhweeteurWin(QMainWindow):
         #Search Button
         self.tb_search_menu = QMenu()
         self.loadSearchMenu()
-        
+
+
         #Search (Default)
         self.tb_search_button = QToolBadgeButton(self)
         self.tb_search_button.setText("")
@@ -300,6 +301,20 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setCheckable(True)
         self.tb_search_button.clicked.connect(self.show_search)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_search_button))
+
+        #Lists Button
+        self.tb_list_menu = QMenu()
+        self.loadListMenu()
+        
+        #Lists (Default)
+        self.tb_list_button = QToolBadgeButton(self)
+        self.tb_list_button.setText("")
+        self.tb_list_button.setIcon(QIcon.fromTheme('general_notes'))
+        self.tb_list_button.setMenu(self.tb_list_menu)
+        self.tb_list_button.setPopupMode(QToolButton.InstantPopup)
+        self.tb_list_button.setCheckable(True)
+        self.tb_list_button.clicked.connect(self.show_list)
+        self.list_tb_action.append(self.toolbar.addWidget(self.tb_list_button))
         
         #Reply button (Action)
         self.tb_reply = QAction('Reply', self)
@@ -361,7 +376,7 @@ class KhweeteurWin(QMainWindow):
         self.switch_tb_default()
         
         self.model.load('HomeTimeline')
-        self.setWindowTitle('Khweeteur:Home')
+        self.setWindowTitle('Khweeteur : Home')
         self.setCentralWidget(self.view)
         
 #        QApplication.processEvents()
@@ -400,12 +415,12 @@ class KhweeteurWin(QMainWindow):
         elif msg.startswith('Search:'):
             self.tb_search_button.setCounter(self.tb_search_button.getCounter()+count)
             self.tb_search_button.update()
-
+        elif msg.startswith('List:'):
+            self.tb_list_button.setCounter(self.tb_list_button.getCounter()+count)
+            self.tb_list_button.update()
+            
         if self.model.call == msg:
             self.model.load(msg)
-
-#        QApplication.processEvents()
-
 
     @pyqtSlot()
     def show_search(self):
@@ -415,10 +430,23 @@ class KhweeteurWin(QMainWindow):
         self.msg_button.setChecked(False)
         self.tb_search_button.setChecked(True)
         self.mention_button.setChecked(False)
+        self.tb_list_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Search:'+terms)
         self.delete_search_action.setVisible(True)
-        self.setWindowTitle('Khweeteur:'+terms)
+        self.setWindowTitle('Khweeteur : '+terms)
+
+    def show_list(self, name='', user='', tid=''):
+        self.tb_list_button.setCounter(0)
+        self.home_button.setChecked(False)        
+        self.msg_button.setChecked(False)
+        self.tb_search_button.setChecked(False)
+        self.tb_list_button.setChecked(True)
+        self.mention_button.setChecked(False)
+        self.view.scrollToTop()
+        self.model.load('List:'+user+':'+tid)
+        self.delete_search_action.setVisible(True)
+        self.setWindowTitle('Khweeteur List : '+name)
         
     @pyqtSlot()
     def show_hometimeline(self):
@@ -426,10 +454,11 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(True)        
         self.msg_button.setChecked(False)
         self.tb_search_button.setChecked(False)
+        self.tb_list_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('HomeTimeline')
-        self.setWindowTitle('Khweeteur:Home')
+        self.setWindowTitle('Khweeteur : Home')
         self.delete_search_action.setVisible(False)
 
     @pyqtSlot()
@@ -666,23 +695,25 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setCounter(0)
         self.mention_button.setChecked(True)
         self.msg_button.setChecked(False)
+        self.tb_list_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.home_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Mentions')
-        self.setWindowTitle('Khweeteur:Mentions')
+        self.setWindowTitle('Khweeteur : Mentions')
         self.delete_search_action.setVisible(False)
 
     @pyqtSlot()
     def show_dms(self):
         self.msg_button.setCounter(0)
         self.msg_button.setChecked(True)
+        self.tb_list_button.setChecked(False)
         self.home_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('DMs')
-        self.setWindowTitle('Khweeteur:DMs')
+        self.setWindowTitle('Khweeteur : DMs')
         self.delete_search_action.setVisible(False)
         
     @pyqtSlot()
@@ -713,6 +744,16 @@ class KhweeteurWin(QMainWindow):
             self.tb_search_menu.addAction(settings.value('terms'), self.show_search)
         settings.endArray()                        
 
+    def loadListMenu(self):
+        settings = QSettings()
+        searches = []
+        self.tb_list_menu.clear ()
+        nb_lists = settings.beginReadArray('lists')
+        for index in range(nb_lists):
+            settings.setArrayIndex(index)
+            self.tb_list_menu.addAction(settings.value('name'), lambda user=settings.value('user'), id=settings.value('id'), name=settings.value('name') : self.show_list(name,user,id) )
+        settings.endArray()
+        
     @pyqtSlot()
     def do_delete_search_action(self):
         try:

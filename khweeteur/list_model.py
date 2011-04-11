@@ -76,38 +76,6 @@ class KhweetsModel(QAbstractListModel):
                               self.createIndex(0,
                               len(self._items)))
                               
-    def addStatuses(self, uids):
-        #Optimization
-        folder_path = self.getCacheFolder()
-        pickleload = pickle.load
-        try:
-            keys = []
-            for uid in uids:
-                try:
-                    pkl_file = open(os.path.join(folder_path,
-                                    str(uid)), 'rb')
-                    status = pickleload(pkl_file)
-                    pkl_file.close()
-
-                    #Test if status already exists
-                    if status.id not in self._uids:
-                        self._uids.append(status.id)
-                        self._items.append(status)
-
-                except StandardError, e:
-                    print e
-
-        except StandardError, e:
-            print "We shouldn't got this error here :", e
-            import traceback
-            traceback.print_exc()
-            
-        self._items.sort()
-        self._uids.sort()        
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(0,
-                              len(self._items)))
-
     def destroyStatus(self, index):
         self._items.pop(index.row())
         self.dataChanged.emit(self.createIndex(0, 0),

@@ -189,22 +189,32 @@ class KhweeteurRefreshWorker(Thread):
                 logging.debug('%s finished' % self.call)
             elif 'RetrieveLists' in self.call:
                 logging.debug('%s running' % self.call)
-                #statuses = self.api.GetSearch(since_id=since, term=self.call.split(':')[1])
+                #Get the list subscriptions
                 lists = self.api.GetSubscriptions(user = self.api.VerifyCredentials().id)
                 settings.beginWriteArray('lists')
                 for index,list_instance in enumerate(lists):
                     settings.setArrayIndex(index)
                     settings.setValue('id',list_instance.id)
+                    settings.setValue('user',list_instance.user.screen_name)
                     settings.setValue('name',list_instance.name)
                 settings.endArray()
+                #Get the status of list              
+                logging.debug('%s finished' % self.call)
+                settings.sync()
+            elif self.call.startswith('List:'):
+                logging.debug('%s running' % self.call)
+                statuses = self.api.GetListStatuses(user=self.call.split(':')[1], id=self.call.split(':')[2], since_id=since)
                 logging.debug('%s finished' % self.call)
             else:   
                 logging.error('Unknow call : %s' % (self.call,))
                 
-        except StandardError, err:
-            logging.debug(err)
-            raise err
-        
+        except Exception, err:
+            logging.debug(str(err))
+#            import traceback
+#            exc_type, exc_value, exc_traceback = sys.exc_info()
+#            logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
+#                                      exc_traceback)))
+            
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:
             logging.debug('%s start download avatars' % self.call)                            
