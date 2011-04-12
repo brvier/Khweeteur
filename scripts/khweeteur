@@ -1,7 +1,5 @@
 #!/bin/sh
-if [ $# = 1 ]
-then
-  exec python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs
-else
-  exec python /usr/lib/python2.5/site-packages/khweeteur/__init__.py
-fi
+case $1 in
+	-d | -D ) /usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs;;
+	* )       exec python /usr/lib/python2.5/site-packages/khweeteur/__init__.py;;
+esac

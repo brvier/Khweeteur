@@ -6,7 +6,7 @@
 
 '''A Twitter client made with Python and Qt'''
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 
 #import sip
 #sip.setapi('QString', 2)
@@ -137,6 +137,8 @@ class KhweeteurAbout(QMainWindow):
                                    <br>Control-M : Reply to selected tweet
                                    <br>Control-Up : To scroll to top
                                    <br>Control-Bottom : To scroll to bottom
+                                   <br>Control-Left : Zoom out
+                                   <br>Control-Right : Zoom in
                                    <br><br><b>Thanks to :</b>
                                    <br>ddoodie on #pyqt
                                    <br>xnt14 on #maemo

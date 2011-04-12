@@ -26,7 +26,7 @@ import socket
 import pickle
 import re
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -648,7 +648,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
             if 'startfromprefs' == sys.argv[1]:
                     daemon.startfromprefs()
-            if 'start' == sys.argv[1]:
+            elif 'start' == sys.argv[1]:
                     daemon.start()
             elif 'stop' == sys.argv[1]:
                     daemon.stop()
