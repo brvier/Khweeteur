@@ -6,7 +6,7 @@
 
 '''A Twitter client made with Python and Qt'''
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 
 #import sip
 #sip.setapi('QString', 2)
@@ -123,22 +123,27 @@ class KhweeteurAbout(QMainWindow):
                                    <br><br>An easy to use twitter client
                                    <br><br>Licenced under GPLv3
                                    <br>By Beno&icirc;t HERVIER (Khertan)
-                                   <br><br><b>Khweeteur try to be simple and fast
-                                   <br>identi.ca and twitter client</b>
+                                   <br><br><b>Try to be simple and fast
+                                   <br>identi.ca and twitter client</b></center>
                                    <br><br><b>Features</b>
-                                   <br>Support multiple account
-                                   <br>Notify DMs and Mentions even when not launched                                   
-                                   <br>Reply, Retweet, Follow/Unfollow user, Favorite, Delete your tweet                                   
-                                   <br>Disconnected mode, action will be done when you recover network                                   
-                                   <br>Twitpic upload                                   
-                                   <br>Automated OAuth authentification
+                                   <br>* Support multiple account
+                                   <br>* Notify DMs and Mentions In Background
+                                   <br>* Reply, Retweet,
+                                   <br>* Follow/Unfollow user,
+                                   <br>* Favorite, Delete your tweet                                   
+                                   <br>* Disconnected mode
+                                   <br>  Action will be done
+                                   <br>  when you recover network                                   
+                                   <br>* Twitpic upload                                   
+                                   <br>* Automated OAuth authentification
                                    <br><br><b>Shortcuts :</b>
-                                   <br>Control-R : Refresh current view
-                                   <br>Control-M : Reply to selected tweet
-                                   <br>Control-Up : To scroll to top
-                                   <br>Control-Bottom : To scroll to bottom
-                                   <br>Control-Left : Zoom out
-                                   <br>Control-Right : Zoom in
+                                   <br>* Control-R : Refresh current view
+                                   <br>* Control-M : Reply to selected tweet
+                                   <br>* Control-Up : To scroll to top
+                                   <br>* Control-Bottom : To scroll to bottom
+                                   <br>* Control-Left : Zoom out
+                                   <br>* Control-Right : Zoom in
+                                   <br>* Control-C : Copy text of the selected tweet
                                    <br><br><b>Thanks to :</b>
                                    <br>ddoodie on #pyqt
                                    <br>xnt14 on #maemo
@@ -149,7 +154,7 @@ class KhweeteurAbout(QMainWindow):
                                    <br>creip on Twitter
                                    <br>zcopley on #statusnet
                                    <br>jordan_c on #statusnet
-                                   </center>''')
+                                   ''')
                    % __version__)
         aboutLayout.addWidget(aboutLabel)
         self.bugtracker_button = QPushButton(self.tr('BugTracker'))
@@ -402,8 +407,14 @@ class KhweeteurWin(QMainWindow):
 
     @pyqtSlot()
     def do_tb_copy(self):
-        pass
-                
+        text = None
+        for index in self.view.selectedIndexes():
+            text = self.model.data(index, role=Qt.DisplayRole)
+
+        if text:
+            cb = QApplication.clipboard()
+            cb.setText(text)
+           
     def enterEvent(self,event):
         """
             Redefine the enter event to refresh recent file list

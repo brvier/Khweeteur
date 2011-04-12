@@ -269,12 +269,15 @@ class KhweeteurDaemon(Daemon):
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
         self.threads = [] #Here to avoid gc 
+        self.me_users = {}
+        self.apis = {}
 
         #Cache Folder
         self.cache_path = os.path.join(os.path.expanduser("~"),\
                                  '.khweeteur', 'cache')
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
+
         #Post Folder
         self.post_path = os.path.join(os.path.expanduser("~"),\
                                  '.khweeteur', 'topost')
@@ -298,6 +301,13 @@ class KhweeteurDaemon(Daemon):
             action='',
             tweet_id='',
             ):
+
+        if not os.path.isdir(self.post_path):
+            try:
+                os.makedirs(self.post_path)
+            except IOError, e:
+                logging.debug('post_tweet:' + e)
+
         with open(os.path.join(self.post_path, str(time.time())), 'wb') as fhandle:
             post = {'shorten_url': shorten_url,
                     'serialize': serialize,
@@ -527,6 +537,7 @@ class KhweeteurDaemon(Daemon):
                         except StandardError, err:
                             logging.debug('Cannot remove : %s : %s' % (str(status.id), str(err)))
 
+
             nb_searches = settings.beginReadArray('searches')
             searches = []
             for index in range(nb_searches):
@@ -545,37 +556,36 @@ class KhweeteurDaemon(Daemon):
             logging.info('Found %s account' % (str(nb_accounts),))
             for index in range(nb_accounts):
                 settings.setArrayIndex(index)
+                access_token = settings.value('access_token')
+                if not access_token in self.apis:
+                    self.apis[access_token] = self.get_api(dict((key, settings.value(key)) for key in settings.allKeys()))
+                    self.me_users[access_token] = self.apis[access_token].VerifyCredentials().id
+
+                api = self.apis[access_token]
+                me_user_id = self.me_users[access_token]
+
                 #Worker
                 try:                               
                     self.threads.append(KhweeteurRefreshWorker(\
-                                settings.value('base_url'),
-                                settings.value('consumer_key'),
-                                settings.value('consumer_secret'),
-                                settings.value('token_key'),
-                                settings.value('token_secret'),
-                                'HomeTimeline', self.dbus_handler))
+                                api,
+                                'HomeTimeline', self.dbus_handler,
+                                me_user_id))
                 except Exception, err:
                     logging.error('Timeline : %s' % str(err))
 
                 try:                                                   
                     self.threads.append(KhweeteurRefreshWorker(\
-                                settings.value('base_url'),
-                                settings.value('consumer_key'),
-                                settings.value('consumer_secret'),
-                                settings.value('token_key'),
-                                settings.value('token_secret'),
-                                'Mentions', self.dbus_handler))
+                                api,
+                                'Mentions', self.dbus_handler,
+                                me_user_id))
                 except Exception, err:
                     logging.error('Mentions : %s' % str(err))
 
                 try:                               
                     self.threads.append(KhweeteurRefreshWorker(\
-                                settings.value('base_url'),
-                                settings.value('consumer_key'),
-                                settings.value('consumer_secret'),
-                                settings.value('token_key'),
-                                settings.value('token_secret'),
-                                'DMs', self.dbus_handler))
+                                api,
+                                'DMs', self.dbus_handler,
+                                me_user_id))
                 except Exception, err:
                     logging.error('DMs : %s' % str(err))
 
@@ -583,24 +593,18 @@ class KhweeteurDaemon(Daemon):
                 for terms in searches:
                     try:                               
                         self.threads.append(KhweeteurRefreshWorker(\
-                                    settings.value('base_url'),
-                                    settings.value('consumer_key'),
-                                    settings.value('consumer_secret'),
-                                    settings.value('token_key'),
-                                    settings.value('token_secret'),
-                                    'Search:'+terms, self.dbus_handler))
+                                    api,
+                                    'Search:'+terms, self.dbus_handler,
+                                    me_user_id))
                     except Exception, err:
                         logging.error('Search %s: %s' % (terms,str(err)))
 
                 #Start retrieving the list
                 try:
                         self.threads.append(KhweeteurRefreshWorker(\
-                                    settings.value('base_url'),
-                                    settings.value('consumer_key'),
-                                    settings.value('consumer_secret'),
-                                    settings.value('token_key'),
-                                    settings.value('token_secret'),
-                                    'RetrieveLists', self.dbus_handler))
+                                    api,
+                                    'RetrieveLists', self.dbus_handler,
+                                    me_user_id))
                 except Exception, err:
                     logging.error('Retrieving List error %s' % (str(err),))
 
@@ -613,7 +617,8 @@ class KhweeteurDaemon(Daemon):
                                     settings.value('consumer_secret'),
                                     settings.value('token_key'),
                                     settings.value('token_secret'),
-                                    'List:'+user+':'+list_id, self.dbus_handler))
+                                    'List:'+user+':'+list_id, self.dbus_handler,
+                                    self.me_user_id))
                     except Exception, err:
                         logging.error('List %s: %s' % (list_id,str(err)))
 

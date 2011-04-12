@@ -27,16 +27,17 @@ import socket
 
 
 class KhweeteurRefreshWorker(Thread):
-    def __init__(self,base_url, consumer_key, consumer_secret, access_token, access_secret, call, dbus_handler):
+    def __init__(self, api, call, dbus_handler, me_user_id):
         Thread.__init__(self, None)
-        self.api = twitter.Api(username=consumer_key,
-                               password=consumer_secret,
-                               access_token_key=access_token,
-                               access_token_secret=access_secret,
-                               base_url=base_url)
-        self.api.SetUserAgent('Khweeteur')
+        self.api = api
+#        self.api = twitter.Api(username=consumer_key,
+#                               password=consumer_secret,
+#                               access_token_key=access_token,
+#                               access_token_secret=access_secret,
+#                               base_url=base_url)
+        self.me_user_id = me_user_id
+#        self.api.SetUserAgent('Khweeteur')
         self.call = call
-        self.consumer_key = consumer_key
         self.dbus_handler = dbus_handler
         socket.setdefaulttimeout(60)
 
@@ -128,12 +129,8 @@ class KhweeteurRefreshWorker(Thread):
             print err
 
     def isMe(self,statuses):
-        try:
-            me = self.api.VerifyCredentials()
-        except StandardError, err:
-            logging.debug('IsMe: %s' % (str(err),))
         for status in statuses:
-            if status.user.id == me.id:
+            if status.user.id == self.me_user_id:
                 status.is_me = True
             else:
                 status.is_me = False
@@ -168,14 +165,14 @@ class KhweeteurRefreshWorker(Thread):
         
         logging.debug('Thread Runned')
         try:
-            since = settings.value(self.consumer_key + '_' + self.call)
+            since = settings.value(self.api._access_token_key + '_' + self.call)
                         
             if self.call == 'HomeTimeline':
                 logging.debug('%s running' % self.call)                            
                 statuses = self.api.GetHomeTimeline(since_id=since)
                 logging.debug('%s finished' % self.call)                            
             elif self.call == 'Mentions':
-                logging.debug('%s running' % self.call)                            
+                logging.debug('%s running' % self.call)                    
                 statuses = self.api.GetMentions(since_id=since)
                 logging.debug('%s finished' % self.call)                            
             elif self.call == 'DMs':
@@ -230,7 +227,7 @@ class KhweeteurRefreshWorker(Thread):
             self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
-            settings.setValue(self.consumer_key + \
+            settings.setValue(self.api._access_token_key + \
                        '_' + self.call, statuses[0].id)
             self.send_notification(self.call,len(statuses))
         settings.sync()
