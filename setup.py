@@ -61,8 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
+      'XB_Maemo_Upgrade_Description':'Fix launcher script and daemon argument comparaison',
       'section':'user/network',
-      'changelog':'* Complete rewrite',
+      'changelog':'* Fix launcher script and daemon argument comparaison',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
