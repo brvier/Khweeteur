@@ -26,7 +26,7 @@ import socket
 import pickle
 import re
 
-__version__ = '0.5.1'
+__version__ = '0.5.3'
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -271,6 +271,7 @@ class KhweeteurDaemon(Daemon):
         self.threads = [] #Here to avoid gc 
         self.me_users = {}
         self.apis = {}
+        self.idtag = None
 
         #Cache Folder
         self.cache_path = os.path.join(os.path.expanduser("~"),\
@@ -495,6 +496,7 @@ class KhweeteurDaemon(Daemon):
         self.do_posts()
         self.retrieve()
         gobject.timeout_add_seconds(refresh_interval, self.update)
+
         return False
         
     def retrieve(self, options=None):
@@ -618,7 +620,7 @@ class KhweeteurDaemon(Daemon):
                                     settings.value('token_key'),
                                     settings.value('token_secret'),
                                     'List:'+user+':'+list_id, self.dbus_handler,
-                                    self.me_user_id))
+                                    me_user_id))
                     except Exception, err:
                         logging.error('List %s: %s' % (list_id,str(err)))
 

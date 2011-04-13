@@ -6,7 +6,7 @@
 
 '''A Twitter client made with Python and Qt'''
 
-__version__ = '0.5.2'
+__version__ = '0.5.3'
 
 #import sip
 #sip.setapi('QString', 2)

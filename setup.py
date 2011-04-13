@@ -61,14 +61,13 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'Fix launcher script and daemon argument comparaison',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve retriever, fix some minor bugs in daemon and scripy',
       'section':'user/network',
-      'changelog':'* Fix launcher script and daemon argument comparaison',
+      'changelog':'* Improve retriever, fix some minor bugs in daemon and scripts',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
 python -m compileall /usr/lib/python2.5/site-packages/khweeteur
-rm -rf /home/user/.khweeteur/
 NOTIFICATIONS_CONF="/etc/hildon-desktop/notification-groups.conf"
 NOTIFICATIONS_KEY="khweeteur-new-tweets"
 if ! grep -q "$NOTIFICATIONS_KEY" "$NOTIFICATIONS_CONF"; then
@@ -86,6 +85,8 @@ LED-Pattern=PatternCommonNotification
 EOF
     echo "done."
 fi
+python /usr/lib/python2.5/site-packages/khweeteur/daemon.py stop
+python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs
 """,
       'prere':"""#!/bin/sh
 rm -rf /usr/lib/python2.5/site-packages/khweeteur/*.pyc""",
