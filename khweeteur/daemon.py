@@ -112,7 +112,7 @@ class Daemon:
             if pid > 0:
                 # exit from second parent
                 sys.exit(0) 
-        except OSError, e: 
+        except OSError, e:
             sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1) 
     
@@ -194,7 +194,7 @@ class Daemon:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print str(err)
+                logging.error(str(err))
                 sys.exit(1)
 
     def restart(self):
@@ -387,7 +387,7 @@ class KhweeteurDaemon(Daemon):
                                     api.PostUpdate(text,
                                             in_reply_to_status_id=int(post['tweet_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
-                                logging.debug('Posted reply %s' % (text,))
+                                logging.debug('Posted reply %s : %s' % (text,post['tweet_id']))
                         elif post['action'] == 'retweet':
                             #Retweet
                                 if account['base_url'] == post['base_url'] \
@@ -561,79 +561,85 @@ class KhweeteurDaemon(Daemon):
                 access_token = settings.value('access_token')
                 if not access_token in self.apis:
                     self.apis[access_token] = self.get_api(dict((key, settings.value(key)) for key in settings.allKeys()))
-                    self.me_users[access_token] = self.apis[access_token].VerifyCredentials().id
+                    self.me_users[access_token] = None
+
+                if not self.me_users[access_token]:
+                    try:
+                        self.me_users[access_token] = self.apis[access_token].VerifyCredentials().id
+                    except Exception, err:
+                        self.me_users[access_token] = None
+                        logging.error('VerifyCredential : %s' % str(err))
 
                 api = self.apis[access_token]
                 me_user_id = self.me_users[access_token]
 
-                #Worker
-                try:                               
-                    self.threads.append(KhweeteurRefreshWorker(\
-                                api,
-                                'HomeTimeline', self.dbus_handler,
-                                me_user_id))
-                except Exception, err:
-                    logging.error('Timeline : %s' % str(err))
+                #If have user:
+                if self.me_users[access_token]:
 
-                try:                                                   
-                    self.threads.append(KhweeteurRefreshWorker(\
-                                api,
-                                'Mentions', self.dbus_handler,
-                                me_user_id))
-                except Exception, err:
-                    logging.error('Mentions : %s' % str(err))
-
-                try:                               
-                    self.threads.append(KhweeteurRefreshWorker(\
-                                api,
-                                'DMs', self.dbus_handler,
-                                me_user_id))
-                except Exception, err:
-                    logging.error('DMs : %s' % str(err))
-
-                #Start searches thread
-                for terms in searches:
+                    #Worker
                     try:                               
                         self.threads.append(KhweeteurRefreshWorker(\
                                     api,
-                                    'Search:'+terms, self.dbus_handler,
+                                    'HomeTimeline', self.dbus_handler,
                                     me_user_id))
                     except Exception, err:
-                        logging.error('Search %s: %s' % (terms,str(err)))
-
-                #Start retrieving the list
-                try:
+                        logging.error('Timeline : %s' % str(err))
+    
+                    try:                                                   
                         self.threads.append(KhweeteurRefreshWorker(\
                                     api,
-                                    'RetrieveLists', self.dbus_handler,
-                                    me_user_id))
-                except Exception, err:
-                    logging.error('Retrieving List error %s' % (str(err),))
-
-                #Start lists thread
-                for list_id,user in lists:
-                    try:                               
-                        self.threads.append(KhweeteurRefreshWorker(\
-                                    settings.value('base_url'),
-                                    settings.value('consumer_key'),
-                                    settings.value('consumer_secret'),
-                                    settings.value('token_key'),
-                                    settings.value('token_secret'),
-                                    'List:'+user+':'+list_id, self.dbus_handler,
+                                    'Mentions', self.dbus_handler,
                                     me_user_id))
                     except Exception, err:
-                        logging.error('List %s: %s' % (list_id,str(err)))
-
-                try:                               
-                    for idx, thread in enumerate(self.threads):
-                        logging.debug('Try to run Thread : %s' % str(thread))
-                        try:
-                            self.threads[idx].start()
-                        except RuntimeError, err:
-                            logging.debug('Attempt to start a thread already running : %s' % (str(err),))
-                except:
-                    logging.error('Running Thread error')
-
+                        logging.error('Mentions : %s' % str(err))
+    
+                    try:                               
+                        self.threads.append(KhweeteurRefreshWorker(\
+                                    api,
+                                    'DMs', self.dbus_handler,
+                                    me_user_id))
+                    except Exception, err:
+                        logging.error('DMs : %s' % str(err))
+    
+                    #Start searches thread
+                    for terms in searches:
+                        try:                               
+                            self.threads.append(KhweeteurRefreshWorker(\
+                                        api,
+                                        'Search:'+terms, self.dbus_handler,
+                                        me_user_id))
+                        except Exception, err:
+                            logging.error('Search %s: %s' % (terms,str(err)))
+    
+                    #Start retrieving the list
+                    try:
+                            self.threads.append(KhweeteurRefreshWorker(\
+                                        api,
+                                        'RetrieveLists', self.dbus_handler,
+                                        me_user_id))
+                    except Exception, err:
+                        logging.error('Retrieving List error %s' % (str(err),))
+    
+                    #Start lists thread
+                    for list_id,user in lists:
+                        try:                               
+                            self.threads.append(KhweeteurRefreshWorker(\
+                                        api,
+                                        'List:'+user+':'+list_id, self.dbus_handler,
+                                        me_user_id))
+                        except Exception, err:
+                            logging.error('List %s: %s' % (list_id,str(err)))
+    
+                    try:                               
+                        for idx, thread in enumerate(self.threads):
+                            logging.debug('Try to run Thread : %s' % str(thread))
+                            try:
+                                self.threads[idx].start()
+                            except RuntimeError, err:
+                                logging.debug('Attempt to start a thread already running : %s' % (str(err),))
+                    except:
+                        logging.error('Running Thread error')
+    
             
             settings.endArray()
 
@@ -662,9 +668,10 @@ if __name__ == "__main__":
             elif 'restart' == sys.argv[1]:
                     daemon.restart()
             else:
+                    logging.error('Unknown command')                    
                     print "Unknown command"
                     sys.exit(2)
             sys.exit(0)
     else:
-            print "usage: %s start|stop|restart" % sys.argv[0]
+            print "usage: %s start|stop|restart|startfromprefs" % sys.argv[0]
             sys.exit(2)

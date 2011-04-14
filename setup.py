@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve retriever, fix some minor bugs in daemon and scripy',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve retriever, fix some minor bugs in daemon and scripts, Fix Bug #692 preventing daemon to follow prefs, optimize some api call',
       'section':'user/network',
-      'changelog':'* Improve retriever, fix some minor bugs in daemon and scripts',
+      'changelog':'* Improve retriever, fix some minor bugs in daemon and scripts, Fix Bug #692 preventing daemon to follow prefs, optimize some api call',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur

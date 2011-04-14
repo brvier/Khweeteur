@@ -322,6 +322,12 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.setCheckable(True)
         self.tb_list_button.clicked.connect(self.show_list)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_list_button))
+
+        #Fullscreen
+        self.tb_fullscreen =  QAction(QIcon.fromTheme("general_fullsize"), 'Fullscreen', self)
+        self.tb_fullscreen.triggered.connect(self.do_tb_fullscreen)
+        self.toolbar.addAction(self.tb_fullscreen)
+        self.list_tb_action.append(self.tb_fullscreen)
         
         #Reply button (Action)
         self.tb_reply = QAction('Reply', self)
@@ -404,6 +410,13 @@ class KhweeteurWin(QMainWindow):
 #        QApplication.processEvents()
         
         self.geolocDoStart()
+
+    @pyqtSlot()
+    def do_tb_fullscreen(self):
+        if self.isFullScreen():
+            self.showMaximized()
+        else:
+            self.showFullScreen()        
 
     @pyqtSlot()
     def do_tb_copy(self):
@@ -896,6 +909,8 @@ if __name__ == '__main__':
     app.exec_()
     settings = QSettings("Khertan Software", "Khweeteur")
     if settings.contains('useDaemon'):
-        if settings.value('useDaemon')=='false':
-            Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'stop'])
-            
+        print settings.value('useDaemon')
+        if settings.value('useDaemon') != '2':
+            print 'Stop daemon'
+            #use system to wait the exec
+            os.system('/usr/bin/python '+os.path.join(os.path.dirname(__file__),'daemon.py') + ' stop')

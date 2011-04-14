@@ -2413,7 +2413,11 @@ class Api(object):
     tot = len(lines)
     print kwargs
     if len(lines)==1:
-          results.append(self.PostUpdate(lines[0], **kwargs))
+          results.append(self.PostUpdate(lines[0],
+                   in_reply_to_status_id=in_reply_to_status_id, \
+                   longitude = longitude, \
+                   latitude = latitude, \
+                   **kwargs))
     else:
         for line in lines:
           #print 'line',type(unicode(line,'utf-8').encode('utf-8')),line
