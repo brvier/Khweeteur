@@ -2648,7 +2648,7 @@ class Api(object):
     if since_id:
       parameters['since_id'] = since_id
 
-    json = self._FetchUrl(url,parameters=parameters, post_data={'_method': 'GET'})
+    json = self._FetchUrl(url, parameters=parameters)
     data = simplejson.loads(json)
     self._CheckForTwitterError(data)
     return [Status.NewFromJsonDict(x) for x in data]

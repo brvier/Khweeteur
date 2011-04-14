@@ -89,6 +89,9 @@ class KhweeteurRefreshWorker(Thread):
                 if os.path.exists(os.path.join(folder_path,
                                   str(status.id))):
                     statuses.remove(status)
+                    logging.debug('%s found in cache (%s)' % (str(status.id),folder_path))
+                else:
+                    logging.debug('%s not found in cache (%s)' % (str(status.id),folder_path))
         except StandardError, err:
             logging.debug(err)
 
