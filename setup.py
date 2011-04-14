@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve retriever, fix some minor bugs in daemon and scripts, Fix Bug #692 preventing daemon to follow prefs, optimize some api call',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve daemon and fix package, add fullscreen toggle button',
       'section':'user/network',
-      'changelog':'* Improve retriever, fix some minor bugs in daemon and scripts, Fix Bug #692 preventing daemon to follow prefs, optimize some api call',
+      'changelog':'* Improve daemon and fix package, add fullscreen toggle button',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
@@ -85,8 +85,8 @@ LED-Pattern=PatternCommonNotification
 EOF
     echo "done."
 fi
-python /usr/lib/python2.5/site-packages/khweeteur/daemon.py stop
-python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs
+exec su user -c "/usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py stop"
+exec su user -c "/usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs"
 """,
       'prere':"""#!/bin/sh
 rm -rf /usr/lib/python2.5/site-packages/khweeteur/*.pyc""",

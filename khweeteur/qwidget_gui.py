@@ -154,6 +154,7 @@ class KhweeteurAbout(QMainWindow):
                                    <br>creip on Twitter
                                    <br>zcopley on #statusnet
                                    <br>jordan_c on #statusnet
+                                   <br>ZogG on twitter
                                    ''')
                    % __version__)
         aboutLayout.addWidget(aboutLabel)
