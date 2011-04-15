@@ -6,7 +6,9 @@
 
 '''A Twitter client made with Python and Qt'''
 
-__version__ = '0.5.3'
+from __future__ import with_statement
+
+__version__ = '0.5.5'
 
 #import sip
 #sip.setapi('QString', 2)
@@ -44,13 +46,18 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def __init__(self,parent):
         dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur')
         self.parent = parent
+
+        #Post Folder
+        self.post_path = os.path.join(os.path.expanduser("~"),\
+                                 '.khweeteur', 'topost')
         
+
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
     def require_update(self,optional=None):
         self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
 
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
-            signature='uussssss')
+#    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
+#            signature='uussssss')
     def post_tweet(self, \
             shorten_url=1,\
             serialize=1,\
@@ -61,7 +68,18 @@ class KhweeteurDBusHandler(dbus.service.Object):
             action = '',
             tweet_id = '0',            
             ):
-        pass
+        if not os.path.exists(self.post_path):
+            os.makedirs(self.post_path)
+        with open(os.path.join(self.post_path, str(time.time())), 'wb') as fhandle:
+            post = {'shorten_url': shorten_url,
+                    'serialize': serialize,
+                    'text': text,
+                    'lattitude': lattitude,
+                    'longitude': longitude,
+                    'base_url': base_url,
+                    'action': action,
+                    'tweet_id': tweet_id,}
+            pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
 
 class KhweeteurAbout(QMainWindow):
 

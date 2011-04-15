@@ -26,7 +26,7 @@ import socket
 import pickle
 import re
 
-__version__ = '0.5.3'
+__version__ = '0.5.5'
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -475,7 +475,9 @@ class KhweeteurDaemon(Daemon):
                                           exc_traceback)))
 
                 #Emitting the error will block the other tweet post
-                #raise #can t post, we will keep the file to do it later                                   
+                #raise #can t post, we will keep the file to do it later  
+            except Exception, err:
+                logging.error('Do_posts : %s' % str(err))    
             except:
                 logging.error('Do_posts : Unknow error')
                 
@@ -493,8 +495,15 @@ class KhweeteurDaemon(Daemon):
                 refresh_interval = 600
         logging.debug('refresh interval loaded')
 
-        self.do_posts()
-        self.retrieve()
+        try:
+            self.do_posts()
+            self.retrieve()
+        except Exception, err:
+            import traceback
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
+                                  exc_traceback)))
+
         gobject.timeout_add_seconds(refresh_interval, self.update)
 
         return False
@@ -650,7 +659,7 @@ class KhweeteurDaemon(Daemon):
 
             logging.debug('Finished loop')          
                             
-        except StandardError, err:
+        except Exception, err:
             logging.exception(str(err))
             logging.debug(str(err))
 
