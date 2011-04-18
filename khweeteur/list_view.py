@@ -6,10 +6,6 @@
 
 '''A simple Twitter client made with pyqt4 : QListView'''
 
-import sip
-sip.setapi('QString', 2)
-sip.setapi('QVariant', 2)
-
 SCREENNAMEROLE = 20
 REPLYTOSCREENNAMEROLE = 21
 REPLYTEXTROLE = 22
@@ -56,7 +52,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.text_color = QColor('#FFFFFF')
         self.separator_color = QColor('#000000')
         self.fsize = 1.0
-        
         self.fm = None
         self.minifm = None
 
@@ -118,7 +113,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                         | int(Qt.TextWordWrap),
                     reply_text,
                     ).height() + 5
-                    
+
             height += self.minifm.boundingRect(
                 0,
                 0,
@@ -160,15 +155,13 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
 
         #Query data
-        model = index.model()
         tweet = index.data(Qt.DisplayRole)
-        is_me = index.data(ISMEROLE)
         screenname = index.data(SCREENNAMEROLE)
         retweet_of = index.data(RETWEETOFROLE)
         timestamp = index.data(role=TIMESTAMPROLE)
         reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
         reply_text = index.data(role=REPLYTEXTROLE)
-        
+
         painter.save()
 
         # Draw alternate ?
@@ -186,7 +179,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         if icon != None:
             painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
 
-        # Draw screenname        
+        # Draw screenname
         painter.setFont(self.miniFont)
         painter.setPen(self.user_color)
         nrect = painter.drawText(option.rect.adjusted(70, 5, -4, -9),
@@ -209,7 +202,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             painter.drawText(option.rect.adjusted(110+nrect.width(), 5, -4, -9),
                                  int(Qt.AlignTop) | int(Qt.AlignLeft),
                                  retweet_of.user.screen_name)
-            
         # Draw tweet
         painter.setFont(self.normFont)
         painter.setPen(self.text_color)
@@ -218,7 +210,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                                  int(Qt.AlignTop)
                                  | int(Qt.AlignLeft)
                                  | int(Qt.TextWordWrap), tweet)
-        
         # Draw Timeline
         painter.setFont(self.miniFont)
         painter.setPen(self.time_color)
@@ -261,7 +252,7 @@ class WhiteCustomDelegate(DefaultCustomDelegate):
         self.text_color = QColor('#000000')
         self.separator_color = QColor('#000000')
         self.fsize = 1.0
-        
+
 class MiniDefaultCustomDelegate(DefaultCustomDelegate):
 
     '''Delegate to do custom draw of the items'''
@@ -336,13 +327,13 @@ class KhweetsView(QListView):
         self.custom_delegate.fsize = self.custom_delegate.fsize + 0.1
         self.custom_delegate.doZoomRefresh()
         self.parent().resize(-1,-1)
- 
+
     def do_zoom_out(self):
         print 'do zoom out called'
         self.custom_delegate.fsize = self.custom_delegate.fsize - 0.1
         self.custom_delegate.doZoomRefresh()
         self.parent().resize(-1,-1)
-        
+
     def refreshCustomDelegate(self):
         settings = QSettings("Khertan Software", "Khweeteur")
         theme = settings.value('theme')

@@ -3,10 +3,6 @@
 # Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 
-#import sip
-#sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
-
 from __future__ import with_statement
 
 import sys
@@ -20,9 +16,7 @@ import logging
 
 from retriever import KhweeteurRefreshWorker
 from settings import SUPPORTED_ACCOUNTS
-#import gobject
-#gobject.threads_init()
-import socket
+
 import pickle
 import re
 
@@ -32,12 +26,8 @@ import dbus
 #from dbus.mainloop.glib import DBusGMainLoop
 from dbus.mainloop.qt import DBusQtMainLoop
 DBusQtMainLoop(set_as_default = True)
-import threading
 
 import twitter
-from urllib import urlretrieve
-import urllib2
-import pickle
 import glob
 
 try:
@@ -45,16 +35,8 @@ try:
 except:
     import Image
 
-from PySide.QtCore import QSettings
-
-from threading import Thread
-
-import logging
-import os
 import os.path
-import dbus
 import dbus.service
-
 
 #A hook to catch errors
 def install_excepthook(version):
@@ -93,30 +75,30 @@ class Daemon:
         Programming in the UNIX Environment" for details (ISBN 0201563177)
         http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
         """
-        try: 
-            pid = os.fork() 
+        try:
+            pid = os.fork()
             if pid > 0:
                 # exit first parent
-                sys.exit(0) 
-        except OSError, e: 
+                sys.exit(0)
+        except OSError, e:
             sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
-    
+
         # decouple from parent environment
-        os.chdir("/") 
-        os.setsid() 
-        os.umask(0) 
-    
+        os.chdir("/")
+        os.setsid()
+        os.umask(0)
+
         # do second fork
-        try: 
-            pid = os.fork() 
+        try:
+            pid = os.fork()
             if pid > 0:
                 # exit from second parent
-                sys.exit(0) 
+                sys.exit(0)
         except OSError, e:
             sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
-            sys.exit(1) 
-    
+            sys.exit(1)
+
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
@@ -126,12 +108,12 @@ class Daemon:
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-    
+
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
         file(self.pidfile, 'w+').write("%s\n" % pid)
-    
+
     def delpid(self):
         os.remove(self.pidfile)
 
@@ -140,7 +122,7 @@ class Daemon:
         if settings.contains('useDaemon'):
             if settings.value('useDaemon') == 'true':
                 self.start()
-                
+
     def start(self):
         """
         Start the daemon
@@ -152,7 +134,7 @@ class Daemon:
             pf.close()
         except IOError:
             pid = None
-    
+
         if pid:
             try:
                 os.kill(pid, 0)
@@ -160,9 +142,9 @@ class Daemon:
                 sys.stderr.write(message % self.pidfile)
                 sys.exit(1)
 
-            except OSError, err:
+            except OSError:
                 sys.stderr.write('pidfile %s already exist. But daemon is dead.\n' % self.pidfile)
-        
+
         # Start the daemon
         self.daemonize()
         self.run()
@@ -178,13 +160,13 @@ class Daemon:
             pf.close()
         except IOError:
             pid = None
-    
+
         if not pid:
             message = "pidfile %s does not exist. Daemon not running?\n"
             sys.stderr.write(message % self.pidfile)
             return # not an error in a restart
 
-        # Try killing the daemon process    
+        # Try killing the daemon process
         try:
             while 1:
                 os.kill(pid, SIGTERM)
@@ -233,7 +215,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
                          signature='')
     def refresh_ended(self):
         pass
-                
+
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
                          signature='us')
     def new_tweets(self, count, ttype):
@@ -243,12 +225,11 @@ class KhweeteurDBusHandler(dbus.service.Object):
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
                               '/org/freedesktop/Notifications')
             iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-            m_id = 0
-    
+
             if ttype == 'DMs':
                 msg = 'New DMs'
             elif ttype == 'Mentions':
-                msg = 'New mentions'            
+                msg = 'New mentions'
             else:
                 msg = 'New tweets'
             try:
@@ -270,9 +251,9 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
 class KhweeteurDaemon(Daemon):
 
-    def run(self):        
+    def run(self):
         app=QCoreApplication(sys.argv)
-        
+
         logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
@@ -282,7 +263,7 @@ class KhweeteurDaemon(Daemon):
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
-        self.threads = [] #Here to avoid gc 
+        self.threads = [] #Here to avoid gc
         self.me_users = {}
         self.apis = {}
         self.idtag = None
@@ -302,7 +283,7 @@ class KhweeteurDaemon(Daemon):
         self.dbus_handler = KhweeteurDBusHandler()
 
         # mainloop = DBusQtMainLoop(set_as_default=True)
-        
+
         settings = QSettings("Khertan Software", "Khweeteur")
         if not settings.contains('refresh_interval'):
             refresh_interval = 600
@@ -310,13 +291,13 @@ class KhweeteurDaemon(Daemon):
             refresh_interval = int(settings.value('refresh_interval')) * 60
             if refresh_interval < 600:
                 refresh_interval = 600
-        
+
         self.utimer = QTimer()
         self.utimer.timeout.connect(self.update)
         self.utimer.start(refresh_interval*1000)
-        
+
         QTimer.singleShot(200, self.update)
-        
+
         #gobject.timeout_add_seconds(refresh_interval, self.update, priority=gobject.PRIORITY_LOW)
         logging.debug('Timer added')
         app.exec_()
@@ -368,8 +349,8 @@ class KhweeteurDaemon(Daemon):
         nb_accounts = settings.beginReadArray('accounts')
         for index in range(nb_accounts):
             settings.setArrayIndex(index)
-            accounts.append(dict((key, settings.value(key)) for key in settings.allKeys()))            
-        settings.endArray()                        
+            accounts.append(dict((key, settings.value(key)) for key in settings.allKeys()))
+        settings.endArray()
 
         logging.debug('Number of account : %s' % len(accounts))
 
@@ -397,7 +378,7 @@ class KhweeteurDaemon(Daemon):
                     else:
                         post['lattitude'] = int(post['lattitude'])
                     if not post['longitude']:
-                        post['longitude'] = None                        
+                        post['longitude'] = None
                     else:
                         post['longitude'] = int(post['longitude'])
 
@@ -444,7 +425,6 @@ class KhweeteurDaemon(Daemon):
                                 if settings.contains('ShowInfos'):
                                     if settings.value('ShowInfos')=='2':
                                         self.dbus_handler.info('Khweeteur: Status posted to '+ account['name'])
-                
                         elif post['action'] == 'delete':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
@@ -455,15 +435,15 @@ class KhweeteurDaemon(Daemon):
                                     'HomeTimeline', \
                                     post['tweet_id'])
                                 os.remove(path)
-                                logging.debug('Deleted %s' % (post['tweet_id'],))           
+                                logging.debug('Deleted %s' % (post['tweet_id'],))
                                 if settings.contains('ShowInfos'):
                                     if settings.value('ShowInfos')=='2':
-                                        self.dbus_handler.info('Khweeteur: Status deleted on '+ account['name'])                                
+                                        self.dbus_handler.info('Khweeteur: Status deleted on '+ account['name'])
                         elif post['action'] == 'favorite':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
                                 api.CreateFavorite(int(post['tweet_id']))
-                                logging.debug('Favorited %s' % (post['tweet_id'],))                                
+                                logging.debug('Favorited %s' % (post['tweet_id'],))
                         elif post['action'] == 'follow':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
@@ -473,7 +453,7 @@ class KhweeteurDaemon(Daemon):
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
                                 api.DestroyFriendship(int(post['tweet_id']))
-                                logging.debug('Follow %s' % (post['tweet_id'],))                                
+                                logging.debug('Follow %s' % (post['tweet_id'],))
                         elif post['action'] == 'twitpic':
                             if account['base_url'] == SUPPORTED_ACCOUNTS[0]['base_url']:
                                 api = self.get_api(account)
@@ -495,11 +475,11 @@ class KhweeteurDaemon(Daemon):
                                         post['longitude'],
                                         '',
                                         'tweet',
-                                        '')                                        
+                                        '')
 
                                 else:
                                     raise StandardError('No twitpic url')
-                            
+
                         else:
                             logging.error('Unknow action : %s' % post['action'])
 
@@ -507,13 +487,13 @@ class KhweeteurDaemon(Daemon):
 
             except twitter.TwitterError, err:
                 if err.message == 'Status is a duplicate.':
-                    logging.error('Do_posts (remove): %s' % (err.message,))                           
+                    logging.error('Do_posts (remove): %s' % (err.message,))
                     os.remove(item)
                 elif 'ID' in err.message:
-                    logging.error('Do_posts (remove): %s' % (err.message,))                           
-                    os.remove(item)                    
+                    logging.error('Do_posts (remove): %s' % (err.message,))
+                    os.remove(item)
                 else:
-                    logging.error('Do_posts : %s' % (err.message,))                           
+                    logging.error('Do_posts : %s' % (err.message,))
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos')=='2':
                         self.dbus_handler.info('Khweeteur: Error occur while posting : ' + err.message)
@@ -528,42 +508,26 @@ class KhweeteurDaemon(Daemon):
                                           exc_traceback)))
 
                 #Emitting the error will block the other tweet post
-                #raise #can t post, we will keep the file to do it later  
+                #raise #can t post, we will keep the file to do it later
             except Exception, err:
-                logging.error('Do_posts : %s' % str(err))    
+                logging.error('Do_posts : %s' % str(err))
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos')=='2':
                         self.dbus_handler.info('Khweeteur: Error occur while posting : ' + str(err))
             except:
                 logging.error('Do_posts : Unknow error')
-             
+
     @Slot()
     def update(self):
-#        settings = QSettings("Khertan Software", "Khweeteur")
-#        logging.debug('Setting loaded')
-#        settings.sync()
-
-        #Verify the default interval
-#        if not settings.contains('refresh_interval'):
-#            refresh_interval = 600
-#        else:
-#            refresh_interval = int(settings.value('refresh_interval')) * 60
-#            if refresh_interval < 600:
-#                refresh_interval = 600
-                
-#        logging.debug('refresh interval loaded')
-
         try:
             self.do_posts()
             self.retrieve()
-        except Exception, err:
+        except Exception:
             import traceback
             exc_type, exc_value, exc_traceback = sys.exc_info()
             logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
                                   exc_traceback)))
 
-#        gobject.timeout_add_seconds(refresh_interval, self.update)
-        
     def retrieve(self, options=None):
         settings = QSettings("Khertan Software", "Khweeteur")
         logging.debug('Setting loaded')
@@ -571,19 +535,19 @@ class KhweeteurDaemon(Daemon):
             #Re read the settings
             settings.sync()
             logging.debug('Setting synced')
-            
+
             #Cleaning old thread reference for keep for gc
             for thread in self.threads:
                 if not thread.isAlive():
                     self.threads.remove(thread)
                     logging.debug('Removed a thread')
-                        
+
             #Remove old tweets in cache according to history prefs
             try:
                 keep = int(settings.value('tweetHistory'))
             except:
                 keep = 60
-           
+
             for root, folders, files in os.walk(self.cache_path):
                 for folder in folders:
                     statuses = []
@@ -611,14 +575,14 @@ class KhweeteurDaemon(Daemon):
                 settings.setArrayIndex(index)
                 searches.append(settings.value('terms'))
             settings.endArray()
-            
+
             nb_lists = settings.beginReadArray('lists')
             lists = []
             for index in range(nb_lists):
                 settings.setArrayIndex(index)
                 lists.append((settings.value('id'),(settings.value('user'))))
             settings.endArray()
-            
+
             nb_accounts = settings.beginReadArray('accounts')
             logging.info('Found %s account' % (str(nb_accounts),))
             for index in range(nb_accounts):
@@ -642,40 +606,39 @@ class KhweeteurDaemon(Daemon):
                 if self.me_users[access_token]:
 
                     #Worker
-                    try:                               
+                    try:
                         self.threads.append(KhweeteurRefreshWorker(\
                                     api,
                                     'HomeTimeline', self.dbus_handler,
                                     me_user_id))
                     except Exception, err:
                         logging.error('Timeline : %s' % str(err))
-    
-                    try:                                                   
+
+                    try:
                         self.threads.append(KhweeteurRefreshWorker(\
                                     api,
                                     'Mentions', self.dbus_handler,
                                     me_user_id))
                     except Exception, err:
                         logging.error('Mentions : %s' % str(err))
-    
-                    try:                               
+
+                    try:
                         self.threads.append(KhweeteurRefreshWorker(\
                                     api,
                                     'DMs', self.dbus_handler,
                                     me_user_id))
                     except Exception, err:
                         logging.error('DMs : %s' % str(err))
-    
+
                     #Start searches thread
                     for terms in searches:
-                        try:                               
+                        try:
                             self.threads.append(KhweeteurRefreshWorker(\
                                         api,
                                         'Search:'+terms, self.dbus_handler,
                                         me_user_id))
                         except Exception, err:
                             logging.error('Search %s: %s' % (terms,str(err)))
-    
                     #Start retrieving the list
                     try:
                             self.threads.append(KhweeteurRefreshWorker(\
@@ -684,18 +647,18 @@ class KhweeteurDaemon(Daemon):
                                         me_user_id))
                     except Exception, err:
                         logging.error('Retrieving List error %s' % (str(err),))
-    
+
                     #Start lists thread
                     for list_id,user in lists:
-                        try:                               
+                        try:
                             self.threads.append(KhweeteurRefreshWorker(\
                                         api,
                                         'List:'+user+':'+list_id, self.dbus_handler,
                                         me_user_id))
                         except Exception, err:
                             logging.error('List %s: %s' % (list_id,str(err)))
-    
-                    try:                               
+
+                    try:
                         for idx, thread in enumerate(self.threads):
                             logging.debug('Try to run Thread : %s' % str(thread))
                             try:
@@ -704,25 +667,21 @@ class KhweeteurDaemon(Daemon):
                                 logging.debug('Attempt to start a thread already running : %s' % (str(err),))
                     except:
                         logging.error('Running Thread error')
-    
-            
+
+
             settings.endArray()
 
             while any([thread.isAlive() for thread in self.threads]):
                 time.sleep(1)
-                
+
             self.dbus_handler.refresh_ended()
 
-            logging.debug('Finished loop')          
-                            
+            logging.debug('Finished loop')
+
         except Exception, err:
             logging.exception(str(err))
             logging.debug(str(err))
-#            if settings.contains('ShowInfos'):
-#                if settings.value('ShowInfos')=='2':
-#                    self.dbus_handler.info(str(err))
 
-                         
 if __name__ == "__main__":
     install_excepthook(__version__)
     daemon = KhweeteurDaemon('/var/run/khweeteurd/khweeteurd.pid')
@@ -736,7 +695,7 @@ if __name__ == "__main__":
             elif 'restart' == sys.argv[1]:
                     daemon.restart()
             else:
-                    logging.error('Unknown command')                    
+                    logging.error('Unknown command')
                     print "Unknown command"
                     sys.exit(2)
             sys.exit(0)

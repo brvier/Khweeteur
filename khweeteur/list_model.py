@@ -6,15 +6,9 @@
 
 '''A simple Twitter client made with pyqt4 : QModel'''
 
-#import sip
-#sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
-
 import time
 import pickle
-import datetime
 import glob
-from notifications import KhweeteurNotification 
 import os
 
 SCREENNAMEROLE = 20
@@ -30,16 +24,13 @@ PROTECTEDROLE = 28
 USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel,QModelIndex, \
-                         QThread, \
                          Qt, \
-                         QSettings, \
-                         QObject, \
                          Signal
-                         
+
 from PySide.QtGui import QPixmap
 
 pyqtSignal = Signal
-    
+
 class KhweetsModel(QAbstractListModel):
 
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
@@ -75,7 +66,7 @@ class KhweetsModel(QAbstractListModel):
         self.dataChanged.emit(self.createIndex(0, 0),
                               self.createIndex(0,
                               len(self._items)))
-                              
+
     def destroyStatus(self, index):
         self._items.pop(index.row())
         self.dataChanged.emit(self.createIndex(0, 0),
@@ -86,7 +77,7 @@ class KhweetsModel(QAbstractListModel):
     def load(self,call):
 
         self.now = time.time()
-        
+
         if self.call != call:
             self._items=[]
         self.call = call
@@ -103,30 +94,27 @@ class KhweetsModel(QAbstractListModel):
                                     str(uid)), 'rb')
                     status = pickleload(pkl_file)
                     pkl_file.close()
-        
+
                     #Test if status already exists
                     if status not in self._items:
                         self._uids.append(status.id)
                         self._items.append(status)
-                        if hasattr(status, 'user'):                                       
-                            profile_image = os.path.basename(status.user.profile_image_url.replace('/'                        
-                                                 , '_'))                                                          
-                        else:                                                                                     
+                        if hasattr(status, 'user'):
+                            profile_image = os.path.basename(status.user.profile_image_url.replace('/', '_'))
+                        else:
                             profile_image = '/opt/usr/share/icons/hicolor/64x64/hildon/general_default_avatar.png'
-       
-                        if profile_image not in self._avatars:                                                
+                        if profile_image not in self._avatars:
                             try:
                                 self._avatars[status.user.profile_image_url] = QPixmap(os.path.join(avatar_path,
-                                            profile_image))                  
+                                            profile_image))
                             except:
                                 pass
 
             self._items.sort(key=lambda status:status.created_at_in_seconds, reverse=True)
-                
             self.dataChanged.emit(self.createIndex(0, 0),
                                   self.createIndex(0,
                                   len(self._items)))
-    
+
         except StandardError, e:
             print 'unSerialize : ', e
 
@@ -138,7 +126,7 @@ class KhweetsModel(QAbstractListModel):
                 if status.truncated:
                     return status.retweeted_status.text
                 else:
-                    return status.text                    
+                    return status.text
             except:
                 return status.text
         elif role == SCREENNAMEROLE:
@@ -172,16 +160,14 @@ class KhweetsModel(QAbstractListModel):
                 return self._items[index.row()].is_me
             except:
                 return False
-                
+
         elif role == TIMESTAMPROLE:
             return self._items[index.row()].GetRelativeCreatedAt(self.now)
-                
         elif role == PROTECTEDROLE:
             return self._items[index.row()].user.protected
 
         elif role == USERIDROLE:
             return self._items[index.row()].user.id
-                
         elif role == Qt.DecorationRole:
             try:
                 return self._avatars[self._items[index.row()].user.profile_image_url]
@@ -191,5 +177,4 @@ class KhweetsModel(QAbstractListModel):
             return None
 
     def wantsUpdate(self):
-        #QObject.emit(self, SIGNAL('layoutChanged()'))
         self.layoutChanged.emit()

@@ -14,8 +14,31 @@ __version__ = '0.5.8'
 #sip.setapi('QString', 2)
 #sip.setapi('QVariant', 2)
 
-from PySide.QtGui import *
-from PySide.QtCore import *
+
+from PySide.QtGui import QMainWindow, \
+    QHBoxLayout, \
+    QSizePolicy, \
+    QToolButton, \
+    QVBoxLayout, \
+    QFileDialog, \
+    QDesktopServices, \
+    QScrollArea, \
+    QPushButton, \
+    QToolBar, \
+    QLabel, \
+    QWidget, \
+    QInputDialog, \
+    QMenu, \
+    QAction, \
+    QApplication, \
+    QIcon, \
+    QMessageBox, \
+    QPlainTextEdit
+from PySide.QtCore import Qt, \
+    QUrl, \
+    QSettings, \
+    Slot
+
 from PySide.QtMaemo5 import *
 
 import dbus
