@@ -8,7 +8,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.6'
+__version__ = '0.5.7'
 
 #import sip
 #sip.setapi('QString', 2)
