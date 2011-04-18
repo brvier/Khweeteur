@@ -8,7 +8,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.7'
+__version__ = '0.5.8'
 
 #import sip
 #sip.setapi('QString', 2)
@@ -469,7 +469,7 @@ class KhweeteurWin(QMainWindow):
         self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='new_tweets')
         self.bus.add_signal_receiver(self.stop_spinning, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
-        self.activated_by_dbus.connect(self.show)
+        self.activated_by_dbus.connect(self.activateWindow)
         dbusobj = KhweeteurDBus()
         dbusobj.attach_win(self)
 
