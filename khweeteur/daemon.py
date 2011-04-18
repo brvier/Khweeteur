@@ -718,9 +718,9 @@ class KhweeteurDaemon(Daemon):
         except Exception, err:
             logging.exception(str(err))
             logging.debug(str(err))
-            if settings.contains('ShowInfos'):
-                if settings.value('ShowInfos')=='2':
-                    self.dbus_handler.info(str(err))
+#            if settings.contains('ShowInfos'):
+#                if settings.value('ShowInfos')=='2':
+#                    self.dbus_handler.info(str(err))
 
                          
 if __name__ == "__main__":
