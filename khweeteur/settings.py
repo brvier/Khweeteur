@@ -8,6 +8,7 @@
 import datetime
 import httplib2
 import re
+import os
 
 #import sip
 #sip.setapi('QString', 2)
