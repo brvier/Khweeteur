@@ -261,6 +261,11 @@ class KhweeteurPref(QMainWindow):
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
 
+        if self.settings.contains("showInfos"):
+            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value("showInfos"))))
+        else:
+            self.showInfos_value.setCheckState(Qt.CheckState(0))
+
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings''' 
         self.settings.beginWriteArray("accounts")
@@ -281,6 +286,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
+        self.settings.setValue('showInfos', self.showInfos_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
         self.save.emit()
@@ -373,7 +379,10 @@ class KhweeteurPref(QMainWindow):
     def closeEvent(self,widget,*args):
         ''' close event called when closing window'''
         self.savePrefs()        
-
+        #Restart the daemon on prefs changes instead of loading data at every loop of daemon.
+        from subprocess import Popen
+        Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'restart'])
+    
     def _setupGUI(self):
         ''' Create the gui content of the window'''
         self.scrollArea = QScrollArea(self)
@@ -421,6 +430,9 @@ class KhweeteurPref(QMainWindow):
 
         self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
         self._umain_layout.addWidget(self.useGPS_value,13,1)
+        
+        self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
+        self._umain_layout.addWidget(self.showInfos_value,14,1)
 
         self._main_layout.addLayout(self._umain_layout)
 

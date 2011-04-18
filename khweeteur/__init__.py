@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2010 Beno�t HERVIER
+# Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
 
 '''A Twitter client made with Python and Qt'''

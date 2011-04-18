@@ -8,7 +8,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.5'
+__version__ = '0.5.6'
 
 #import sip
 #sip.setapi('QString', 2)
@@ -35,6 +35,7 @@ import time
 from list_view import *
 from list_model import *
 
+from dbusobj import KhweeteurDBus
 import re
 
 from QtMobility.Location import *
@@ -207,14 +208,20 @@ class Khweeteur(QApplication):
         self.setOrganizationName("Khertan Software")
         self.setOrganizationDomain("khertan.net")
         self.setApplicationName("Khweeteur")
-        
         self.run()
 
+#    def activated_by_dbus(self):
+#        if hasattr(self,'win'):
+#            self.win.show()
+            
     def run(self):
         self.win = KhweeteurWin()
         self.win.show()
                
 class KhweeteurWin(QMainWindow):
+
+    activated_by_dbus = pyqtSignal()
+
     def __init__(self,parent=None):
         QMainWindow.__init__(self,parent)
 
@@ -462,6 +469,9 @@ class KhweeteurWin(QMainWindow):
         self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='new_tweets')
         self.bus.add_signal_receiver(self.stop_spinning, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
+        self.activated_by_dbus.connect(self.show)
+        dbusobj = KhweeteurDBus()
+        dbusobj.attach_win(self)
 
     def stop_spinning(self):
         self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , False)

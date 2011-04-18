@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Improve daemon and fix package, add fullscreen toggle button',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Change daemon mainloop from glib to qt for better reliability, fix twitter api when twitter is over charged, improve managment of errors in daemon, add notification info when error occurs and when posting, handle dbus notification message',
       'section':'user/network',
-      'changelog':'* Improve daemon and fix package, add fullscreen toggle button',
+      'changelog':'* Change daemon mainloop from glib to qt for better reliability, fix twitter api when twitter is over charged, improve managment of errors in daemon, add notification info when error occurs and when posting, handle dbus notification message',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur

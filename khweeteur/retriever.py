@@ -103,10 +103,7 @@ class KhweeteurRefreshWorker(Thread):
         #Got from cache        
         status = None
         for root,dirs,files in os.walk(os.path.join(os.path.expanduser("~"),'.khweeteur','cache')):
-            for folder in dirs:
-                logging.debug('getOneReplyContent Folder: %s' % (folder,))
             for afile in files:
-                logging.debug('getOneReplyContent aFile: %s' % (os.path.join(root,afile),))
                 if unicode(tid) == afile:
                     try:
                         fhandle = open(os.path.join(root,afile), 'rb')
@@ -210,6 +207,9 @@ class KhweeteurRefreshWorker(Thread):
                 
         except Exception, err:
             logging.debug(str(err))
+            if settings.contains('ShowInfos'):
+                if settings.value('ShowInfos')=='2':
+                    self.dbus_handler.info('Khweeteur Error : ' + str(err))
 #            import traceback
 #            exc_type, exc_value, exc_traceback = sys.exc_info()
 #            logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,

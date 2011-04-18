@@ -11,7 +11,7 @@ from __future__ import with_statement
 
 import sys
 import time
-from PySide.QtCore import QSettings
+from PySide.QtCore import QSettings, Slot, QTimer, QCoreApplication
 import atexit
 import os
 from signal import SIGTERM
@@ -20,17 +20,18 @@ import logging
 
 from retriever import KhweeteurRefreshWorker
 from settings import SUPPORTED_ACCOUNTS
-import gobject
-gobject.threads_init()
+#import gobject
+#gobject.threads_init()
 import socket
 import pickle
 import re
 
-__version__ = '0.5.5'
+__version__ = '0.5.7'
 
 import dbus
-from dbus.mainloop.glib import DBusGMainLoop
-DBusGMainLoop(set_as_default=True)
+#from dbus.mainloop.glib import DBusGMainLoop
+from dbus.mainloop.qt import DBusQtMainLoop
+DBusQtMainLoop(set_as_default = True)
 import threading
 
 import twitter
@@ -217,6 +218,17 @@ class KhweeteurDBusHandler(dbus.service.Object):
         dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur')
         self.m_id = 0
 
+    def info(self, message):
+        '''Display an information banner'''
+        try:
+            m_bus = dbus.SystemBus()
+            m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                                  '/org/freedesktop/Notifications')
+            iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+            iface.SystemNoteInfoprint('Khweeteur : '+message)
+        except:
+            pass
+
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
                          signature='')
     def refresh_ended(self):
@@ -259,12 +271,14 @@ class KhweeteurDBusHandler(dbus.service.Object):
 class KhweeteurDaemon(Daemon):
 
     def run(self):        
+        app=QCoreApplication(sys.argv)
+        
         logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S',
                     filename='/home/user/.khweeteur.log',
                     filemode='w')
-
+        logging.info('Starting daemon %s' % (__version__))
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='require_update')
         self.bus.add_signal_receiver(self.post_tweet, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='post_tweet')
@@ -287,10 +301,25 @@ class KhweeteurDaemon(Daemon):
 
         self.dbus_handler = KhweeteurDBusHandler()
 
-        loop = gobject.MainLoop()
-        gobject.timeout_add_seconds(1, self.update)
-        logging.debug('Timer added')        
-        loop.run()
+        # mainloop = DBusQtMainLoop(set_as_default=True)
+        
+        settings = QSettings("Khertan Software", "Khweeteur")
+        if not settings.contains('refresh_interval'):
+            refresh_interval = 600
+        else:
+            refresh_interval = int(settings.value('refresh_interval')) * 60
+            if refresh_interval < 600:
+                refresh_interval = 600
+        
+        self.utimer = QTimer()
+        self.utimer.timeout.connect(self.update)
+        self.utimer.start(refresh_interval*1000)
+        
+        QTimer.singleShot(200, self.update)
+        
+        #gobject.timeout_add_seconds(refresh_interval, self.update, priority=gobject.PRIORITY_LOW)
+        logging.debug('Timer added')
+        app.exec_()
 
     def post_tweet(self, \
             shorten_url=True,\
@@ -388,6 +417,9 @@ class KhweeteurDaemon(Daemon):
                                             in_reply_to_status_id=int(post['tweet_id']),
                                             latitude=post['lattitude'], longitude=post['longitude'])
                                 logging.debug('Posted reply %s : %s' % (text,post['tweet_id']))
+                                if settings.contains('ShowInfos'):
+                                    if settings.value('ShowInfos')=='2':
+                                        self.dbus_handler.info('Khweeteur: Reply posted to '+ account['name'])
                         elif post['action'] == 'retweet':
                             #Retweet
                                 if account['base_url'] == post['base_url'] \
@@ -395,6 +427,9 @@ class KhweeteurDaemon(Daemon):
                                     api = self.get_api(account)
                                     api.PostRetweet(tweet_id=int(post['tweet_id']))
                                     logging.debug('Posted retweet %s' % (post['tweet_id'],))
+                                    if settings.contains('ShowInfos'):
+                                        if settings.value('ShowInfos')=='2':
+                                            self.dbus_handler.info('Khweeteur: Retweet posted to '+ account['name'])
                         elif post['action'] == 'tweet':
                             #Else "simple" tweet
                             if account['use_for_tweet'] == 'true':
@@ -406,6 +441,10 @@ class KhweeteurDaemon(Daemon):
                                     api.PostUpdate(text,
                                         latitude=post['lattitude'], longitude=post['longitude'])
                                 logging.debug('Posted %s' % (text,))
+                                if settings.contains('ShowInfos'):
+                                    if settings.value('ShowInfos')=='2':
+                                        self.dbus_handler.info('Khweeteur: Status posted to '+ account['name'])
+                
                         elif post['action'] == 'delete':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
@@ -416,7 +455,10 @@ class KhweeteurDaemon(Daemon):
                                     'HomeTimeline', \
                                     post['tweet_id'])
                                 os.remove(path)
-                                logging.debug('Deleted %s' % (post['tweet_id'],))                                
+                                logging.debug('Deleted %s' % (post['tweet_id'],))           
+                                if settings.contains('ShowInfos'):
+                                    if settings.value('ShowInfos')=='2':
+                                        self.dbus_handler.info('Khweeteur: Status deleted on '+ account['name'])                                
                         elif post['action'] == 'favorite':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
@@ -426,7 +468,7 @@ class KhweeteurDaemon(Daemon):
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
                                 api.CreateFriendship(int(post['tweet_id']))
-                                logging.debug('Follow %s' % (post['tweet_id'],))                                
+                                logging.debug('Follow %s' % (post['tweet_id'],))
                         elif post['action'] == 'unfollow':
                             if account['base_url'] == post['base_url']:
                                 api = self.get_api(account)
@@ -454,6 +496,7 @@ class KhweeteurDaemon(Daemon):
                                         '',
                                         'tweet',
                                         '')                                        
+
                                 else:
                                     raise StandardError('No twitpic url')
                             
@@ -464,11 +507,21 @@ class KhweeteurDaemon(Daemon):
 
             except twitter.TwitterError, err:
                 if err.message == 'Status is a duplicate.':
+                    logging.error('Do_posts (remove): %s' % (err.message,))                           
                     os.remove(item)
+                elif 'ID' in err.message:
+                    logging.error('Do_posts (remove): %s' % (err.message,))                           
+                    os.remove(item)                    
                 else:
                     logging.error('Do_posts : %s' % (err.message,))                           
+                if settings.contains('ShowInfos'):
+                    if settings.value('ShowInfos')=='2':
+                        self.dbus_handler.info('Khweeteur: Error occur while posting : ' + err.message)
             except StandardError, err:
                 logging.error('Do_posts : %s' % (str(err),))
+                if settings.contains('ShowInfos'):
+                    if settings.value('ShowInfos')=='2':
+                        self.dbus_handler.info('Khweeteur: Error occur while posting : ' + str(err))
                 import traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
@@ -478,22 +531,27 @@ class KhweeteurDaemon(Daemon):
                 #raise #can t post, we will keep the file to do it later  
             except Exception, err:
                 logging.error('Do_posts : %s' % str(err))    
+                if settings.contains('ShowInfos'):
+                    if settings.value('ShowInfos')=='2':
+                        self.dbus_handler.info('Khweeteur: Error occur while posting : ' + str(err))
             except:
                 logging.error('Do_posts : Unknow error')
-                
-    def update(self, option=None):
-        settings = QSettings("Khertan Software", "Khweeteur")
-        logging.debug('Setting loaded')
-        settings.sync()
+             
+    @Slot()
+    def update(self):
+#        settings = QSettings("Khertan Software", "Khweeteur")
+#        logging.debug('Setting loaded')
+#        settings.sync()
 
         #Verify the default interval
-        if not settings.contains('refresh_interval'):
-            refresh_interval = 600
-        else:
-            refresh_interval = int(settings.value('refresh_interval')) * 60
-            if refresh_interval < 600:
-                refresh_interval = 600
-        logging.debug('refresh interval loaded')
+#        if not settings.contains('refresh_interval'):
+#            refresh_interval = 600
+#        else:
+#            refresh_interval = int(settings.value('refresh_interval')) * 60
+#            if refresh_interval < 600:
+#                refresh_interval = 600
+                
+#        logging.debug('refresh interval loaded')
 
         try:
             self.do_posts()
@@ -504,9 +562,7 @@ class KhweeteurDaemon(Daemon):
             logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
                                   exc_traceback)))
 
-        gobject.timeout_add_seconds(refresh_interval, self.update)
-
-        return False
+#        gobject.timeout_add_seconds(refresh_interval, self.update)
         
     def retrieve(self, options=None):
         settings = QSettings("Khertan Software", "Khweeteur")
@@ -662,6 +718,9 @@ class KhweeteurDaemon(Daemon):
         except Exception, err:
             logging.exception(str(err))
             logging.debug(str(err))
+            if settings.contains('ShowInfos'):
+                if settings.value('ShowInfos')=='2':
+                    self.dbus_handler.info(str(err))
 
                          
 if __name__ == "__main__":
