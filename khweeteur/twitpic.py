@@ -62,17 +62,17 @@ class TwitPicError(Exception):
         return self.reason
 
 
-# Handles Twitter OAuth authentication 
+# Handles Twitter OAuth authentication
 class TwitPicOAuthClient(oauth.OAuthClient):
     """TwitPic OAuth Client API"""
-    
+
     SIGNIN_URL        = 'https://api.twitter.com/oauth/authenticate'
     STATUS_UPDATE_URL = 'https://api.twitter.com/1/statuses/update.json'
     USER_INFO_URL     = 'https://api.twitter.com/1/account/verify_credentials.json'
-    
+
     FORMAT = 'json'
     SERVER = 'http://api.twitpic.com'
-    
+
     GET_URIS = {
         'media_show':       ('/2/media/show',      ('id',)),
         'faces_show':       ('/2/faces/show',      ('user')),
@@ -84,7 +84,7 @@ class TwitPicOAuthClient(oauth.OAuthClient):
         'event_show':       ('/2/event/show',      ('id',)),
         'tags_show':        ('/2/tags/show',       ('tag',)),
     }
-        
+
     POST_URIS = {
         'upload':           ('/2/upload',          ('message', 'media')),
         'comments_create':  ('/2/comments/create', ('message_id', 'message')),
@@ -93,11 +93,11 @@ class TwitPicOAuthClient(oauth.OAuthClient):
         'event_add':        ('/2/event/add',       ('event_id', 'media_id')), # no workie!
         'tags_create':      ('/2/tags/create',     ('media_id', 'tags')),
     }
-    
+
     PUT_URIS = {
         'faces_edit':       ('/2/faces/edit',      ('tag_id', 'top_coord', 'left_coord')),
     }
-    
+
     DELETE_URIS = {
         'comments_delete':  ('/2/comments/delete', ('comment_id')),
         'faces_delete':     ('/2/faces/delete',    ('tag_id')),
@@ -105,14 +105,14 @@ class TwitPicOAuthClient(oauth.OAuthClient):
         'event_remove':     ('/2/event/remove',    ('event_id', 'media_id')),
         'tags_delete':      ('/2/tags/delete',     ('media_id', 'tag_id')),
     }
-        
-    def __init__(self, consumer_key=None, consumer_secret=None, 
+
+    def __init__(self, consumer_key=None, consumer_secret=None,
                  service_key=None, access_token=None):
         """
         An object for interacting with the Twitpic API.
-        
+
         The arguments listed below are generally required for most calls.
-        
+
         Args:
           consumer_key:
             Twitter API Key [optional]
@@ -122,50 +122,50 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             Authorized access_token in string format. [optional]
           service_key:
             Twitpic service key used to interact with the API. [optional]
-        
+
         NOTE:
-          The TwitPic OAuth Client does NOT support fetching 
-          an access_token. Use your favorite Twitter API Client to 
+          The TwitPic OAuth Client does NOT support fetching
+          an access_token. Use your favorite Twitter API Client to
           retrieve this.
-        
+
         """
         self.server = self.SERVER
         self.consumer = oauth.OAuthConsumer(consumer_key, consumer_secret)
         self.signature_method = oauth.OAuthSignatureMethod_HMAC_SHA1()
-        self.service_key = service_key        
+        self.service_key = service_key
         self.format = self.FORMAT
-        
+
         if access_token:
             self.access_token = oauth.OAuthToken.from_string(access_token)
-    
+
     def set_comsumer(self, consumer_key, consumer_secret):
         self.consumer = oauth.OAuthConsumer(consumer_key, consumer_secret)
-    
+
     def set_access_token(self, access_token):
         self.access_token = oauth.OAuthToken.from_string(access_token)
-    
+
     def set_service_key(self, service_key):
         self.service_key = service_key
-    
+
     def _encode_multipart_formdata(self, fields=None):
         BOUNDARY = '-------tHISiStheMulTIFoRMbOUNDaRY'
         CRLF = '\r\n'
         L = []
         filedata = None
         media = fields.get('media', '')
-        
+
         if media:
             filedata = self._get_filedata(media)
             del fields['media']
-        
+
         if fields:
             for (key, value) in fields.items():
                 L.append('--' + BOUNDARY)
                 L.append('Content-Disposition: form-data; name="%s"' % str(key))
                 L.append('')
                 L.append(str(value))
-                
-        if filedata:     
+
+        if filedata:
             for (filename, value) in [(media, filedata)]:
                 L.append('--' + BOUNDARY)
                 L.append('Content-Disposition: form-data; name="media"; \
@@ -173,55 +173,55 @@ class TwitPicOAuthClient(oauth.OAuthClient):
                 L.append('Content-Type: %s' % self._get_content_type(media))
                 L.append('')
                 L.append(value.getvalue())
-        
+
         L.append('--' + BOUNDARY + '--')
         L.append('')
         body = CRLF.join(L)
         content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
-        
+
         return content_type, body
-    
+
     def _get_content_type(self, media):
         return mimetypes.guess_type(media)[0] or 'application/octet-stream'
-    
+
     def _get_filedata(self, media):
         # Check self.image is an url, file path, or nothing.
         prog = re.compile('((https?|ftp|gopher|telnet|file|notes|ms-help):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)')
-        
+
         if prog.match(media):
             return StringIO.StringIO(urllib2.urlopen(media).read())
         elif os.path.exists(media):
             return StringIO.StringIO(open(media, 'rb').read())
         else:
             return None
-    
-    def _post_call(self, method, params, uri, required):     
+
+    def _post_call(self, method, params, uri, required):
         if not self.consumer:
             raise TwitPicError("Missing Twitter consumer keys")
         if not self.access_token:
             raise TwitPicError("Missing access_token")
         if not self.service_key:
             raise TwitPicError("Missing TwitPic service key")
-        
+
         for req_param in required:
             if req_param not in params:
                 raise TwitPicError('"' + req_param + '" parameter is not provided.')
-        
+
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(
             self.consumer,
             self.access_token,
             http_url=self.USER_INFO_URL
-        )        
-        
+        )
+
         # Sign our request before setting Twitpic-only parameters
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
-        
+
         # Set TwitPic parameters
         oauth_request.set_parameter('key', self.service_key)
-        
+
         for key, value in params.iteritems():
             oauth_request.set_parameter(key, value)
-        
+
         # Build request body parameters.
         params = oauth_request.parameters
         content_type, content_body = self._encode_multipart_formdata(params)
@@ -239,9 +239,9 @@ class TwitPicOAuthClient(oauth.OAuthClient):
 
         # Build our url
         url = '%s%s.%s' % (self.server, uri, self.format)
-        
+
         # Make the request.
-        
+
         req = urllib2.Request(url, content_body, headers)
 
         try:
@@ -254,13 +254,13 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             return self.parse_json(response.read())
         elif self.format == 'xml':
             return self.parse_xml(response.read())
-    
+
     def read(self, method, params, format=None):
         """
         Use this method for all GET URI calls.
-        
+
         An access_token or service_key is not required for this method.
-        
+
         Args:
           method:
             name that references which GET URI to use.
@@ -268,50 +268,50 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             dictionary of parameters needed for the selected method call.
           format:
             response format. default is json. options are (xml, json)
-        
+
         NOTE:
           faces_show is actually a POST method. However, since data
-          is being retrieved and not created, it seemed appropriate 
-          to keep this call under the GET method calls. Tokens and keys 
+          is being retrieved and not created, it seemed appropriate
+          to keep this call under the GET method calls. Tokens and keys
           will be required for this call as well.
-        
+
         """
         uri, required = self.GET_URIS.get(method, (None, None))
         if uri is None:
             raise TwitPicError('Unidentified Method: ' + method)
-        
+
         if format:
             self.format = format
-        
+
         if method == 'faces_show':
             return self._post_call(method, params, uri, required)
-        
+
         for req_param in required:
             if req_param not in params:
                 raise TwitPicError('"' + req_param + '" parameter is not provided.')
-        
+
         # Build our GET url
         request_params = urllib.urlencode(params)
         url = '%s%s.%s?%s' % (self.server, uri, self.format, request_params)
-        
+
         # Make the request.
         req = urllib2.Request(url)
-        
+
         try:
             # Get the response.
             response = urllib2.urlopen(req)
         except urllib2.HTTPError, e:
             raise TwitPicError(e)
-        
+
         if self.format == 'json':
             return self.parse_json(response.read())
         elif self.format == 'xml':
             return self.parse_xml(response.read())
-        
+
     def create(self, method, params, format=None):
         """
         Use this method for all POST URI calls.
-        
+
         Args:
           method:
             name that references which POST URI to use.
@@ -319,29 +319,29 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             dictionary of parameters needed for the selected method call.
           format:
             response format. default is json. options are (xml, json)
-        
+
         NOTE:
           You do NOT have to pass the key param (service key). Service key
           should have been provided before calling this method.
-        
+
         """
         if 'key' in params:
             raise TwitPicError('"key" parameter should be provided by set_service_key method or initializer method.')
-        
+
         uri, required = self.POST_URIS.get(method, (None, None))
-        
+
         if uri is None:
             raise TwitPicError('Unidentified Method: ' + method)
-        
+
         if format:
             self.format = format
-        
+
         return self._post_call(method, params, uri, required)
-    
+
     def update(self, method, params, format=None):
         """
         Use this method for all PUT URI calls.
-        
+
         Args:
           method:
             name that references which PUT URI to use.
@@ -349,25 +349,25 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             dictionary of parameters needed for the selected method call.
           format:
             response format. default is json. options are (xml, json)
-        
+
         """
         if 'key' in params:
             raise TwitPicError('"key" parameter should be provided by set_service_key method or initializer method.')
-        
+
         uri, required = self.PUT_URIS.get(method, (None, None))
-        
+
         if uri is None:
             raise TwitPicError('Unidentified Method: ' + method)
-        
+
         if format:
             self.format = format
-        
+
         return self._post_call(method, params, uri, required)
-    
+
     def remove(self, method, params, format=None):
         """
         Use this method for all DELETE URI calls.
-        
+
         Args:
           method:
             name that references which DELETE URI to use.
@@ -375,21 +375,21 @@ class TwitPicOAuthClient(oauth.OAuthClient):
             dictionary of parameters needed for the selected method call.
           format:
             response format. default is json. options are (xml, json)
-        
+
         """
         if 'key' in params:
             raise TwitPicError('"key" parameter should be provided by set_service_key method or initializer method.')
-        
+
         uri, required = self.DELETE_URIS.get(method, (None, None))
-        
+
         if uri is None:
             raise TwitPicError('Unidentified Method: ' + method)
-        
+
         if format:
             self.format = format
-        
+
         return self._post_call(method, params, uri, required)
-        
+
     def parse_xml(self, xml_response):
         try:
             dom = xml.parseString(xml_response)
@@ -400,7 +400,7 @@ class TwitPicOAuthClient(oauth.OAuthClient):
                 return dom
         except ExpatError, e:
             raise TwitPicError('XML Parsing Error: ' + e)
-    
+
     def parse_json(self, json_response):
         try:
             result = json.loads(json_response)
@@ -421,31 +421,31 @@ if __name__ == '__main__':
     optPsr.add_option('-m', '--message', type='string', help='The tweet that belongs to the image.')
     optPsr.add_option('-f', '--file', type='string', help='The file upload data.')
     (opts, args) = optPsr.parse_args()
-    
+
     if not opts.consumer_key:
         optPsr.error("Missing CONSUMER_KEY")
-    
+
     if not opts.consumer_secret:
         optPsr.error("Missing CONSUMER_SECRET")
-    
+
     if not opts.access_token:
         optPsr.error("Missing ACCESS_TOKEN")
-    
+
     if not opts.service_key:
         optPsr.error("Missing SERVICE_KEY")
-    
+
     if not opts.message:
         optPsr.error("Missing TWEET")
-    
+
     if not opts.file:
         optPsr.error("Missing FILE")
-    
+
     twitpic = TwitPicOAuthClient(
         consumer_key = opts.consumer_key,
         consumer_secret = opts.consumer_secret,
         access_token = opts.access_token,
         service_key = opts.service_key,
     )
-    
+
     response = twitpic.create('upload', {'media': opts.file, 'message': opts.message })
     print response

@@ -21,7 +21,6 @@ __author__ = 'python-twitter@googlegroups.com'
 __version__ = '0.8-khtfork.3'
 
 
-import base64
 import calendar
 import datetime
 import httplib
@@ -65,7 +64,7 @@ ACCESS_TOKEN_URL  = 'https://api.twitter.com/oauth/access_token'
 AUTHORIZATION_URL = 'https://api.twitter.com/oauth/authorize'
 SIGNIN_URL        = 'https://api.twitter.com/oauth/authenticate'
 
- 
+
 
 import re, htmlentitydefs
 
@@ -523,9 +522,9 @@ class Status(object):
 
 class List(object):
   '''A class representing the List structure used by the twitter API.
-  
+
   The List structure exposes the following properties:
-  
+
     list.id
     list.name
     list.slug
@@ -2612,7 +2611,7 @@ class Api(object):
     return List.NewFromJsonDict(data)
 
   def GetListStatuses(self, user='', id='', since_id = None):
-    '''Get the status from the given list 
+    '''Get the status from the given list
 
     The twitter.Api instance must be authenticated.
 
@@ -2627,14 +2626,14 @@ class Api(object):
     url = '%s/%s/lists/%s/statuses.json' % (self.base_url, user, id)
 
     parameters = {}
-    
+
     if since_id:
       parameters['since_id'] = since_id
 
     json = self._FetchUrl(url, parameters=parameters)
     data = self._ParseAndCheckForTwitterError(json)
     return [Status.NewFromJsonDict(x) for x in data]
-    
+
   def CreateSubscription(self, owner, list):
     '''Creates a subscription to a list by the authenticated user
 
@@ -3406,7 +3405,7 @@ class Api(object):
 
   def _ParseAndCheckForTwitterError(self, json):
     """
-    Try and parse the JSON returned from Twitter and return 
+    Try and parse the JSON returned from Twitter and return
     an empty dictionary if there is any error. This is a purely
     defensive check because during some Twitter network outages
     it will return an HTML failwhale page.
@@ -3499,7 +3498,7 @@ class Api(object):
 
       req.sign_request(self._signature_method_hmac_sha1, self._oauth_consumer, self._oauth_token)
 
-      headers = req.to_header()
+      req.to_header()
 
       if http_method == "POST":
         encoded_post_data = req.to_postdata()
@@ -3598,7 +3597,7 @@ class _FileCache(object):
              os.getenv('USERNAME') or \
              os.getlogin() or \
              'nobody'
-    except (IOError, OSError), e:
+    except (IOError, OSError):
       return 'nobody'
 
   def _GetTmpCachePath(self):

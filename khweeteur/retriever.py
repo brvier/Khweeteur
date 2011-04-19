@@ -8,7 +8,6 @@ import socket
 socket.setdefaulttimeout(60)
 from urllib import urlretrieve
 
-import urllib2
 import pickle
 try:
     from PIL import Image
@@ -21,8 +20,6 @@ from threading import Thread
 
 import logging
 import os
-import dbus
-import dbus.service
 import socket
 
 
@@ -30,13 +27,8 @@ class KhweeteurRefreshWorker(Thread):
     def __init__(self, api, call, dbus_handler, me_user_id):
         Thread.__init__(self, None)
         self.api = api
-#        self.api = twitter.Api(username=consumer_key,
-#                               password=consumer_secret,
-#                               access_token_key=access_token,
-#                               access_token_secret=access_secret,
-#                               base_url=base_url)
+
         self.me_user_id = me_user_id
-#        self.api.SetUserAgent('Khweeteur')
         self.call = call
         self.dbus_handler = dbus_handler
         socket.setdefaulttimeout(60)
@@ -56,7 +48,7 @@ class KhweeteurRefreshWorker(Thread):
                     os.makedirs(self.folder_path)
                 except IOError, e:
                     logging.debug('getCacheFolder:' + e)
-    
+
         return self.folder_path
 
     def downloadProfilesImage(self, statuses):
@@ -64,7 +56,7 @@ class KhweeteurRefreshWorker(Thread):
                         '.khweeteur','avatars')
         if not os.path.exists(avatar_path):
             os.makedirs(avatar_path)
-            
+
         for status in statuses:
             if type(status) != twitter.DirectMessage:
                 cache = os.path.join(avatar_path, os.path.basename(status.user.profile_image_url.replace('/', '_')))
@@ -76,7 +68,6 @@ class KhweeteurRefreshWorker(Thread):
                         im = im.resize((50, 50))
                         im.save(os.path.splitext(cache)[0] + '.png',
                                 'PNG')
-#                        status.user.profile_image_url = cache
                     except StandardError, err:
                         logging.debug('DownloadProfilImage:' + str(err))
                         print err
@@ -100,7 +91,7 @@ class KhweeteurRefreshWorker(Thread):
             status.base_url = self.api.base_url
 
     def getOneReplyContent(self, tid):
-        #Got from cache        
+        #Got from cache
         status = None
         for root,dirs,files in os.walk(os.path.join(os.path.expanduser("~"),'.khweeteur','cache')):
             for afile in files:
@@ -117,7 +108,7 @@ class KhweeteurRefreshWorker(Thread):
             rpath = os.path.join(os.path.expanduser("~"),'.khweeteur','cache','Replies')
             if not os.path.exists(rpath):
                 os.makedirs(rpath)
-    
+
             status = self.api.GetStatus(tid)
             fhandle = open(os.path.join(os.path.join(rpath,
                         unicode(status.id))), 'wb')
@@ -134,7 +125,7 @@ class KhweeteurRefreshWorker(Thread):
                 status.is_me = True
             else:
                 status.is_me = False
-                
+
     def getRepliesContent(self, statuses):
         for status in statuses:
             try:
@@ -157,28 +148,28 @@ class KhweeteurRefreshWorker(Thread):
                 pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
                 fhandle.close()
             except:
-                logging.debug('Serialization of %s failed' % (status.id,))                                    
+                logging.debug('Serialization of %s failed' % (status.id,))
 
     def run(self):
         settings = QSettings("Khertan Software", "Khweeteur")
         statuses = []
-        
+
         logging.debug('Thread Runned')
         try:
             since = settings.value(self.api._access_token_key + '_' + self.call)
-                        
+
             if self.call == 'HomeTimeline':
-                logging.debug('%s running' % self.call)                            
+                logging.debug('%s running' % self.call)
                 statuses = self.api.GetHomeTimeline(since_id=since)
-                logging.debug('%s finished' % self.call)                            
+                logging.debug('%s finished' % self.call)
             elif self.call == 'Mentions':
-                logging.debug('%s running' % self.call)                    
+                logging.debug('%s running' % self.call)
                 statuses = self.api.GetMentions(since_id=since)
-                logging.debug('%s finished' % self.call)                            
+                logging.debug('%s finished' % self.call)
             elif self.call == 'DMs':
-                logging.debug('%s running' % self.call)                            
+                logging.debug('%s running' % self.call)
                 statuses = self.api.GetDirectMessages(since_id=since)
-                logging.debug('%s finished' % self.call)                            
+                logging.debug('%s finished' % self.call)
             #Its a search .... or a list
             elif self.call.startswith('Search:'):
                 logging.debug('%s running' % self.call)
@@ -195,38 +186,34 @@ class KhweeteurRefreshWorker(Thread):
                     settings.setValue('user',list_instance.user.screen_name)
                     settings.setValue('name',list_instance.name)
                 settings.endArray()
-                #Get the status of list              
+                #Get the status of list
                 logging.debug('%s finished' % self.call)
                 settings.sync()
             elif self.call.startswith('List:'):
                 logging.debug('%s running' % self.call)
                 statuses = self.api.GetListStatuses(user=self.call.split(':')[1], id=self.call.split(':')[2], since_id=since)
                 logging.debug('%s finished' % self.call)
-            else:   
+            else:
                 logging.error('Unknow call : %s' % (self.call,))
-                
+
         except Exception, err:
-            logging.debug(str(err))
+            logging.debug('Retriever : %s' % str(err))
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos')=='2':
                     self.dbus_handler.info('Khweeteur Error : ' + str(err))
-#            import traceback
-#            exc_type, exc_value, exc_traceback = sys.exc_info()
-#            logging.error('%s' % repr(traceback.format_exception(exc_type, exc_value,
-#                                      exc_traceback)))
-            
+
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:
-            logging.debug('%s start download avatars' % self.call)                            
+            logging.debug('%s start download avatars' % self.call)
             self.downloadProfilesImage(statuses)
-            logging.debug('%s start applying origin' % self.call)                            
+            logging.debug('%s start applying origin' % self.call)
             self.applyOrigin(statuses)
-            logging.debug('%s start getreply' % self.call)                            
+            logging.debug('%s start getreply' % self.call)
             self.getRepliesContent(statuses)
             if self.call != 'DMs':
                 logging.debug('%s start isMe' % self.call)
-                self.isMe(statuses)           
-            logging.debug('%s start serialize' % self.call)                            
+                self.isMe(statuses)
+            logging.debug('%s start serialize' % self.call)
             self.serialize(statuses)
             statuses.sort()
             statuses.reverse()
@@ -234,4 +221,4 @@ class KhweeteurRefreshWorker(Thread):
                        '_' + self.call, statuses[0].id)
             self.send_notification(self.call,len(statuses))
         settings.sync()
-        logging.debug('%s refreshed' % self.call)                            
+        logging.debug('%s refreshed' % self.call)

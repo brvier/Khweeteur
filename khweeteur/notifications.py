@@ -5,18 +5,16 @@
 # Licenced under GPLv3
 
 from PySide.QtCore import QObject
-    
-try:   
+
+try:
     import dbus
     import dbus.service
-    from dbus.mainloop.qt import DBusQtMainLoop
-#    from dbusobj import KhweeteurDBus
     noDBUS = False
 except:
     noDBUS = True
     print 'No dbus try with pynotify'
     import pynotify
-    
+
 class KhweeteurNotification(QObject):
     '''Notification class interface'''
     def __init__(self):
@@ -43,7 +41,7 @@ class KhweeteurNotification(QObject):
             if pynotify.init("Khweeteur"):
                 n = pynotify.Notification(message, message)
                 n.show()
-                
+
     def info(self, message):
         '''Display an information banner'''
         if not noDBUS:
@@ -55,7 +53,7 @@ class KhweeteurNotification(QObject):
             if pynotify.init("Khweeteur"):
                 n = pynotify.Notification(message, message)
                 n.show()
-                
+
     def notify(self,title, message,category='khweeteur-new-tweets', icon='khweeteur',count=1):
         '''Create a notification in the style of email one'''
         if not noDBUS:
@@ -75,7 +73,7 @@ class KhweeteurNotification(QObject):
                                   )
             except:
                 pass
-                
+
         else:
             if pynotify.init("Khweeteur"):
                 n = pynotify.Notification(title, message)
