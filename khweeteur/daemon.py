@@ -202,6 +202,18 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
     def info(self, message):
         '''Display an information banner'''
+        logging.debug('Dbus.info(%s)' % message)
+
+        message = message.replace('\'','')
+        message = message.replace('<','')
+        message = message.replace('>','')
+
+        if message == '':
+            import traceback
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logging.error('Null info message : %s' % repr(traceback.format_exception(exc_type, exc_value,
+                                      exc_traceback)))
+
         try:
             m_bus = dbus.SystemBus()
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
@@ -209,7 +221,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
             iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
             iface.SystemNoteInfoprint('Khweeteur : '+message)
         except:
-            pass
+            import traceback
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logging.error('Error info message : %s' % repr(traceback.format_exception(exc_type, exc_value,
+                                      exc_traceback)))
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur',
                          signature='')
@@ -530,6 +545,12 @@ class KhweeteurDaemon(Daemon):
 
     def retrieve(self, options=None):
         settings = QSettings("Khertan Software", "Khweeteur")
+
+        showInfos = False
+        if settings.contains('ShowInfos'):
+            if settings.value('ShowInfos')=='2':
+                showInfos = True
+
         logging.debug('Setting loaded')
         try:
             #Re read the settings
@@ -597,7 +618,9 @@ class KhweeteurDaemon(Daemon):
                         self.me_users[access_token] = self.apis[access_token].VerifyCredentials().id
                     except Exception, err:
                         self.me_users[access_token] = None
-                        logging.error('VerifyCredential : %s' % str(err))
+                        logging.error('VerifyCredential2 : %s' % str(err))
+                        if showInfos:
+                            self.dbus_handler.info(str(err))
 
                 api = self.apis[access_token]
                 me_user_id = self.me_users[access_token]
