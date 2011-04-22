@@ -30,8 +30,8 @@ import sys
 import pickle
 import time
 from list_view import KhweetsView
-from list_model import KhweetsModel
-
+from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE
+from settings import KhweeteurPref
 from dbusobj import KhweeteurDBus
 import re
 
