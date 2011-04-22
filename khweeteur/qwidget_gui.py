@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 #
 # Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
@@ -8,97 +9,78 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.8'
+__version__ = '0.5.9'
 
-#import sip
-#sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
+# import sip
+# sip.setapi('QString', 2)
+# sip.setapi('QVariant', 2)
 
-
-from PySide.QtGui import QMainWindow, \
-    QHBoxLayout, \
-    QSizePolicy, \
-    QToolButton, \
-    QVBoxLayout, \
-    QFileDialog, \
-    QDesktopServices, \
-    QScrollArea, \
-    QPushButton, \
-    QToolBar, \
-    QLabel, \
-    QWidget, \
-    QInputDialog, \
-    QMenu, \
-    QAction, \
-    QApplication, \
-    QIcon, \
-    QMessageBox, \
-    QPlainTextEdit
-from PySide.QtCore import Qt, \
-    QUrl, \
-    QSettings, \
-    Slot
-
+from PySide.QtGui import QMainWindow, QHBoxLayout, QSizePolicy, QToolButton, \
+    QVBoxLayout, QFileDialog, QDesktopServices, QScrollArea, QPushButton, \
+    QToolBar, QLabel, QWidget, QInputDialog, QMenu, QAction, QApplication, \
+    QIcon, QMessageBox, QPlainTextEdit
+from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal
 from PySide.QtMaemo5 import *
+from qbadgebutton import QToolBadgeButton
 
 import dbus
 import dbus.service
-
 import os
 import sys
-
-from qbadgebutton import QToolBadgeButton
-
 import pickle
 import time
-
-from list_view import *
-from list_model import *
+from list_view import KhweetsView
+from list_model import KhweetsModel
 
 from dbusobj import KhweeteurDBus
 import re
 
 from QtMobility.Location import *
 
-pyqtSignal = Signal
-pyqtSlot = Slot
-
 class KhweeteurDBusHandler(dbus.service.Object):
-    def __init__(self,parent):
-        dbus.service.Object.__init__(self, dbus.SessionBus(), '/net/khertan/Khweeteur')
+
+    def __init__(self, parent):
+        dbus.service.Object.__init__(self, dbus.SessionBus(),
+                                     '/net/khertan/Khweeteur')
         self.parent = parent
 
-        #Post Folder
-        self.post_path = os.path.join(os.path.expanduser("~"),\
-                                 '.khweeteur', 'topost')
+        # Post Folder
 
+        self.post_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
+                                      'topost')
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
-    def require_update(self,optional=None):
-        self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , True)
+    def require_update(self, optional=None):
+        self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
 
-    def post_tweet(self, \
-            shorten_url=1,\
-            serialize=1,\
-            text='',\
-            lattitude='0',
-            longitude='0',
-            base_url = '',
-            action = '',
-            tweet_id = '0',
-            ):
+    def post_tweet(
+        self,
+        shorten_url=1,
+        serialize=1,
+        text='',
+        lattitude='0',
+        longitude='0',
+        base_url='',
+        action='',
+        tweet_id='0',
+        ):
+
         if not os.path.exists(self.post_path):
             os.makedirs(self.post_path)
-        with open(os.path.join(self.post_path, str(time.time())), 'wb') as fhandle:
-            post = {'shorten_url': shorten_url,
-                    'serialize': serialize,
-                    'text': text,
-                    'lattitude': lattitude,
-                    'longitude': longitude,
-                    'base_url': base_url,
-                    'action': action,
-                    'tweet_id': tweet_id,}
+        with open(os.path.join(self.post_path, str(time.time())), 'wb') as \
+            fhandle:
+            post = {
+                'shorten_url': shorten_url,
+                'serialize': serialize,
+                'text': text,
+                'lattitude': lattitude,
+                'longitude': longitude,
+                'base_url': base_url,
+                'action': action,
+                'tweet_id': tweet_id,
+                }
             pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
+
 
 class KhweeteurAbout(QMainWindow):
 
@@ -124,8 +106,7 @@ class KhweeteurAbout(QMainWindow):
             aboutScrollArea.setWidgetResizable(True)
             awidget = QWidget(aboutScrollArea)
             awidget.setMinimumSize(480, 1400)
-            awidget.setSizePolicy(QSizePolicy.Expanding,
-                                  QSizePolicy.Expanding)
+            awidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             aboutScrollArea.setSizePolicy(QSizePolicy.Expanding,
                     QSizePolicy.Expanding)
 
@@ -144,12 +125,10 @@ class KhweeteurAbout(QMainWindow):
 
         aboutIcon = QLabel()
         try:
-            aboutIcon.setPixmap(QIcon.fromTheme('khweeteur'
-                                ).pixmap(128, 128))
+            aboutIcon.setPixmap(QIcon.fromTheme('khweeteur').pixmap(128, 128))
         except:
             aboutIcon.setPixmap(QIcon(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                'icons', 'khweeteur.png')).pixmap(128,
-                                128))
+                                'icons', 'khweeteur.png')).pixmap(128, 128))
 
         aboutIcon.setAlignment(Qt.AlignCenter or Qt.AlignHCenter)
         aboutIcon.resize(128, 128)
@@ -220,24 +199,27 @@ class KhweeteurAbout(QMainWindow):
     def open_bugtracker(self):
         QDesktopServices.openUrl(QUrl('http://khertan.net/khweeteur/bugs'))
 
+
 class Khweeteur(QApplication):
+
     def __init__(self):
-        QApplication.__init__(self,sys.argv)
-        self.setOrganizationName("Khertan Software")
-        self.setOrganizationDomain("khertan.net")
-        self.setApplicationName("Khweeteur")
+        QApplication.__init__(self, sys.argv)
+        self.setOrganizationName('Khertan Software')
+        self.setOrganizationDomain('khertan.net')
+        self.setApplicationName('Khweeteur')
         self.run()
 
     def run(self):
         self.win = KhweeteurWin()
         self.win.show()
 
+
 class KhweeteurWin(QMainWindow):
 
-    activated_by_dbus = pyqtSignal()
+    activated_by_dbus = Signal()
 
-    def __init__(self,parent=None):
-        QMainWindow.__init__(self,parent)
+    def __init__(self, parent=None):
+        QMainWindow.__init__(self, parent)
 
         self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
@@ -255,22 +237,22 @@ class KhweeteurWin(QMainWindow):
         self.toolbar = QToolBar('Toolbar')
         self.addToolBar(Qt.BottomToolBarArea, self.toolbar)
 
-        self.toolbar_mode = 0 #0 - Default , 1 - Edit, 2 - Action
+        self.toolbar_mode = 0  # 0 - Default , 1 - Edit, 2 - Action
 
         self.list_tb_action = []
         self.edit_tb_action = []
         self.action_tb_action = []
 
-        #Switch to edit mode (default)
-        self.tb_new = QAction(QIcon.fromTheme('khweeteur'
-                ), 'New', self)
+        # Switch to edit mode (default)
+
+        self.tb_new = QAction(QIcon.fromTheme('khweeteur'), 'New', self)
         self.tb_new.triggered.connect(self.switch_tb_edit)
         self.toolbar.addAction(self.tb_new)
         self.list_tb_action.append(self.tb_new)
 
-        #Back button (Edit + Action)
-        self.tb_back = QAction(QIcon.fromTheme('general_back'
-                ), 'Back', self)
+        # Back button (Edit + Action)
+
+        self.tb_back = QAction(QIcon.fromTheme('general_back'), 'Back', self)
         self.tb_back.triggered.connect(self.switch_tb_default)
         self.toolbar.addAction(self.tb_back)
         self.edit_tb_action.append(self.tb_back)
@@ -278,69 +260,78 @@ class KhweeteurWin(QMainWindow):
 
         self.setupMenu()
 
-        #Twitpic button
-        self.tb_twitpic = QAction(QIcon.fromTheme('tasklaunch_images'
-                ), 'Twitpic', self)
+        # Twitpic button
+
+        self.tb_twitpic = QAction(QIcon.fromTheme('tasklaunch_images'),
+                                  'Twitpic', self)
         self.tb_twitpic.triggered.connect(self.do_tb_twitpic)
         self.toolbar.addAction(self.tb_twitpic)
         self.edit_tb_action.append(self.tb_twitpic)
 
-        #Text field (edit)
+        # Text field (edit)
+
         self.tb_text = QPlainTextEdit()
         self.tb_text_reply_id = 0
         self.tb_text_reply_base_url = ''
         self.tb_text.setFixedHeight(66)
         self.edit_tb_action.append(self.toolbar.addWidget(self.tb_text))
 
-        #Char count (Edit)
+        # Char count (Edit)
+
         self.tb_charCounter = QLabel('140')
         self.edit_tb_action.append(self.toolbar.addWidget(self.tb_charCounter))
         self.tb_text.textChanged.connect(self.countCharsAndResize)
 
-        #Send tweet (Edit)
-        self.tb_send = QAction(QIcon.fromTheme('khweeteur'
-                ), 'Tweet', self)
+        # Send tweet (Edit)
+
+        self.tb_send = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
         self.tb_send.triggered.connect(self.do_tb_send)
         self.tb_send.setVisible(False)
         self.toolbar.addAction(self.tb_send)
         self.edit_tb_action.append(self.tb_send)
 
-        #Refresh (Default)
-        self.tb_update = QAction(QIcon.fromTheme('general_refresh'
-                ), 'Update', self)
+        # Refresh (Default)
+
+        self.tb_update = QAction(QIcon.fromTheme('general_refresh'), 'Update',
+                                 self)
         self.tb_update.triggered.connect(self.dbus_handler.require_update)
         self.toolbar.addAction(self.tb_update)
         self.list_tb_action.append(self.tb_update)
 
-        #Home (Default)
+        # Home (Default)
+
         self.home_button = QToolBadgeButton(self)
-        self.home_button.setText("Home")
+        self.home_button.setText('Home')
         self.home_button.setCheckable(True)
         self.home_button.setChecked(True)
         self.home_button.clicked.connect(self.show_hometimeline)
         self.list_tb_action.append(self.toolbar.addWidget(self.home_button))
 
-        #Mentions (Default)
+        # Mentions (Default)
+
         self.mention_button = QToolBadgeButton(self)
-        self.mention_button.setText("Mentions")
+        self.mention_button.setText('Mentions')
         self.mention_button.setCheckable(True)
         self.mention_button.clicked.connect(self.show_mentions)
         self.list_tb_action.append(self.toolbar.addWidget(self.mention_button))
 
-        #DM (Default)
+        # DM (Default)
+
         self.msg_button = QToolBadgeButton(self)
-        self.msg_button.setText("DMs")
+        self.msg_button.setText('DMs')
         self.msg_button.setCheckable(True)
         self.msg_button.clicked.connect(self.show_dms)
         self.list_tb_action.append(self.toolbar.addWidget(self.msg_button))
 
-        #Search Button
+        # Search Button
+
         self.tb_search_menu = QMenu()
         self.loadSearchMenu()
 
-        #Search (Default)
+        # Search (Default)
+
         self.tb_search_button = QToolBadgeButton(self)
-        self.tb_search_button.setText("")
+        self.tb_search_button.setText('')
         self.tb_search_button.setIcon(QIcon.fromTheme('general_search'))
         self.tb_search_button.setMenu(self.tb_search_menu)
         self.tb_search_button.setPopupMode(QToolButton.InstantPopup)
@@ -348,13 +339,15 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.clicked.connect(self.show_search)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_search_button))
 
-        #Lists Button
+        # Lists Button
+
         self.tb_list_menu = QMenu()
         self.loadListMenu()
 
-        #Lists (Default)
+        # Lists (Default)
+
         self.tb_list_button = QToolBadgeButton(self)
-        self.tb_list_button.setText("")
+        self.tb_list_button.setText('')
         self.tb_list_button.setIcon(QIcon.fromTheme('general_notes'))
         self.tb_list_button.setMenu(self.tb_list_menu)
         self.tb_list_button.setPopupMode(QToolButton.InstantPopup)
@@ -362,52 +355,61 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.clicked.connect(self.show_list)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_list_button))
 
-        #Fullscreen
-        self.tb_fullscreen =  QAction(QIcon.fromTheme("general_fullsize"), 'Fullscreen', self)
+        # Fullscreen
+
+        self.tb_fullscreen = QAction(QIcon.fromTheme('general_fullsize'),
+                                     'Fullscreen', self)
         self.tb_fullscreen.triggered.connect(self.do_tb_fullscreen)
         self.toolbar.addAction(self.tb_fullscreen)
         self.list_tb_action.append(self.tb_fullscreen)
 
-        #Reply button (Action)
+        # Reply button (Action)
+
         self.tb_reply = QAction('Reply', self)
         self.tb_reply.setShortcut('Ctrl+M')
         self.toolbar.addAction(self.tb_reply)
         self.tb_reply.triggered.connect(self.do_tb_reply)
         self.action_tb_action.append(self.tb_reply)
 
-        #Retweet (Action)
+        # Retweet (Action)
+
         self.tb_retweet = QAction('Retweet', self)
         self.tb_retweet.setShortcut('Ctrl+P')
         self.toolbar.addAction(self.tb_retweet)
         self.tb_retweet.triggered.connect(self.do_tb_retweet)
         self.action_tb_action.append(self.tb_retweet)
 
-        #Follow (Action)
+        # Follow (Action)
+
         self.tb_follow = QAction('Follow', self)
         self.tb_follow.triggered.connect(self.do_tb_follow)
         self.toolbar.addAction(self.tb_follow)
         self.action_tb_action.append(self.tb_follow)
 
-        #UnFollow (Action)
+        # UnFollow (Action)
+
         self.tb_unfollow = QAction('Unfollow', self)
         self.tb_unfollow.triggered.connect(self.do_tb_unfollow)
         self.toolbar.addAction(self.tb_unfollow)
         self.action_tb_action.append(self.tb_unfollow)
 
-        #Favorite (Action)
+        # Favorite (Action)
+
         self.tb_favorite = QAction('Favorite', self)
         self.tb_favorite.triggered.connect(self.do_tb_favorite)
         self.toolbar.addAction(self.tb_favorite)
         self.action_tb_action.append(self.tb_favorite)
 
-        #Open URLs (Action)
+        # Open URLs (Action)
+
         self.tb_urls = QAction('Open URLs', self)
         self.tb_urls.setShortcut('Ctrl+O')
         self.toolbar.addAction(self.tb_urls)
         self.tb_urls.triggered.connect(self.do_tb_openurl)
         self.action_tb_action.append(self.tb_urls)
 
-        #Delete (Action)
+        # Delete (Action)
+
         self.tb_delete = QAction('Delete', self)
         self.toolbar.addAction(self.tb_delete)
         self.tb_delete.triggered.connect(self.do_tb_delete)
@@ -448,14 +450,14 @@ class KhweeteurWin(QMainWindow):
 
         self.geolocDoStart()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_fullscreen(self):
         if self.isFullScreen():
             self.showMaximized()
         else:
             self.showFullScreen()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_copy(self):
         text = None
         for index in self.view.selectedIndexes():
@@ -465,10 +467,11 @@ class KhweeteurWin(QMainWindow):
             cb = QApplication.clipboard()
             cb.setText(text)
 
-    def enterEvent(self,event):
+    def enterEvent(self, event):
         """
             Redefine the enter event to refresh recent file list
         """
+
         self.model.refreshTimestamp()
 
     def listen_dbus(self):
@@ -476,38 +479,49 @@ class KhweeteurWin(QMainWindow):
         self.dbus_loop = DBusQtMainLoop()
         dbus.set_default_main_loop(self.dbus_loop)
         self.bus = dbus.SessionBus()
-        #Connect the new tweet signal
-        self.bus.add_signal_receiver(self.new_tweets, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='new_tweets')
-        self.bus.add_signal_receiver(self.stop_spinning, path='/net/khertan/Khweeteur', dbus_interface='net.khertan.Khweeteur', signal_name='refresh_ended')
+
+        # Connect the new tweet signal
+
+        self.bus.add_signal_receiver(self.new_tweets,
+                                     path='/net/khertan/Khweeteur',
+                                     dbus_interface='net.khertan.Khweeteur',
+                                     signal_name='new_tweets')
+        self.bus.add_signal_receiver(self.stop_spinning,
+                                     path='/net/khertan/Khweeteur',
+                                     dbus_interface='net.khertan.Khweeteur',
+                                     signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
         self.activated_by_dbus.connect(self.activateWindow)
         dbusobj = KhweeteurDBus()
         dbusobj.attach_win(self)
 
     def stop_spinning(self):
-        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator , False)
+        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, False)
 
-    def new_tweets(self,count,msg):
+    def new_tweets(self, count, msg):
         if msg == 'HomeTimeline':
-            self.home_button.setCounter(self.home_button.getCounter()+count)
+            self.home_button.setCounter(self.home_button.getCounter() + count)
             self.home_button.update()
         elif msg == 'Mentions':
-            self.mention_button.setCounter(self.mention_button.getCounter()+count)
+            self.mention_button.setCounter(self.mention_button.getCounter()
+                    + count)
             self.mention_button.update()
         elif msg == 'DMs':
-            self.msg_button.setCounter(self.msg_button.getCounter()+count)
+            self.msg_button.setCounter(self.msg_button.getCounter() + count)
             self.msg_button.update()
         elif msg.startswith('Search:'):
-            self.tb_search_button.setCounter(self.tb_search_button.getCounter()+count)
+            self.tb_search_button.setCounter(self.tb_search_button.getCounter()
+                    + count)
             self.tb_search_button.update()
         elif msg.startswith('List:'):
-            self.tb_list_button.setCounter(self.tb_list_button.getCounter()+count)
+            self.tb_list_button.setCounter(self.tb_list_button.getCounter()
+                    + count)
             self.tb_list_button.update()
 
         if self.model.call == msg:
             self.model.load(msg)
 
-    @pyqtSlot()
+    @Slot()
     def show_search(self):
         terms = self.sender().text()
         self.tb_search_button.setCounter(0)
@@ -517,11 +531,16 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.tb_list_button.setChecked(False)
         self.view.scrollToTop()
-        self.model.load('Search:'+terms)
+        self.model.load('Search:' + terms)
         self.delete_search_action.setVisible(True)
-        self.setWindowTitle('Khweeteur : '+terms)
+        self.setWindowTitle('Khweeteur : ' + terms)
 
-    def show_list(self, name='', user='', tid=''):
+    def show_list(
+        self,
+        name='',
+        user='',
+        tid='',
+        ):
         self.tb_list_button.setCounter(0)
         self.home_button.setChecked(False)
         self.msg_button.setChecked(False)
@@ -529,11 +548,11 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.setChecked(True)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
-        self.model.load('List:'+user+':'+tid)
+        self.model.load('List:' + user + ':' + tid)
         self.delete_search_action.setVisible(True)
-        self.setWindowTitle('Khweeteur List : '+name)
+        self.setWindowTitle('Khweeteur List : ' + name)
 
-    @pyqtSlot()
+    @Slot()
     def show_hometimeline(self):
         self.home_button.setCounter(0)
         self.home_button.setChecked(True)
@@ -546,7 +565,7 @@ class KhweeteurWin(QMainWindow):
         self.setWindowTitle('Khweeteur : Home')
         self.delete_search_action.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def switch_tb_default(self):
         self.tb_text.setPlainText('')
         self.tb_text_reply_id = 0
@@ -554,12 +573,12 @@ class KhweeteurWin(QMainWindow):
         self.toolbar_mode = 0
         self.switch_tb()
 
-    @pyqtSlot()
+    @Slot()
     def switch_tb_edit(self):
         self.toolbar_mode = 1
         self.switch_tb()
 
-    @pyqtSlot()
+    @Slot()
     def switch_tb_action(self):
         if self.toolbar_mode != 2:
             self.toolbar_mode = 2
@@ -589,41 +608,45 @@ class KhweeteurWin(QMainWindow):
         if mode in (1, 2):
             self.tb_back.setVisible(True)
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_twitpic(self):
         text = self.tb_text.toPlainText()
 
         if not text:
-            QMessageBox.warning(self,
-               "Khweeteur - Twitpic",
-               "Please enter a text before posting a picture.",
-               QMessageBox.Close
-               )
+            QMessageBox.warning(self, 'Khweeteur - Twitpic',
+                                'Please enter a text before posting a picture.'
+                                , QMessageBox.Close)
             return
 
-        filename =  QFileDialog.getOpenFileName(self,
-                            "Khweeteur",'/home/user/MyDocs')
+        filename = QFileDialog.getOpenFileName(self, 'Khweeteur',
+                '/home/user/MyDocs')
 
-        #PySide work arround bug #625
+        # PySide work arround bug #625
+
         if type(filename) == tuple:
-            filename = filename[0
-            ]
+            filename = filename[0]
 
         if filename:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                1,#serialize=\
-                text,#text=\
-                '' if self.geoloc_source==None else self.geoloc_source[0], #lattitude =
-                '' if self.geoloc_source==None else self.geoloc_source[1], #longitude =
-                filename, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                1,
+                text,
+                ('' if self.geoloc_source == None else self.geoloc_source[0]),
+                ('' if self.geoloc_source == None else self.geoloc_source[1]),
+                filename,
                 'twitpic',
-                '', #tweet_id =
+                '',
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_openurl(self):
         for index in self.view.selectedIndexes():
             status = self.model.data(index)
@@ -635,22 +658,29 @@ class KhweeteurWin(QMainWindow):
             except:
                 raise
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_send(self):
-        is_not_reply = self.tb_text_reply_id==0
-        self.dbus_handler.post_tweet( \
-            1,#shorten_url=\
-            1,#serialize=\
-            self.tb_text.toPlainText(),#text=\
-            '' if self.geoloc_source==None else self.geoloc_source[0], #lattitude =
-            '' if self.geoloc_source==None else self.geoloc_source[1], #longitude =
-            '' if is_not_reply else self.tb_text_reply_base_url, #base_url
-            'tweet' if is_not_reply else 'reply', #action
-            '' if is_not_reply else str(self.tb_text_reply_id),)
+        is_not_reply = self.tb_text_reply_id == 0
+        self.dbus_handler.post_tweet(  # shorten_url=\
+                                       # serialize=\
+                                       # text=\
+                                       # lattitude =
+                                       # longitude =
+                                       # base_url
+                                       # action
+            1,
+            1,
+            self.tb_text.toPlainText(),
+            ('' if self.geoloc_source == None else self.geoloc_source[0]),
+            ('' if self.geoloc_source == None else self.geoloc_source[1]),
+            ('' if is_not_reply else self.tb_text_reply_base_url),
+            ('tweet' if is_not_reply else 'reply'),
+            ('' if is_not_reply else str(self.tb_text_reply_id)),
+            )
         self.switch_tb_default()
         self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_reply(self):
         tweet_id = None
         for index in self.view.selectedIndexes():
@@ -658,12 +688,13 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
             tweet_screenname = self.model.data(index, role=SCREENNAMEROLE)
         if tweet_id:
-            self.tb_text.setPlainText('@'+tweet_screenname+self.tb_text.toPlainText())
+            self.tb_text.setPlainText('@' + tweet_screenname
+                                      + self.tb_text.toPlainText())
             self.tb_text_reply_id = tweet_id
             self.tb_text_reply_base_url = tweet_source
             self.switch_tb_edit()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_retweet(self):
         tweet_id = None
         for index in self.view.selectedIndexes():
@@ -671,27 +702,31 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
             if self.model.data(index, role=PROTECTEDROLE):
                 screenname = self.model.data(index, role=SCREENNAMEROLE)
-                QMessageBox.warning(self,
-                   "Khweeteur - Retweet",
-                   "%s protect his tweets you can't retweet them" % screenname,
-                   QMessageBox.Close
-                   )
+                QMessageBox.warning(self, 'Khweeteur - Retweet',
+                                    "%s protect his tweets you can't retweet them"
+                                     % screenname, QMessageBox.Close)
 
         if tweet_id:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                0,#serialize=\
-                '',#text=\
-                '', #lattitude =
-                '', #longitude =
-                tweet_source, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                0,
+                '',
+                '',
+                '',
+                tweet_source,
                 'retweet',
-                str(tweet_id), #tweet_id =
+                str(tweet_id),
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_delete(self):
         tweet_id = None
         for index in self.view.selectedIndexes():
@@ -699,20 +734,26 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
 
         if tweet_id:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                0,#serialize=\
-                '',#text=\
-                '', #lattitude =
-                '', #longitude =
-                tweet_source, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                0,
+                '',
+                '',
+                '',
+                tweet_source,
                 'delete',
-                str(tweet_id), #tweet_id =
+                str(tweet_id),
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_favorite(self):
         tweet_id = None
         for index in self.view.selectedIndexes():
@@ -720,20 +761,26 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
 
         if tweet_id:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                0,#serialize=\
-                '',#text=\
-                '', #lattitude =
-                '', #longitude =
-                tweet_source, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                0,
+                '',
+                '',
+                '',
+                tweet_source,
                 'favorite',
-                str(tweet_id), #tweet_id =
+                str(tweet_id),
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_follow(self):
         user_id = None
         for index in self.view.selectedIndexes():
@@ -741,20 +788,26 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
 
         if user_id:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                0,#serialize=\
-                '',#text=\
-                '', #lattitude =
-                '', #longitude =
-                tweet_source, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                0,
+                '',
+                '',
+                '',
+                tweet_source,
                 'follow',
-                str(user_id), #tweet_id =
+                str(user_id),
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def do_tb_unfollow(self):
         user_id = None
         for index in self.view.selectedIndexes():
@@ -762,20 +815,26 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
 
         if user_id:
-            self.dbus_handler.post_tweet( \
-                0,#shorten_url=\
-                0,#serialize=\
-                '',#text=\
-                '', #lattitude =
-                '', #longitude =
-                tweet_source, #base_url =
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # lattitude =
+                                           # longitude =
+                                           # base_url =
+                                           # tweet_id =
+                0,
+                0,
+                '',
+                '',
+                '',
+                tweet_source,
                 'unfollow',
-                str(user_id), #tweet_id =
+                str(user_id),
                 )
             self.switch_tb_default()
             self.dbus_handler.require_update()
 
-    @pyqtSlot()
+    @Slot()
     def show_mentions(self):
         self.mention_button.setCounter(0)
         self.mention_button.setChecked(True)
@@ -788,7 +847,7 @@ class KhweeteurWin(QMainWindow):
         self.setWindowTitle('Khweeteur : Mentions')
         self.delete_search_action.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def show_dms(self):
         self.msg_button.setCounter(0)
         self.msg_button.setChecked(True)
@@ -801,16 +860,15 @@ class KhweeteurWin(QMainWindow):
         self.setWindowTitle('Khweeteur : DMs')
         self.delete_search_action.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def countCharsAndResize(self):
         local_self = self.tb_text
         self.tb_charCounter.setText(unicode(140
                                     - len(local_self.toPlainText())))
         doc = local_self.document()
         s = doc.size()
-        s.setHeight((s.height() + 1)
-                    * (local_self.fontMetrics().lineSpacing() + 1)
-                    - 21)
+        s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing()
+                    + 1) - 21)
         fr = local_self.frameRect()
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(370, s.height() + fr.height()
@@ -818,57 +876,66 @@ class KhweeteurWin(QMainWindow):
 
     def loadSearchMenu(self):
         settings = QSettings()
-        self.tb_search_menu.clear ()
-        self.tb_search_menu.addAction(QIcon.fromTheme('general_add'), 'New', self.newSearchAsk)
+        self.tb_search_menu.clear()
+        self.tb_search_menu.addAction(QIcon.fromTheme('general_add'), 'New',
+                                      self.newSearchAsk)
 
         nb_searches = settings.beginReadArray('searches')
         for index in range(nb_searches):
             settings.setArrayIndex(index)
-            self.tb_search_menu.addAction(settings.value('terms'), self.show_search)
+            self.tb_search_menu.addAction(settings.value('terms'),
+                    self.show_search)
         settings.endArray()
 
     def loadListMenu(self):
         settings = QSettings()
-        self.tb_list_menu.clear ()
+        self.tb_list_menu.clear()
         nb_lists = settings.beginReadArray('lists')
         for index in range(nb_lists):
             settings.setArrayIndex(index)
-            self.tb_list_menu.addAction(settings.value('name'), lambda user=settings.value('user'), id=settings.value('id'), name=settings.value('name') : self.show_list(name,user,id) )
+            self.tb_list_menu.addAction(settings.value('name'),
+                                        lambda user=settings.value('user'), \
+                                        id=settings.value('id'), \
+                                        name=settings.value('name'): \
+                                        self.show_list(name, user, id))
         settings.endArray()
 
-    @pyqtSlot()
+    @Slot()
     def do_delete_search_action(self):
         try:
             terms = self.model.call.split(':')[1]
-            for index,action in enumerate(self.tb_search_menu.actions()):
+            for (index, action) in enumerate(self.tb_search_menu.actions()):
                 if action.text() == terms:
                     self.tb_search_menu.removeAction(action)
             self.saveSearchMenuInPrefs()
             self.loadSearchMenu()
             self.show_hometimeline()
-
         except Exception, err:
-            print err #not a search
+
+            print err  # not a search
 
     def saveSearchMenuInPrefs(self):
         settings = QSettings()
         settings.beginWriteArray('searches')
-        for index,action in enumerate(self.tb_search_menu.actions()):
-            #pass the first which are the new option
-            if index==0:
+        for (index, action) in enumerate(self.tb_search_menu.actions()):
+
+            # pass the first which are the new option
+
+            if index == 0:
                 continue
-            settings.setArrayIndex(index-1)
-            settings.setValue('terms',action.text())
+            settings.setArrayIndex(index - 1)
+            settings.setValue('terms', action.text())
         settings.endArray()
         settings.sync()
 
-    @pyqtSlot()
+    @Slot()
     def newSearchAsk(self):
-        (search_terms, ok) = QInputDialog.getText(self,
-                self.tr('Search'),
+        (search_terms, ok) = QInputDialog.getText(self, self.tr('Search'),
                 self.tr('Enter the search keyword(s) :'))
         if ok == 1:
-            #FIXME : Create the search
+
+            # FIXME : Create the search
+
             self.tb_search_menu.addAction(search_terms, self.show_search)
             self.saveSearchMenuInPrefs()
             self.dbus_handler.require_update()
@@ -878,29 +945,29 @@ class KhweeteurWin(QMainWindow):
             Initialization of the maemo menu
         """
 
-        fileMenu =  QMenu(self.tr("&Menu"), self)
+        fileMenu = QMenu(self.tr('&Menu'), self)
         self.menuBar().addMenu(fileMenu)
-        self.delete_search_action = QAction(self.tr("&Delete Search"),self)
+        self.delete_search_action = QAction(self.tr('&Delete Search'), self)
         self.delete_search_action.triggered.connect(self.do_delete_search_action)
-        fileMenu.addAction(self.tr("&Preferences..."), self.showPrefs)
-        fileMenu.addAction(self.tr("&About"), self.showAbout)
+        fileMenu.addAction(self.tr('&Preferences...'), self.showPrefs)
+        fileMenu.addAction(self.tr('&About'), self.showAbout)
         fileMenu.addAction(self.delete_search_action)
         self.delete_search_action.setVisible(False)
 
-    @pyqtSlot()
+    @Slot()
     def showPrefs(self):
         khtsettings = KhweeteurPref(parent=self)
         khtsettings.save.connect(self.refreshPrefs)
         khtsettings.show()
 
-    @pyqtSlot()
+    @Slot()
     def refreshPrefs(self):
         self.view.refreshCustomDelegate()
         self.geolocDoStart()
 
-    @pyqtSlot()
+    @Slot()
     def showAbout(self):
-        if not hasattr(self,'aboutWin'):
+        if not hasattr(self, 'aboutWin'):
             self.aboutWin = KhweeteurAbout(self)
         self.aboutWin.show()
 
@@ -913,6 +980,7 @@ class KhweeteurWin(QMainWindow):
 
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
+
         self.geoloc_coordinates = None
         if self.geoloc_source is None:
             self.geoloc_source = \
@@ -924,6 +992,7 @@ class KhweeteurWin(QMainWindow):
 
     def geolocStop(self):
         '''Stop the GPS'''
+
         self.geoloc_coordinates = None
         if self.geoloc_source is not None:
             self.geoloc_source.stopUpdates()
@@ -931,21 +1000,28 @@ class KhweeteurWin(QMainWindow):
 
     def geolocUpdated(self, update):
         '''GPS Callback on update'''
+
         if update.isValid():
             self.geoloc_coordinates = (update.coordinate().latitude(),
-                                update.coordinate().longitude())
+                                       update.coordinate().longitude())
         else:
             print 'GPS Update not valid'
 
+
 if __name__ == '__main__':
     from subprocess import Popen
-    Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
+    Popen(['/usr/bin/python', os.path.join(os.path.dirname(__file__),
+          'daemon.py'), 'start'])
     app = Khweeteur()
     app.exec_()
-    settings = QSettings("Khertan Software", "Khweeteur")
+    settings = QSettings('Khertan Software', 'Khweeteur')
     if settings.contains('useDaemon'):
         print settings.value('useDaemon')
         if settings.value('useDaemon') != '2':
             print 'Stop daemon'
-            #use system to wait the exec
-            os.system('/usr/bin/python '+os.path.join(os.path.dirname(__file__),'daemon.py') + ' stop')
+
+            # use system to wait the exec
+
+            os.system('/usr/bin/python '
+                      + os.path.join(os.path.dirname(__file__), 'daemon.py')
+                      + ' stop')

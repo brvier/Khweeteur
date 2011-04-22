@@ -12,7 +12,10 @@ from PySide.QtCore import QSettings
 
 if __name__ == '__main__':
     from subprocess import Popen
-    Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'start'])
+    Popen(['/usr/bin/python',
+           os.path.join(os.path.dirname(__file__),
+           'daemon.py'),
+           'start'])
     app = Khweeteur()
     app.exec_()
     settings = QSettings("Khertan Software", "Khweeteur")
@@ -21,4 +24,5 @@ if __name__ == '__main__':
         if settings.value('useDaemon') != '2':
             print 'Stop daemon'
             #use system to wait the exec
-            os.system('/usr/bin/python '+os.path.join(os.path.dirname(__file__),'daemon.py') + ' stop')
+            os.system('/usr/bin/python ' + \
+                os.path.join(os.path.dirname(__file__), 'daemon.py') + ' stop')

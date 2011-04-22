@@ -1,57 +1,44 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 #
 # Copyright (c) 2010 Benoît HERVIER
 # Licenced under GPLv3
+
 '''A simple Twitter client made with pyqt4'''
 
 import httplib2
 import re
 import os
 
-#import sip
-#sip.setapi('QString', 2)
-#sip.setapi('QVariant', 2)
+# import sip
+# sip.setapi('QString', 2)
+# sip.setapi('QVariant', 2)
 
-from PySide.QtGui import QMainWindow, \
-    QSizePolicy, \
-    QSpinBox, \
-    QVBoxLayout, \
-    QAbstractItemView, \
-    QScrollArea, \
-    QListView, \
-    QComboBox, \
-    QCheckBox, \
-    QDialog, \
-    QGridLayout, \
-    QWidget, \
-    QLabel, \
-    QPushButton, \
-    QApplication, \
-    QMessageBox
+from PySide.QtGui import QMainWindow, QSizePolicy, QSpinBox, QVBoxLayout, \
+    QAbstractItemView, QScrollArea, QListView, QComboBox, QCheckBox, QDialog, \
+    QGridLayout, QWidget, QLabel, QPushButton, QApplication, QMessageBox
 
-from PySide.QtCore import Qt, \
-    QUrl, \
-    QAbstractListModel, \
-    QSettings, \
-    QModelIndex, \
+from PySide.QtCore import Qt, QUrl, QAbstractListModel, QSettings, QModelIndex, \
     Signal
 
-SUPPORTED_ACCOUNTS = [{'name':'Twitter',
-                           'consumer_key':'uhgjkoA2lggG4Rh0ggUeQ',
-                           'consumer_secret':'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
-                           'base_url':'https://api.twitter.com/1',
-                           'request_token_url':'https://api.twitter.com/oauth/request_token',
-                           'access_token_url':'https://api.twitter.com/oauth/access_token',
-                           'authorization_url':'https://api.twitter.com/oauth/authorize'},
-                          {'name':'Identi.ca',
-                           'consumer_key':'c7e86efd4cb951871200440ad1774413',
-                           'consumer_secret':'236fa46bf3f65fabdb1fd34d63c26d28',
-                           'base_url':'http://identi.ca/api',
-                           'request_token_url':'http://identi.ca/api/oauth/request_token',
-                           'access_token_url':'http://identi.ca/api/oauth/access_token',
-                           'authorization_url':'http://identi.ca/api/oauth/authorize'},
-                         ]
+SUPPORTED_ACCOUNTS = [{
+    'name': 'Twitter',
+    'consumer_key': 'uhgjkoA2lggG4Rh0ggUeQ',
+    'consumer_secret': 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
+    'base_url': 'https://api.twitter.com/1',
+    'request_token_url': 'https://api.twitter.com/oauth/request_token',
+    'access_token_url': 'https://api.twitter.com/oauth/access_token',
+    'authorization_url': 'https://api.twitter.com/oauth/authorize',
+    }, {
+    'name': 'Identi.ca',
+    'consumer_key': 'c7e86efd4cb951871200440ad1774413',
+    'consumer_secret': '236fa46bf3f65fabdb1fd34d63c26d28',
+    'base_url': 'http://identi.ca/api',
+    'request_token_url': 'http://identi.ca/api/oauth/request_token',
+    'access_token_url': 'http://identi.ca/api/oauth/access_token',
+    'authorization_url': 'http://identi.ca/api/oauth/authorize',
+    }]
 
 import oauth2 as oauth
 from notifications import KhweeteurNotification
@@ -65,9 +52,15 @@ from PySide.QtWebKit import *
 
 
 class OAuthView(QWebView):
+
     gotpin = Signal(unicode)
 
-    def __init__(self, parent=None, account_type={}, use_for_tweet=False):
+    def __init__(
+        self,
+        parent=None,
+        account_type={},
+        use_for_tweet=False,
+        ):
         QWebView.__init__(self, parent)
         self.loggedIn = False
         self.account_type = account_type
@@ -76,6 +69,7 @@ class OAuthView(QWebView):
 
     def open(self, url):
         """."""
+
         self.url = QUrl(url)
         self.loadFinished.connect(self._loadFinished)
         self.load(self.url)
@@ -83,6 +77,7 @@ class OAuthView(QWebView):
 
     def createWindow(self, windowType):
         """Load links in the same web-view."""
+
         return self
 
     def _loadFinished(self):
@@ -92,7 +87,7 @@ class OAuthView(QWebView):
         if len(res) > 0:
             self.pin = res[0]
 
-        self.loggedIn = (self.pin not in (None, ''))
+        self.loggedIn = self.pin not in (None, '')
 
         if self.loggedIn:
             self.loadFinished.disconnect(self._loadFinished)
@@ -100,20 +95,22 @@ class OAuthView(QWebView):
 
 
 class AccountDlg(QDialog):
+
     """ Find and replace dialog """
+
     add_account = Signal(dict, bool)
 
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        self.setWindowTitle("Add account")
+        self.setWindowTitle('Add account')
 
         self.accounts_type = QComboBox()
         for account_type in SUPPORTED_ACCOUNTS:
             self.accounts_type.addItem(account_type['name'])
 
-        self.use_for_tweet = QCheckBox("Use for posting")
+        self.use_for_tweet = QCheckBox('Use for posting')
 
-        self.add = QPushButton("&Add")
+        self.add = QPushButton('&Add')
 
         gridLayout = QGridLayout()
         gridLayout.addWidget(self.accounts_type, 0, 0)
@@ -130,6 +127,7 @@ class AccountDlg(QDialog):
 
 
 class AccountsModel(QAbstractListModel):
+
     dataChanged = Signal(QModelIndex, QModelIndex)
 
     def __init__(self):
@@ -138,8 +136,7 @@ class AccountsModel(QAbstractListModel):
 
     def set(self, mlist):
         self._items = mlist
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(0,
+        self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
                               len(self._items)))
 
     def rowCount(self, parent=QModelIndex()):
@@ -159,9 +156,18 @@ class AccountsView(QListView):
         self.setEditTriggers(QAbstractItemView.SelectedClicked)
 
 
-class KhweeteurAccount():
+class KhweeteurAccount:
 
-    def __init__(self, name='Unknow', consumer_key='', consumer_secret='', token_key='', token_secret='', use_for_tweet=True, base_url=''):
+    def __init__(
+        self,
+        name='Unknow',
+        consumer_key='',
+        consumer_secret='',
+        token_key='',
+        token_secret='',
+        use_for_tweet=True,
+        base_url='',
+        ):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.token_key = token_key
@@ -170,7 +176,9 @@ class KhweeteurAccount():
         self.base_url = base_url
         self.name = name
 
+
 class KhweeteurPref(QMainWindow):
+
     save = Signal()
 
     DEFAULTTHEME = u'Default'
@@ -178,11 +186,13 @@ class KhweeteurPref(QMainWindow):
     COOLWHITETHEME = u'CoolWhite'
     COOLGRAYTHEME = u'CoolGray'
     MINITHEME = u'MiniDefault'
-    THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME, MINITHEME]
+    THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME,
+              MINITHEME]
 
     def __init__(self, parent=None):
         ''' Init the GUI Win'''
-        QMainWindow.__init__(self,parent)
+
+        QMainWindow.__init__(self, parent)
         self.parent = parent
 
         self.settings = QSettings()
@@ -190,89 +200,105 @@ class KhweeteurPref(QMainWindow):
         self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.setWindowTitle("Khweeteur Prefs")
+        self.setWindowTitle('Khweeteur Prefs')
 
         self._setupGUI()
         self.loadPrefs()
 
     def loadPrefs(self):
         ''' Load and init default prefs to GUI'''
-        #load account
+
+        # load account
+
         self.accounts = []
         nb_accounts = self.settings.beginReadArray('accounts')
         for index in range(nb_accounts):
             self.settings.setArrayIndex(index)
-            self.accounts.append(KhweeteurAccount(name=self.settings.value('name'), \
-                consumer_key=self.settings.value('consumer_key'), \
-                consumer_secret=self.settings.value('consumer_secret'), \
-                token_key=self.settings.value('token_key'), \
-                token_secret=self.settings.value('token_secret'), \
-                use_for_tweet=self.settings.value('use_for_tweet'), \
-                base_url=self.settings.value('base_url')))
+            self.accounts.append(KhweeteurAccount(
+                name=self.settings.value('name'),
+                consumer_key=self.settings.value('consumer_key'),
+                consumer_secret=self.settings.value('consumer_secret'),
+                token_key=self.settings.value('token_key'),
+                token_secret=self.settings.value('token_secret'),
+                use_for_tweet=self.settings.value('use_for_tweet'),
+                base_url=self.settings.value('base_url'),
+                ))
         self.settings.endArray()
         self.accounts_model.set(self.accounts)
 
-        #load other prefs
+        # load other prefs
+
         if self.settings.contains('refresh_interval'):
-            self.refresh_value.setValue(int(self.settings.value("refreshInterval")))
+            self.refresh_value.setValue(int(self.settings.value('refreshInterval'
+                                        )))
         else:
             self.refresh_value.setValue(10)
 
-        if self.settings.contains("useDaemon"):
-            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value("useDaemon"))))
+        if self.settings.contains('useDaemon'):
+            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value('useDaemon'
+                    ))))
         else:
             self.useNotification_value.setCheckState(Qt.CheckState(2))
 
-        if self.settings.contains("useSerialization"):
-            self.useSerialization_value.setCheckState(Qt.CheckState(int(self.settings.value("useSerialization"))))
+        if self.settings.contains('useSerialization'):
+            self.useSerialization_value.setCheckState(Qt.CheckState(int(self.settings.value('useSerialization'
+                    ))))
         else:
             self.useSerialization_value.setCheckState(Qt.CheckState(2))
 
-        if self.settings.contains("useBitly"):
-            self.useBitly_value.setCheckState(Qt.CheckState(int(self.settings.value("useBitly"))))
+        if self.settings.contains('useBitly'):
+            self.useBitly_value.setCheckState(Qt.CheckState(int(self.settings.value('useBitly'
+                    ))))
         else:
             self.useBitly_value.setCheckState(Qt.CheckState(2))
 
-        if self.settings.contains("theme"):
-            if not self.settings.value("theme") in self.THEMES:
-                self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
+        if self.settings.contains('theme'):
+            if not self.settings.value('theme') in self.THEMES:
+                self.settings.setValue('theme', KhweeteurPref.DEFAULTTHEME)
         else:
-            self.settings.setValue("theme",KhweeteurPref.DEFAULTTHEME)
+            self.settings.setValue('theme', KhweeteurPref.DEFAULTTHEME)
 
-        self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value("theme")))
+        self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value('theme'
+                )))
 
-        if self.settings.contains("tweetHistory"):
-            self.history_value.setValue(int(self.settings.value("tweetHistory")))
+        if self.settings.contains('tweetHistory'):
+            self.history_value.setValue(int(self.settings.value('tweetHistory'
+                                        )))
         else:
             self.history_value.setValue(60)
 
-        if self.settings.contains("useGPS"):
-            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value("useGPS"))))
+        if self.settings.contains('useGPS'):
+            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'
+                    ))))
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
 
-        if self.settings.contains("showInfos"):
-            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value("showInfos"))))
+        if self.settings.contains('showInfos'):
+            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value('showInfos'
+                    ))))
         else:
             self.showInfos_value.setCheckState(Qt.CheckState(0))
 
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
-        self.settings.beginWriteArray("accounts")
-        for index,account in enumerate(self.accounts):
+
+        self.settings.beginWriteArray('accounts')
+        for (index, account) in enumerate(self.accounts):
             self.settings.setArrayIndex(index)
-            self.settings.setValue("name", account.name)
-            self.settings.setValue("consumer_key", account.consumer_key)
-            self.settings.setValue("consumer_secret", account.consumer_secret)
-            self.settings.setValue("token_key", account.token_key)
-            self.settings.setValue("token_secret", account.token_secret)
-            self.settings.setValue("use_for_tweet", account.use_for_tweet)
-            self.settings.setValue("base_url", account.base_url)
+            self.settings.setValue('name', account.name)
+            self.settings.setValue('consumer_key', account.consumer_key)
+            self.settings.setValue('consumer_secret', account.consumer_secret)
+            self.settings.setValue('token_key', account.token_key)
+            self.settings.setValue('token_secret', account.token_secret)
+            self.settings.setValue('use_for_tweet', account.use_for_tweet)
+            self.settings.setValue('base_url', account.base_url)
         self.settings.endArray()
 
         self.settings.setValue('refreshInterval', self.refresh_value.value())
-        self.settings.setValue('useDaemon', self.useNotification_value.checkState())
-        self.settings.setValue('useSerialization', self.useSerialization_value.checkState())
+        self.settings.setValue('useDaemon',
+                               self.useNotification_value.checkState())
+        self.settings.setValue('useSerialization',
+                               self.useSerialization_value.checkState())
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
@@ -286,38 +312,52 @@ class KhweeteurPref(QMainWindow):
         self.dlg.add_account.connect(self.do_ask_token)
         self.dlg.show()
 
-    def do_verify_pin(self,pincode):
-        token = oauth.Token(self.oauth_webview.request_token['oauth_token'][0], self.oauth_webview.request_token['oauth_token_secret'][0])
+    def do_verify_pin(self, pincode):
+        token = oauth.Token(self.oauth_webview.request_token['oauth_token'][0],
+                            self.oauth_webview.request_token['oauth_token_secret'
+                            ][0])
         token.set_verifier(unicode(pincode.strip()))
 
-        oauth_consumer = oauth.Consumer(key=self.oauth_webview.account_type['consumer_key'], secret=self.oauth_webview.account_type['consumer_secret'])
+        oauth_consumer = \
+            oauth.Consumer(key=self.oauth_webview.account_type['consumer_key'],
+                           secret=self.oauth_webview.account_type['consumer_secret'
+                           ])
         oauth_client = oauth.Client(oauth_consumer)
-
 
         try:
             oauth_client = oauth.Client(oauth_consumer, token)
-            resp, content = oauth_client.request(self.oauth_webview.account_type['access_token_url'], method='POST', body='oauth_verifier=%s' % str(pincode.strip()))
-            access_token = (parse_qs(content))
+            (resp, content) = \
+                oauth_client.request(self.oauth_webview.account_type['access_token_url'
+                                     ], method='POST', body='oauth_verifier=%s'
+                                     % str(pincode.strip()))
+            access_token = parse_qs(content)
 
             print access_token['oauth_token'][0]
 
             if resp['status'] == '200':
-                #Create the account
-                self.accounts.append(KhweeteurAccount(\
-                        name=self.oauth_webview.account_type['name'],\
-                        base_url=self.oauth_webview.account_type['base_url'],\
-                        consumer_key=self.oauth_webview.account_type['consumer_key'],\
-                        consumer_secret=self.oauth_webview.account_type['consumer_secret'],\
-                        token_key=access_token['oauth_token'][0],\
-                        token_secret=access_token['oauth_token_secret'][0],\
-                        use_for_tweet=self.oauth_webview.use_for_tweet,\
-                        ))
+
+                # Create the account
+
+                self.accounts.append(KhweeteurAccount(
+                    name=self.oauth_webview.account_type['name'],
+                    base_url=self.oauth_webview.account_type['base_url'],
+                    consumer_key=self.oauth_webview.account_type['consumer_key'
+                            ],
+                    consumer_secret=self.oauth_webview.account_type['consumer_secret'
+                            ],
+                    token_key=access_token['oauth_token'][0],
+                    token_secret=access_token['oauth_token_secret'][0],
+                    use_for_tweet=self.oauth_webview.use_for_tweet,
+                    ))
                 self.accounts_model.set(self.accounts)
                 self.savePrefs()
             else:
-                KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting access token: %s') % (self.oauth_webview.account_type['name'],resp['status']))
+                KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting access token: %s'
+                        ) % (self.oauth_webview.account_type['name'],
+                        resp['status']))
         except StandardError, err:
-            KhweeteurNotification().warn(self.tr('A error occur while requesting temp token : %s' % (err,)))
+            KhweeteurNotification().warn(self.tr('A error occur while requesting temp token : %s'
+                     % (err, )))
             import traceback
             traceback.print_exc()
 
@@ -325,25 +365,32 @@ class KhweeteurPref(QMainWindow):
         del self.oauth_win
         del self.oauth_webview
 
-    def do_ask_token(self, account_type,use_for_tweet):
-        print account_type,use_for_tweet
+    def do_ask_token(self, account_type, use_for_tweet):
+        print account_type, use_for_tweet
 
-        oauth_consumer = oauth.Consumer(key=account_type['consumer_key'], secret=account_type['consumer_secret'])
+        oauth_consumer = oauth.Consumer(key=account_type['consumer_key'],
+                                        secret=account_type['consumer_secret'])
         oauth_client = oauth.Client(oauth_consumer)
 
-        #Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
+        # Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
+
         body = 'oauth_callback=oob'
 
         try:
-            resp, content = oauth_client.request(account_type['request_token_url'], 'POST', body=body)
+            (resp, content) = \
+                oauth_client.request(account_type['request_token_url'], 'POST',
+                                     body=body)
 
             if resp['status'] != '200':
-                KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting temp token: %s') % (account_type['name'],resp['status']))
+                KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting temp token: %s'
+                        ) % (account_type['name'], resp['status']))
             else:
-                request_token = (parse_qs(content))
+                request_token = parse_qs(content)
 
             self.oauth_webview = OAuthView(self, account_type, use_for_tweet)
-            self.oauth_webview.open((QUrl('%s?oauth_token=%s' % (account_type['authorization_url'], request_token['oauth_token'][0]))))
+            self.oauth_webview.open(QUrl('%s?oauth_token=%s'
+                                    % (account_type['authorization_url'],
+                                    request_token['oauth_token'][0])))
             self.oauth_webview.request_token = request_token
 
             self.oauth_webview.show()
@@ -352,37 +399,49 @@ class KhweeteurPref(QMainWindow):
             self.oauth_win.setCentralWidget(self.oauth_webview)
             self.oauth_win.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.oauth_win.setAttribute(Qt.WA_Maemo5StackedWindow, True)
-            self.oauth_win.setWindowTitle("Khweeteur OAuth")
+            self.oauth_win.setWindowTitle('Khweeteur OAuth')
             self.oauth_win.show()
+        except httplib2.ServerNotFoundError, err:
 
-        except httplib2.ServerNotFoundError,err:
-            KhweeteurNotification().warn(self.tr('Server not found : %s :') % unicode(err))
+            KhweeteurNotification().warn(self.tr('Server not found : %s :')
+                    % unicode(err))
 
     def delete_account(self, index):
-        if QMessageBox.question(self,'Delete account', 'Are you sure you want to delete this account ?', QMessageBox.Yes | QMessageBox.Close) == QMessageBox.Yes:
+        if QMessageBox.question(self, 'Delete account',
+                                'Are you sure you want to delete this account ?'
+                                , QMessageBox.Yes | QMessageBox.Close) \
+            == QMessageBox.Yes:
             for index in self.accounts_view.selectedIndexes():
                 del self.accounts[index.row()]
             self.accounts_model.set(self.accounts)
 
-    def closeEvent(self,widget,*args):
+    def closeEvent(self, widget, *args):
         ''' close event called when closing window'''
+
         self.savePrefs()
-        #Restart the daemon on prefs changes instead of loading data at every loop of daemon.
+
+        # Restart the daemon on prefs changes instead of loading data at every loop of daemon.
+
         from subprocess import Popen
-        Popen(['/usr/bin/python',os.path.join(os.path.dirname(__file__),'daemon.py'),'restart'])
+        Popen(['/usr/bin/python', os.path.join(os.path.dirname(__file__),
+              'daemon.py'), 'restart'])
 
     def _setupGUI(self):
         ''' Create the gui content of the window'''
+
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.aWidget = QWidget(self.scrollArea)
-        self.aWidget.setMinimumSize(480,1000)
+        self.aWidget.setMinimumSize(480, 1000)
         self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.scrollArea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scrollArea.setSizePolicy(QSizePolicy.Expanding,
+                                      QSizePolicy.Expanding)
         self.scrollArea.setWidget(self.aWidget)
-        #Available on maemo but should be too on Meego
+
+        # Available on maemo but should be too on Meego
+
         try:
-            scroller = self.scrollArea.property("kineticScroller")
+            scroller = self.scrollArea.property('kineticScroller')
             scroller.setEnabled(True)
         except:
             pass
@@ -391,36 +450,39 @@ class KhweeteurPref(QMainWindow):
         self._umain_layout = QGridLayout()
         self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self._umain_layout.addWidget(QLabel(self.tr('Refresh Interval (Minutes) :')),3,0)
+        self._umain_layout.addWidget(QLabel(self.tr('Refresh Interval (Minutes) :'
+                                     )), 3, 0)
         self.refresh_value = QSpinBox()
-        self._umain_layout.addWidget(self.refresh_value,3,1)
+        self._umain_layout.addWidget(self.refresh_value, 3, 1)
 
-        self._umain_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view :')),4,0)
+        self._umain_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view :'
+                                     )), 4, 0)
         self.history_value = QSpinBox()
-        self._umain_layout.addWidget(self.history_value,4,1)
+        self._umain_layout.addWidget(self.history_value, 4, 1)
 
-        self._umain_layout.addWidget(QLabel(self.tr('Theme :')),5,0)
+        self._umain_layout.addWidget(QLabel(self.tr('Theme :')), 5, 0)
 
         self.theme_value = QComboBox()
-        self._umain_layout.addWidget(self.theme_value,5,1)
+        self._umain_layout.addWidget(self.theme_value, 5, 1)
         for theme in self.THEMES:
             self.theme_value.addItem(theme)
 
-        self._umain_layout.addWidget(QLabel(self.tr('Other preferences :')),9,0)
+        self._umain_layout.addWidget(QLabel(self.tr('Other preferences :')), 9,
+                                     0)
         self.useNotification_value = QCheckBox(self.tr('Use Daemon'))
-        self._umain_layout.addWidget(self.useNotification_value,10,1)
+        self._umain_layout.addWidget(self.useNotification_value, 10, 1)
 
         self.useSerialization_value = QCheckBox(self.tr('Use Serialization'))
-        self._umain_layout.addWidget(self.useSerialization_value,11,1)
+        self._umain_layout.addWidget(self.useSerialization_value, 11, 1)
 
         self.useBitly_value = QCheckBox(self.tr('Use Bit.ly'))
-        self._umain_layout.addWidget(self.useBitly_value,12,1)
+        self._umain_layout.addWidget(self.useBitly_value, 12, 1)
 
         self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
-        self._umain_layout.addWidget(self.useGPS_value,13,1)
+        self._umain_layout.addWidget(self.useGPS_value, 13, 1)
 
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
-        self._umain_layout.addWidget(self.showInfos_value,14,1)
+        self._umain_layout.addWidget(self.showInfos_value, 14, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 
@@ -436,12 +498,13 @@ class KhweeteurPref(QMainWindow):
         self.aWidget.setLayout(self._main_layout)
         self.setCentralWidget(self.scrollArea)
 
+
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
-    app.setOrganizationName("Khertan Software")
-    app.setOrganizationDomain("khertan.net")
-    app.setApplicationName("Khweeteur")
+    app.setOrganizationName('Khertan Software')
+    app.setOrganizationDomain('khertan.net')
+    app.setApplicationName('Khweeteur')
 
     khtsettings = KhweeteurPref()
     khtsettings.show()
