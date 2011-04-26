@@ -21,7 +21,7 @@ from settings import SUPPORTED_ACCOUNTS
 import pickle
 import re
 
-__version__ = '0.5.9'
+__version__ = '0.5.10'
 
 import dbus
 
@@ -147,7 +147,7 @@ class Daemon:
     def startfromprefs(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
         if settings.contains('useDaemon'):
-            if settings.value('useDaemon') == 'true':
+            if settings.value('useDaemon') == '2':
                 self.start()
 
     def start(self):

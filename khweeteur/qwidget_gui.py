@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.9'
+__version__ = '0.5.10'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -868,7 +868,7 @@ class KhweeteurWin(QMainWindow):
         doc = local_self.document()
         s = doc.size()
         s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing()
-                    + 1) - 21)
+                    + 1) - 18)
         fr = local_self.frameRect()
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(370, s.height() + fr.height()
