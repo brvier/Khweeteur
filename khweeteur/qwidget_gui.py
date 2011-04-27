@@ -19,7 +19,7 @@ from PySide.QtGui import QMainWindow, QHBoxLayout, QSizePolicy, QToolButton, \
     QVBoxLayout, QFileDialog, QDesktopServices, QScrollArea, QPushButton, \
     QToolBar, QLabel, QWidget, QInputDialog, QMenu, QAction, QApplication, \
     QIcon, QMessageBox, QPlainTextEdit
-from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal
+from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal, QTimer
 from PySide.QtMaemo5 import *
 from qbadgebutton import QToolBadgeButton
 
@@ -35,7 +35,7 @@ from settings import KhweeteurPref
 from dbusobj import KhweeteurDBus
 import re
 
-from QtMobility.Location import *
+from QtMobility.Location import QGeoPositionInfoSource
 
 class KhweeteurDBusHandler(dbus.service.Object):
 
@@ -444,10 +444,13 @@ class KhweeteurWin(QMainWindow):
 
         self.switch_tb_default()
 
-        self.model.load('HomeTimeline')
         self.setWindowTitle('Khweeteur : Home')
         self.setCentralWidget(self.view)
+        QTimer.singleShot(100,self.post_init)
 
+    @Slot()
+    def post_init(self):
+        self.model.load('HomeTimeline')
         self.geolocDoStart()
 
     @Slot()
@@ -865,14 +868,34 @@ class KhweeteurWin(QMainWindow):
         local_self = self.tb_text
         self.tb_charCounter.setText(unicode(140
                                     - len(local_self.toPlainText())))
-        doc = local_self.document()
-        s = doc.size()
-        s.setHeight((s.height() + 1) * (local_self.fontMetrics().lineSpacing()
-                    + 1) - 18)
+#        doc = local_self.document()
+        fm = local_self.fontMetrics()
+#        line_height = fm.boundingRect(local_self.toPlainText()).height()
+
+#        height = (line_height ) * doc.documentLayout().documentSize().height() + fm.lineSpacing()
+#        s = doc.documentLayout().documentSize()
+
+#        print 'Doc size', doc.size().height()
+
+#        doc.setHeight(s.height())
+#        s.setHeight((s.height() + 2) + (local_self.fontMetrics().lineSpacing()*2 + 2))
+#        s.setHeight(s.height())
+#        print 'Doc size', s.height()
         fr = local_self.frameRect()
+#        print 'frame size', fr.size().height()
         cr = local_self.contentsRect()
-        local_self.setFixedHeight(min(370, s.height() + fr.height()
-                                  - cr.height() - 1))
+#        print 'content size', cr.size().height()
+#        print 'page size', doc.pageSize().height()
+#        print 'page count', doc.pageCount()
+#        local_self.setFixedHeight(min(370, s.height() + fr.height()
+#                                  - cr.height() - 1))
+        text_height = fm.boundingRect(0,0,local_self.size().width(),370, \
+                    int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), \
+                    local_self.toPlainText()).height()
+#        print 'text height',text_height
+#        if height > 5 :
+        local_self.setFixedHeight(min(370, text_height + (fr.height() - cr.height()) + 6))
+        local_self.updateGeometry()
 
     def loadSearchMenu(self):
         settings = QSettings()
@@ -975,7 +998,7 @@ class KhweeteurWin(QMainWindow):
         settings = QSettings()
         self.geoloc_source = None
         if settings.contains('useGPS'):
-            if settings.value('useGPS') == 'true':
+            if settings.value('useGPS') == '2':
                 self.geolocStart()
 
     def geolocStart(self):
