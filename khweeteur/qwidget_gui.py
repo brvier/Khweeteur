@@ -868,7 +868,7 @@ class KhweeteurWin(QMainWindow):
         local_self = self.tb_text
         self.tb_charCounter.setText(unicode(140
                                     - len(local_self.toPlainText())))
-#        doc = local_self.document()
+        doc = local_self.document()
         fm = local_self.fontMetrics()
 #        line_height = fm.boundingRect(local_self.toPlainText()).height()
 
@@ -881,22 +881,30 @@ class KhweeteurWin(QMainWindow):
 #        s.setHeight((s.height() + 2) + (local_self.fontMetrics().lineSpacing()*2 + 2))
 #        s.setHeight(s.height())
 #        print 'Doc size', s.height()
-        fr = local_self.frameRect()
+#        fr = local_self.frameRect()
 #        print 'frame size', fr.size().height()
-        cr = local_self.contentsRect()
+#        cr = local_self.contentsRect()
 #        print 'content size', cr.size().height()
 #        print 'page size', doc.pageSize().height()
 #        print 'page count', doc.pageCount()
 #        local_self.setFixedHeight(min(370, s.height() + fr.height()
 #                                  - cr.height() - 1))
-        text_height = fm.boundingRect(0,0,local_self.size().width(),370, \
-                    int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), \
-                    local_self.toPlainText()).height()
+#        text_height = fm.boundingRect(0,0,local_self.size().width(),370, \
+#                    int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), \
+#                    local_self.toPlainText()).height()
 #        print 'text height',text_height
 #        if height > 5 :
-        local_self.setFixedHeight(min(370, text_height + (fr.height() - cr.height()) + 6))
+#        local_self.setFixedHeight(min(370, text_height + (fr.height() - cr.height()) + 6))
+#        local_self.updateGeometry()
+#Resize
+#        doc = self.document()            
+        s = doc.size().toSize()
+        s.setHeight((s.height() + 1) * (fm.lineSpacing()+1))
+        fr = local_self.frameRect()
+        cr = local_self.contentsRect()
+        local_self.setFixedHeight(min(s.height() +  (fr.height() - cr.height() - 1) - 15,370))
         local_self.updateGeometry()
-
+        
     def loadSearchMenu(self):
         settings = QSettings()
         self.tb_search_menu.clear()

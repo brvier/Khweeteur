@@ -3,7 +3,6 @@
 
 #Khweeteur Setup File
 
-import imp
 import sys
 reload(sys).setdefaultencoding("UTF-8")
 
@@ -62,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Change daemon mainloop from glib to qt for better reliability, fix twitter api when twitter is over charged, improve managment of errors in daemon, add notification info when error occurs and when posting, handle dbus notification message',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : ',
       'section':'user/network',
-      'changelog':'* Change daemon mainloop from glib to qt for better reliability, fix twitter api when twitter is over charged, improve managment of errors in daemon, add notification info when error occurs and when posting, handle dbus notification message',
+      'changelog':'* ',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
