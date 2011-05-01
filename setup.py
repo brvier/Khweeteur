@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : ',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : dd a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
       'section':'user/network',
-      'changelog':'* ',
+      'changelog':'* dd a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
