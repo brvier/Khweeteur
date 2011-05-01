@@ -268,8 +268,7 @@ class KhweeteurPref(QMainWindow):
             self.history_value.setValue(60)
 
         if self.settings.contains('useGPS'):
-            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'
-                    ))))
+            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'))))
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
 

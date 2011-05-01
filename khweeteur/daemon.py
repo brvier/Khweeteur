@@ -478,7 +478,7 @@ class KhweeteurDaemon(Daemon):
                                 if settings.contains('ShowInfos'):
                                     if settings.value('ShowInfos') == '2':
                                         self.dbus_handler.info('Khweeteur: Reply posted to '
-         + account['name'])
+                                         + account['name'])
                         elif post['action'] == 'retweet':
 
                             # Retweet
@@ -565,7 +565,7 @@ class KhweeteurDaemon(Daemon):
                                         post['serialize'],
                                         post['shorten_url'],
                                         unicode(response['url']) + u' : '
-    + post['text'],
+                                            + post['text'],
                                         post['lattitude'],
                                         post['longitude'],
                                         '',

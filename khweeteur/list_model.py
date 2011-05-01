@@ -96,19 +96,17 @@ class KhweetsModel(QAbstractListModel):
                         self._uids.append(status.id)
                         self._items.append(status)
                         if hasattr(status, 'user'):
-                            profile_image = \
-                                os.path.basename(status.user.profile_image_url.replace('/'
-                                    , '_'))
+
+                            if status.user.profile_image_url not in self._avatars:
+                                profile_image = os.path.join(avatar_path,
+                                     os.path.basename(status.user.profile_image_url.replace('/', '_'))) 
+                                try:
+                                     self._avatars[status.user.profile_image_url] = \
+                                     QPixmap(os.path.splitext(profile_image)[0] + '.png', 'PNG')
+                                except:
+                                     self._avatars[status.user.profile_image_url] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
                         else:
-                            profile_image = \
-                                '/opt/usr/share/icons/hicolor/64x64/hildon/general_default_avatar.png'
-                        if profile_image not in self._avatars:
-                            try:
-                                self._avatars[status.user.profile_image_url] = \
-                                    QPixmap(os.path.join(avatar_path,
-                                        profile_image))
-                            except:
-                                pass
+                            self._avatars['default'] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')                        
 
             self._items.sort(key=lambda status: status.created_at_in_seconds,
                              reverse=True)
@@ -172,7 +170,7 @@ class KhweetsModel(QAbstractListModel):
             try:
                 return self._avatars[self._items[index.row()].user.profile_image_url]
             except:
-                return None
+                return self._avatars['default']
         else:
             return None
 

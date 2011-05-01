@@ -1000,6 +1000,8 @@ class KhweeteurWin(QMainWindow):
         if settings.contains('useGPS'):
             if settings.value('useGPS') == '2':
                 self.geolocStart()
+            else:
+                self.geolocStop()
 
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
