@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.10'
+__version__ = '0.5.11'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -35,8 +35,11 @@ from settings import KhweeteurPref
 from dbusobj import KhweeteurDBus
 import re
 
-from QtMobility.Location import QGeoPositionInfoSource
-
+try:
+    from QtMobility.Location import QGeoPositionInfoSource
+except:
+    print 'Pysode QtMobility not installed or broken'
+    
 class KhweeteurDBusHandler(dbus.service.Object):
 
     def __init__(self, parent):
@@ -1013,11 +1016,14 @@ class KhweeteurWin(QMainWindow):
 
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
-
         self.geoloc_coordinates = None
         if self.geoloc_source is None:
-            self.geoloc_source = \
-                QGeoPositionInfoSource.createDefaultSource(None)
+            try:
+                self.geoloc_source = \
+                    QGeoPositionInfoSource.createDefaultSource(None)
+            except:
+                self.geoloc_source = None
+                print 'PySide QtMobility not installed or package broken'
             if self.geoloc_source is not None:
                 self.geoloc_source.setUpdateInterval(50000)
                 self.geoloc_source.positionUpdated.connect(self.geolocUpdated)

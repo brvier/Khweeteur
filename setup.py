@@ -55,15 +55,15 @@ setup(name='khweeteur',
       cmdclass={'sdist_maemo': _sdist_maemo},
       options = { 'sdist_maemo':{
       'debian_package':'khweeteur-experimental',
-      'buildversion':'2',
-      'depends':'python2.5, pyside-mobility-location, python-pyside.qtmaemo5, python-pyside.qtwebkit, python-pyside.qtcore, python-pyside.qtgui, python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
-      'conflicts':'khweewteur-experimental',
+      'buildversion':'4',
+      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5, python-pyside.qtwebkit, python-pyside.qtcore, python-pyside.qtgui, python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
+      'conflicts':'khweewteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : dd a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Fix pyside mobility location dep',
       'section':'user/network',
-      'changelog':'* dd a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
+      'changelog':'* Fix a mobility pyside dependancy hell, Add a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
@@ -92,7 +92,7 @@ su user -c "run-standalone.sh /usr/bin/python /usr/lib/python2.5/site-packages/k
 rm -rf /usr/lib/python2.5/site-packages/khweeteur/*.pyc""",
       'copyright':'gpl'},
       'bdist_rpm':{
-      'requires':'python, python-setuptools, pyside-mobility-location, python-pyside.qtcore, python-pyside.qtgui, python-pyside.qtmaemo5, python-pyside.qtwebkit, pyside-mobility-bearer, python-simplejson, python-conic, python-imaging',
+      'requires':'python, python-setuptools, python-qtmobility, python-pyside.qtcore, python-pyside.qtgui, python-pyside.qtmaemo5, python-pyside.qtwebkit, pyside-mobility-bearer, python-simplejson, python-conic, python-imaging',
       'conflicts':'khweeteur-experimental',
       'icon':'khweeteur.png',
       'group':'Network',}}
