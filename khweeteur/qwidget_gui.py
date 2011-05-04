@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.11'
+__version__ = '0.5.12'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -212,7 +212,60 @@ class Khweeteur(QApplication):
         self.setApplicationName('Khweeteur')
         self.run()
 
+    def check_crash_report(self):
+        if os.path.isfile(os.path.join(os.path.join(os.path.expanduser("~"),'.khweeteur_crash_report'))):
+            import urllib2
+            import urllib
+            import pickle
+            if (( QMessageBox.question(None,
+                "Kheeteur Crash Report",
+                "An error occur on Khweeteur in the previous launch. Report this bug on the bug tracker ?",
+                QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+                url = 'http://khertan.net/report.php' # write ur URL here
+                try:
+                    filename = os.path.join(os.path.join(os.path.expanduser("~"),'.khweeteur_crash_report'))
+                    output = open(filename, 'rb')
+                    error = pickle.load(output)
+                    output.close()
+
+                    values = {
+                          'project' : 'khweeteur',
+                          'version': __version__,
+                          'description':error,
+                      }
+
+                    data = urllib.urlencode(values)
+                    req = urllib2.Request(url, data)
+                    response = urllib2.urlopen(req)
+                    the_page = response.read()
+                except Exception, detail:
+                    print detail
+                    QMessageBox.question(None,
+                    "Khweeteur Crash Report",
+                    "An error occur during the report : %s" % detail,
+                    QMessageBox.Close)
+                    return False
+
+                if 'Your report have been successfully stored' in the_page:
+                    QMessageBox.question(None,
+                    "Khweeteur Crash Report",
+                    "%s" % the_page,
+                    QMessageBox.Close)
+                    return True
+                else:
+                    print 'page:',the_page
+                    QMessageBox.question(None,
+                    "KhtEditor Crash Report",
+                    "%s" % the_page,
+                    QMessageBox.Close)
+                    return False
+            try:
+                os.remove(os.path.join(os.path.join(os.path.expanduser("~"),'.khweeteur_crash_report')))
+            except:
+                pass
+
     def run(self):
+        self.check_crash_report()
         self.win = KhweeteurWin()
         self.win.show()
 
