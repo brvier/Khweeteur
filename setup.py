@@ -55,15 +55,15 @@ setup(name='khweeteur',
       cmdclass={'sdist_maemo': _sdist_maemo},
       options = { 'sdist_maemo':{
       'debian_package':'khweeteur-experimental',
-      'buildversion':'4',
+      'buildversion':'1',
       'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5, python-pyside.qtwebkit, python-pyside.qtcore, python-pyside.qtgui, python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
       'conflicts':'khweewteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Fix pyside mobility location dep',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Quick fix for checking broken pyside mobility package',
       'section':'user/network',
-      'changelog':'* Fix a mobility pyside dependancy hell, Add a missing dependancy on setup.py, Fix daemon startfromprefs, and sizing of QLineEdit due to Qt 4.7.2 changes, Fix GPS Startup, Improve starting time by defering some method after showing the window, Fix for avatars and some optiisations',
+      'changelog':'* Quick fix for checking broken pyside mobility package',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
