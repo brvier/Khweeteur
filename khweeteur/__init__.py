@@ -6,16 +6,17 @@
 
 '''A Twitter client made with Python and Qt'''
 
-from qwidget_gui import Khweeteur
+from qwidget_gui import Khweeteur, __version__
 import os.path
 from PySide.QtCore import QSettings
+import sys
 
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
-def install_excepthook:
+def install_excepthook():
     '''Install exception hook for the bug reporter'''
     APP_NAME = 'Khweeteur'
-    APP_VERSION = Khweeteur.__version__
+    APP_VERSION = __version__
 
     def write_report(error):
         import pickle
