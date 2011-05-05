@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Quick fix for checking broken pyside mobility package',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Optimize list_model load, add gui crash_reporter',
       'section':'user/network',
-      'changelog':'* Quick fix for checking broken pyside mobility package',
+      'changelog':'* Optimize list_model load, add gui crash_reporter',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
