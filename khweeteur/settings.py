@@ -86,7 +86,12 @@ class OAuthView(QWebView):
         res = regex.findall(self.page().mainFrame().toHtml())
         if len(res) > 0:
             self.pin = res[0]
-
+        else:
+            regex = re.compile('.*<code>(.*)</code>')
+            res = regex.findall(self.page().mainFrame().toHtml())
+            if len(res) > 0:
+                self.pin = res[0]
+            
         self.loggedIn = self.pin not in (None, '')
 
         if self.loggedIn:

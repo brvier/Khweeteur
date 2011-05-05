@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Optimize list_model load, add gui crash_reporter',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Fix for oauth pin retrieval due to twitter change',
       'section':'user/network',
-      'changelog':'* Optimize list_model load, add gui crash_reporter',
+      'changelog':'* Fix for oauth pin retrieval due to twitter change',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
