@@ -25,12 +25,12 @@ PROTECTEDROLE = 28
 USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
-
 from PySide.QtGui import QPixmap
+import twitter
 
 pyqtSignal = Signal
 
-
+        
 class KhweetsModel(QAbstractListModel):
 
     """ListModel : A simple list : Start_At,TweetId, Users Screen_name, Tweet Text, Profile Image"""
@@ -76,38 +76,38 @@ class KhweetsModel(QAbstractListModel):
 
         if self.call != call:
             self._items = []
+            self._uids = []
         self.call = call
+
+        self.avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
+                                       'avatars')
 
         try:
             folder = self.getCacheFolder()
             uids = glob.glob(folder + u'/*')
-            pickleload = pickle.load
-            avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
-                                       'avatars')
+#            pickleload = pickle.load
             for uid in uids:
-                if uid not in [status.id for status in self._items]:
+#                if uid not in [status.id for status in self._items]:
+                if uid not in self._uids:
                     pkl_file = open(os.path.join(folder, str(uid)), 'rb')
-                    status = pickleload(pkl_file)
+                    status = pickle.load(pkl_file)
                     pkl_file.close()
 
-                    # Test if status already exists
+                    self._uids.append(status.id)
+                    self._items.append(status)
+                    if hasattr(status, 'user'):
+                        if status.user.profile_image_url not in self._avatars:
+                            profile_image = os.path.join(self.avatar_path,
+                                 os.path.basename(status.user.profile_image_url.replace('/', '_'))) 
+                            try:
+                                 self._avatars[status.user.profile_image_url] = \
+                                 QPixmap(os.path.splitext(profile_image)[0] + '.png', 'PNG')
+                            except:
+                                 self._avatars[status.user.profile_image_url] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
+                    else:
+                        self._avatars['default'] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')                        
 
-                    if status not in self._items:
-                        self._uids.append(status.id)
-                        self._items.append(status)
-                        if hasattr(status, 'user'):
-
-                            if status.user.profile_image_url not in self._avatars:
-                                profile_image = os.path.join(avatar_path,
-                                     os.path.basename(status.user.profile_image_url.replace('/', '_'))) 
-                                try:
-                                     self._avatars[status.user.profile_image_url] = \
-                                     QPixmap(os.path.splitext(profile_image)[0] + '.png', 'PNG')
-                                except:
-                                     self._avatars[status.user.profile_image_url] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
-                        else:
-                            self._avatars['default'] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')                        
-
+                    
             self._items.sort(key=lambda status: status.created_at_in_seconds,
                              reverse=True)
             self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
@@ -115,7 +115,7 @@ class KhweetsModel(QAbstractListModel):
         except StandardError, e:
 
             print 'unSerialize : ', e
-
+        
     def data(self, index, role=Qt.DisplayRole):
 
         if role == Qt.DisplayRole:

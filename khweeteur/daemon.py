@@ -787,7 +787,7 @@ class KhweeteurDaemon(Daemon):
             settings.endArray()
 
             while any([thread.isAlive() for thread in self.threads]):
-                time.sleep(1)
+                time.sleep(2)
 
             self.dbus_handler.refresh_ended()
 
