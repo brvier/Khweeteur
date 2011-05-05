@@ -26,10 +26,9 @@ USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
 from PySide.QtGui import QPixmap
-import twitter
+import twitter #Not really unused. Avoid pickle to do it each time
 
 pyqtSignal = Signal
-
         
 class KhweetsModel(QAbstractListModel):
 
@@ -42,12 +41,14 @@ class KhweetsModel(QAbstractListModel):
 
         # Cache the passed data list as a class member.
 
-        self._items = []
-        self._uids = []
+        self._items = {}
+        self._uids = {}
 
         self._avatars = {}
         self.now = time.time()
-        self.call = None
+        self.call = 'HomeTimeLine'
+
+        self._items[self.call] = []
 
     def setLimit(self, limit):
         self.khweets_limit = limit
@@ -58,7 +59,7 @@ class KhweetsModel(QAbstractListModel):
                             ))).encode('UTF-8'))
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._items)
+        return len(self._items[self.call][:self.khweets_limit])
 
     def refreshTimestamp(self):
         self.now = time.time()
@@ -74,11 +75,13 @@ class KhweetsModel(QAbstractListModel):
 
         self.now = time.time()
 
-        if self.call != call:
-            self._items = []
-            self._uids = []
+#        if self.call != call:
+#            self._items = []
+#            self._uids = []
         self.call = call
-
+        if call not in self._items:
+            self._items[call] = [] 
+            self._uids[call] = [] 
         self.avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                        'avatars')
 
@@ -86,15 +89,16 @@ class KhweetsModel(QAbstractListModel):
             folder = self.getCacheFolder()
             uids = glob.glob(folder + u'/*')
 #            pickleload = pickle.load
+            _uids = self._uids[call]
+            _items = self._items[call]            
             for uid in uids:
 #                if uid not in [status.id for status in self._items]:
-                if uid not in self._uids:
+                if uid not in _uids:
                     pkl_file = open(os.path.join(folder, str(uid)), 'rb')
                     status = pickle.load(pkl_file)
                     pkl_file.close()
-
-                    self._uids.append(status.id)
-                    self._items.append(status)
+                    _uids.append(uid)
+                    _items.append(status)
                     if hasattr(status, 'user'):
                         if status.user.profile_image_url not in self._avatars:
                             profile_image = os.path.join(self.avatar_path,
@@ -108,18 +112,18 @@ class KhweetsModel(QAbstractListModel):
                         self._avatars['default'] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')                        
 
                     
-            self._items.sort(key=lambda status: status.created_at_in_seconds,
+            _items.sort(key=lambda status: status.created_at_in_seconds,
                              reverse=True)
+            _items = _items[:self.khweets_limit]
+            _uids = _uids[:self.khweets_limit]
             self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
-                                  len(self._items)))
+                                  len(_items)))
         except StandardError, e:
-
-            print 'unSerialize : ', e
+            print 'unSerialize : ', e            
         
     def data(self, index, role=Qt.DisplayRole):
-
         if role == Qt.DisplayRole:
-            status = self._items[index.row()]
+            status = self._items[self.call][index.row()]
             try:
                 if status.truncated:
                     return status.retweeted_status.text
@@ -129,46 +133,46 @@ class KhweetsModel(QAbstractListModel):
                 return status.text
         elif role == SCREENNAMEROLE:
             try:
-                return self._items[index.row()].user.screen_name
+                return self._items[self.call][index.row()].user.screen_name
             except:
-                return self._items[index.row()].sender_screen_name
+                return self._items[self.call][index.row()].sender_screen_name
         elif role == IDROLE:
-            return self._items[index.row()].id
+            return self._items[self.call][index.row()].id
         elif role == REPLYIDROLE:
             try:
-                return self._items[index.row()].in_reply_to_status_id
+                return self._items[self.call][index.row()].in_reply_to_status_id
             except:
                 return None
         elif role == REPLYTOSCREENNAMEROLE:
             try:
-                return self._items[index.row()].in_reply_to_screen_name
+                return self._items[self.call][index.row()].in_reply_to_screen_name
             except:
                 return None
         elif role == REPLYTEXTROLE:
-            return self._items[index.row()].in_reply_to_status_text
+            return self._items[self.call][index.row()].in_reply_to_status_text
         elif role == ORIGINROLE:
-            return self._items[index.row()].base_url
+            return self._items[self.call][index.row()].base_url
         elif role == RETWEETOFROLE:
             try:
-                return self._items[index.row()].retweeted_status
+                return self._items[self.call][index.row()].retweeted_status
             except:
                 return None
         elif role == ISMEROLE:
             try:
-                return self._items[index.row()].is_me
+                return self._items[self.call][index.row()].is_me
             except:
                 return False
         elif role == TIMESTAMPROLE:
 
-            return self._items[index.row()].GetRelativeCreatedAt(self.now)
+            return self._items[self.call][index.row()].GetRelativeCreatedAt(self.now)
         elif role == PROTECTEDROLE:
-            return self._items[index.row()].user.protected
+            return self._items[self.call][index.row()].user.protected
         elif role == USERIDROLE:
 
-            return self._items[index.row()].user.id
+            return self._items[self.call][index.row()].user.id
         elif role == Qt.DecorationRole:
             try:
-                return self._avatars[self._items[index.row()].user.profile_image_url]
+                return self._avatars[self._items[self.call][index.row()].user.profile_image_url]
             except:
                 return self._avatars['default']
         else:
