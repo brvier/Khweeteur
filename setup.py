@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Fix for oauth pin retrieval due to twitter change',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Add confirmation dialog for delete, retweet, favorite, follow, unfollow action',
       'section':'user/network',
-      'changelog':'* Fix for oauth pin retrieval due to twitter change',
+      'changelog':'* Add confirmation dialog for delete, retweet, favorite, follow, unfollow action',
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
