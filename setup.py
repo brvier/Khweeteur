@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Add confirmation dialog for delete, retweet, favorite, follow, unfollow action'
+changes = '* Merge from the experimental version : Rewrite from scratch : New UI, Better stability'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -56,14 +56,14 @@ setup(name='khweeteur',
         "Intended Audience :: End Users/Desktop",],
       cmdclass={'sdist_maemo': _sdist_maemo},
       options = { 'sdist_maemo':{
-      'debian_package':'khweeteur-experimental',
+      'debian_package':'khweeteur',
       'buildversion':'1',
       'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5, python-pyside.qtwebkit, python-pyside.qtcore, python-pyside.qtgui, python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
-      'conflicts':'khweewteur',
+      'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : %s' % changes,
+      'XB_Maemo_Upgrade_Description':'%s' % changes,
       'section':'user/network',
       'changelog':changes,
       'architecture':'any',
