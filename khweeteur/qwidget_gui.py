@@ -761,15 +761,23 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def do_tb_retweet(self):
+
         tweet_id = None
         for index in self.view.selectedIndexes():
             tweet_id = self.model.data(index, role=IDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            tweet_text = self.model.data(index, role=Qt.DisplayRole)
             if self.model.data(index, role=PROTECTEDROLE):
                 screenname = self.model.data(index, role=SCREENNAMEROLE)
                 QMessageBox.warning(self, 'Khweeteur - Retweet',
                                     "%s protect his tweets you can't retweet them"
                                      % screenname, QMessageBox.Close)
+
+        if not (( QMessageBox.question(None,
+            "Kheeteur Retweet",
+            "Did you want to retweet '%s'?" % tweet_text,
+            QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+            tweet_id = None
 
         if tweet_id:
             self.dbus_handler.post_tweet(  # shorten_url=\
@@ -797,6 +805,13 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             tweet_id = self.model.data(index, role=IDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            tweet_text = self.model.data(index, role=Qt.DisplayRole)
+
+        if not (( QMessageBox.question(None,
+            "Kheeteur Delete",
+            "Did you really want to delete '%s'?" % tweet_text,
+            QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+            tweet_id = None
 
         if tweet_id:
             self.dbus_handler.post_tweet(  # shorten_url=\
@@ -824,6 +839,13 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             tweet_id = self.model.data(index, role=IDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            tweet_text = self.model.data(index, role=Qt.DisplayRole)
+
+        if not (( QMessageBox.question(None,
+            "Kheeteur Favorite",
+            "Did you really want to favorite '%s'?" % tweet_text,
+            QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+            tweet_id = None
 
         if tweet_id:
             self.dbus_handler.post_tweet(  # shorten_url=\
@@ -851,6 +873,13 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             user_id = self.model.data(index, role=USERIDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            screenname = self.model.data(index, role=SCREENNAMEROLE)
+
+        if not (( QMessageBox.question(None,
+            "Kheeteur Follow",
+            "Did you really want to follow '%s'?" % screenname,
+            QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+            user_id = None
 
         if user_id:
             self.dbus_handler.post_tweet(  # shorten_url=\
@@ -878,6 +907,13 @@ class KhweeteurWin(QMainWindow):
         for index in self.view.selectedIndexes():
             user_id = self.model.data(index, role=USERIDROLE)
             tweet_source = self.model.data(index, role=ORIGINROLE)
+            screenname = self.model.data(index, role=SCREENNAMEROLE)
+
+        if not (( QMessageBox.question(None,
+            "Kheeteur Unfollow",
+            "Did you really want to unfollow '%s'?" % screenname,
+            QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+            user_id = None
 
         if user_id:
             self.dbus_handler.post_tweet(  # shorten_url=\

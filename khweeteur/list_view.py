@@ -52,8 +52,11 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         self.normFont = None
         self.miniFont = None
 
+#        print os.path.join(os.path.dirname(__file__),
+#                                  'icons', 'reply.png')
         self.reply_icon = QPixmap(os.path.join(os.path.dirname(__file__),
                                   'icons', 'reply.png'))
+#        print dir(self.reply_icon)
         self.retweet_icon = QPixmap(os.path.join(os.path.dirname(__file__),
                                     'icons', 'retweet.png'))
         self.geoloc_icon = QPixmap(os.path.join(os.path.dirname(__file__),
