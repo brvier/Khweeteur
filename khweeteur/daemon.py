@@ -21,7 +21,7 @@ from settings import SUPPORTED_ACCOUNTS
 import pickle
 import re
 
-__version__ = '0.5.13'
+__version__ = '0.5.14'
 
 import dbus
 
@@ -313,7 +313,7 @@ class KhweeteurDaemon(Daemon):
     def run(self):
         app = QCoreApplication(sys.argv)
 
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%a, %d %b %Y %H:%M:%S',
                             filename='/home/user/.khweeteur.log', filemode='w')
