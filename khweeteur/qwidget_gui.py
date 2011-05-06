@@ -38,7 +38,7 @@ import re
 try:
     from QtMobility.Location import QGeoPositionInfoSource
 except:
-    print 'Pysode QtMobility not installed or broken'
+    print 'Pyside QtMobility not installed or broken'
     
 class KhweeteurDBusHandler(dbus.service.Object):
 

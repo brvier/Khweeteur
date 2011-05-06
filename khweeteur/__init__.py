@@ -30,6 +30,7 @@ def install_excepthook():
         #we have in the python interpreter
         import traceback
         s = ''.join(traceback.format_exception(exctype, value, tb))
+        print 'Except hook', exctype
         print 'Except hook called : %s' % (s)
         formatted_text = "%s Version %s\nTrace : %s\nComments : " % (APP_NAME, APP_VERSION, s)
         write_report(formatted_text)

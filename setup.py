@@ -24,7 +24,7 @@ setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
       license='GNU GPLv3',
       description="A twitter client for Maemo and MeeGo.",
-      long_description="Khweeteur is a small twitter client for Maemo and MeeGo. It showing DMs, mentions and the follower timeline in one window, with a subsequent window for each search. Maemo's notification system is supported, as is auto-update and themeing.",
+      long_description="Khweeteur is a small twitter client for Maemo and MeeGo. It showing DMs, mentions, searchs, lists, and the follower timeline in one window. Maemo's notification system is supported and can notify for dmsse or mentions even when the ui is not launched, as is auto-update and themeing.",
       author='Benoît HERVIER',
       author_email='khertan@khertan.net',
       maintainer=u'Benoît HERVIER',
@@ -97,4 +97,3 @@ rm -rf /usr/lib/python2.5/site-packages/khweeteur/*.pyc""",
       'icon':'khweeteur.png',
       'group':'Network',}}
      )
-
