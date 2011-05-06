@@ -20,6 +20,8 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
+changes = '* Add confirmation dialog for delete, retweet, favorite, follow, unfollow action'
+
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
       license='GNU GPLv3',
@@ -61,9 +63,9 @@ setup(name='khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : Add confirmation dialog for delete, retweet, favorite, follow, unfollow action',
+      'XB_Maemo_Upgrade_Description':'EXPERIMENTAL : %s' % changes,
       'section':'user/network',
-      'changelog':'* Add confirmation dialog for delete, retweet, favorite, follow, unfollow action',
+      'changelog':changes,
       'architecture':'any',
       'postinst':"""#!/bin/sh
 chmod +x /usr/bin/khweeteur
