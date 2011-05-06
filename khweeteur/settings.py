@@ -276,6 +276,11 @@ class KhweeteurPref(QMainWindow):
             self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'))))
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
+            
+        if self.settings.contains('useGPSOnDemand'):
+            self.useGPSOnDemand_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPSOnDemand'))))
+        else:
+            self.useGPSOnDemand_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('showInfos'):
             self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value('showInfos'
@@ -306,6 +311,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
+        self.settings.setValue('useGPSOnDemand', self.useGPSOnDemand_value.checkState())
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
@@ -484,9 +490,12 @@ class KhweeteurPref(QMainWindow):
 
         self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
         self._umain_layout.addWidget(self.useGPS_value, 13, 1)
+        
+        self.useGPSOnDemand_value = QCheckBox(self.tr('Use GPS On Demand'))
+        self._umain_layout.addWidget(self.useGPSOnDemand_value, 14, 1)
 
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
-        self._umain_layout.addWidget(self.showInfos_value, 14, 1)
+        self._umain_layout.addWidget(self.showInfos_value, 15, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 

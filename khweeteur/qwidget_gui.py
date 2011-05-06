@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.14'
+__version__ = '0.5.15'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -1104,7 +1104,7 @@ class KhweeteurWin(QMainWindow):
         settings = QSettings()
         self.geoloc_source = None
         if settings.contains('useGPS'):
-            if settings.value('useGPS') == '2':
+            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand')!='2'):
                 self.geolocStart()
             else:
                 self.geolocStop()

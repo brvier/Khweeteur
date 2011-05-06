@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Add confirmation dialog for delete, retweet, favorite, follow, unfollow action'
+changes = '* Add on demand gps feature'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
