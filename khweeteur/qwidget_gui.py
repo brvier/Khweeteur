@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.14'
+__version__ = '0.5.16'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -702,8 +702,8 @@ class KhweeteurWin(QMainWindow):
                 0,
                 1,
                 text,
-                ('' if self.geoloc_source == None else self.geoloc_source[0]),
-                ('' if self.geoloc_source == None else self.geoloc_source[1]),
+                ('' if self.geoloc_source == None else self.geoloc_coordinates[0]),
+                ('' if self.geoloc_source == None else self.geoloc_coordinates[1]),
                 filename,
                 'twitpic',
                 '',
