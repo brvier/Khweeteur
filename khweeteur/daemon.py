@@ -21,7 +21,7 @@ from settings import SUPPORTED_ACCOUNTS
 import pickle
 import re
 
-__version__ = '0.5.14'
+__version__ = '0.5.17'
 
 import dbus
 
@@ -41,8 +41,12 @@ except:
 import os.path
 import dbus.service
 
-# A hook to catch errors
+try:
+    from QtMobility.Location import QGeoPositionInfoSource
+except:
+    print 'Pyside QtMobility not installed or broken'
 
+# A hook to catch errors
 
 def install_excepthook(version):
     '''Install an excepthook called at each unexcepted error'''
@@ -331,6 +335,10 @@ class KhweeteurDaemon(Daemon):
         self.apis = {}
         self.idtag = None
 
+        #On demand geoloc
+        self.geoloc_source = None
+        self.geoloc_coordinates = None
+        
         # Cache Folder
 
         self.cache_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
@@ -413,9 +421,45 @@ class KhweeteurDaemon(Daemon):
 
         return api
 
+    def geolocStart(self):
+        '''Start the GPS with a 50000 refresh_rate'''
+        self.geoloc_coordinates = None
+        if self.geoloc_source is None:
+            try:
+                self.geoloc_source = \
+                    QGeoPositionInfoSource.createDefaultSource(None)
+            except:
+                self.geoloc_source = None
+                self.geoloc_coordinates = (0,0)
+                print 'PySide QtMobility not installed or package broken'
+            if self.geoloc_source is not None:
+                self.geoloc_source.setUpdateInterval(50000)
+                self.geoloc_source.positionUpdated.connect(self.geolocUpdated)
+                self.geoloc_source.startUpdates()
+
+    def geolocStop(self):
+        '''Stop the GPS'''
+
+        self.geoloc_coordinates = None
+        if self.geoloc_source is not None:
+            self.geoloc_source.stopUpdates()
+            self.geoloc_source = None
+
+    def geolocUpdated(self, update):
+        '''GPS Callback on update'''
+
+        if update.isValid():
+            self.geoloc_coordinates = (update.coordinate().latitude(),
+                                       update.coordinate().longitude())
+            self.geolocStop()
+            self.update()
+        else:
+            print 'GPS Update not valid'
+
     def do_posts(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
         accounts = []
+        
         nb_accounts = settings.beginReadArray('accounts')
         for index in range(nb_accounts):
             settings.setArrayIndex(index)
@@ -425,7 +469,16 @@ class KhweeteurDaemon(Daemon):
 
         logging.debug('Number of account : %s' % len(accounts))
 
-        for item in glob.glob(os.path.join(self.post_path, '*')):
+        items = glob.glob(os.path.join(self.post_path, '*'))
+
+        if len(items)>0:
+            if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
+                if self.geoloc_source == None:
+                    self.geolocStart()                
+                if self.geoloc_coordinates == None:
+                    return
+
+        for item in items:
             logging.debug('Try to post %s' % (item, ))
             try:
                 with open(item, 'rb') as fhandle:
@@ -444,6 +497,11 @@ class KhweeteurDaemon(Daemon):
                                     text = text.replace(url, short_url)
                                 except:
                                     pass
+
+                    if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
+                        post['lattitude'], post['longitude'] = \
+                            self.geoloc_coordinates
+
                     if not post['lattitude']:
                         post['lattitude'] = None
                     else:

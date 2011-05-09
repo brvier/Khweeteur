@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Merge from the experimental version : Rewrite from scratch : New UI, Better stability'
+changes = '* Add on demand gps feature, * Fix GPS Feature, * Add more recent pyside version as dependancy.'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -58,7 +58,7 @@ setup(name='khweeteur',
       options = { 'sdist_maemo':{
       'debian_package':'khweeteur',
       'buildversion':'1',
-      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5, python-pyside.qtwebkit, python-pyside.qtcore, python-pyside.qtgui, python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
+      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.2), python-pyside.qtwebkit (>=1.0.2), python-pyside.qtcore (>=1.0.2), python-pyside.qtgui (>=1.0.2), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',

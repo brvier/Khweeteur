@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.16'
+__version__ = '0.5.17'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -18,7 +18,7 @@ __version__ = '0.5.16'
 from PySide.QtGui import QMainWindow, QHBoxLayout, QSizePolicy, QToolButton, \
     QVBoxLayout, QFileDialog, QDesktopServices, QScrollArea, QPushButton, \
     QToolBar, QLabel, QWidget, QInputDialog, QMenu, QAction, QApplication, \
-    QIcon, QMessageBox, QPlainTextEdit
+    QIcon, QMessageBox, QPlainTextEdit, QTextCursor
 from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal, QTimer
 from PySide.QtMaemo5 import *
 from qbadgebutton import QToolBadgeButton
@@ -753,8 +753,10 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
             tweet_screenname = self.model.data(index, role=SCREENNAMEROLE)
         if tweet_id:
-            self.tb_text.setPlainText('@' + tweet_screenname
-                                      + self.tb_text.toPlainText())
+            self.tb_text.setPlainText('@%s ' % tweet_screenname)
+            cur = self.tb_text.textCursor()
+            cur.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
+            self.tb_text.setTextCursor(cur)
             self.tb_text_reply_id = tweet_id
             self.tb_text_reply_base_url = tweet_source
             self.switch_tb_edit()
@@ -1104,7 +1106,7 @@ class KhweeteurWin(QMainWindow):
         settings = QSettings()
         self.geoloc_source = None
         if settings.contains('useGPS'):
-            if settings.value('useGPS') == '2':
+            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand')!='2'):
                 self.geolocStart()
             else:
                 self.geolocStop()
