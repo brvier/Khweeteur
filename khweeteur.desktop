@@ -5,3 +5,4 @@ Type=Application
 Name=Khweeteur
 Exec=/usr/bin/khweeteur
 Icon=khweeteur
+X-Osso-Service=net.khertan.khweeteur

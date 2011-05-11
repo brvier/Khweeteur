@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.17'
+__version__ = '0.5.18'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -23,6 +23,8 @@ from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal, QTimer
 from PySide.QtMaemo5 import *
 from qbadgebutton import QToolBadgeButton
 
+import osso
+
 import dbus
 import dbus.service
 import os
@@ -31,8 +33,6 @@ import pickle
 import time
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE
-from settings import KhweeteurPref
-from dbusobj import KhweeteurDBus
 import re
 
 try:
@@ -210,6 +210,8 @@ class Khweeteur(QApplication):
         self.setOrganizationName('Khertan Software')
         self.setOrganizationDomain('khertan.net')
         self.setApplicationName('Khweeteur')
+
+        self.osso_c = osso.Context('net.khertan.khweeteur', "0.0.1", False)
         self.run()
 
     def check_crash_report(self):
@@ -281,11 +283,11 @@ class KhweeteurWin(QMainWindow):
         self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         self.setWindowTitle('Khweeteur')
 
-        self.listen_dbus()
-
         settings = QSettings()
 
         self.view = KhweetsView()
+        self.setCentralWidget(self.view)
+        
         self.model = KhweetsModel()
         try:
             self.model.setLimit(int(settings.value('tweetHistory')))
@@ -293,8 +295,6 @@ class KhweeteurWin(QMainWindow):
             self.model.setLimit(60)
         self.view.setModel(self.model)
         self.view.clicked.connect(self.switch_tb_action)
-
-        self.dbus_handler.require_update()
 
         self.toolbar = QToolBar('Toolbar')
         self.addToolBar(Qt.BottomToolBarArea, self.toolbar)
@@ -312,51 +312,10 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_new)
         self.list_tb_action.append(self.tb_new)
 
-        # Back button (Edit + Action)
-
-        self.tb_back = QAction(QIcon.fromTheme('general_back'), 'Back', self)
-        self.tb_back.triggered.connect(self.switch_tb_default)
-        self.toolbar.addAction(self.tb_back)
-        self.edit_tb_action.append(self.tb_back)
-        self.action_tb_action.append(self.tb_back)
-
-        self.setupMenu()
-
-        # Twitpic button
-
-        self.tb_twitpic = QAction(QIcon.fromTheme('tasklaunch_images'),
-                                  'Twitpic', self)
-        self.tb_twitpic.triggered.connect(self.do_tb_twitpic)
-        self.toolbar.addAction(self.tb_twitpic)
-        self.edit_tb_action.append(self.tb_twitpic)
-
-        # Text field (edit)
-
-        self.tb_text = QPlainTextEdit()
-        self.tb_text_reply_id = 0
-        self.tb_text_reply_base_url = ''
-        self.tb_text.setFixedHeight(66)
-        self.edit_tb_action.append(self.toolbar.addWidget(self.tb_text))
-
-        # Char count (Edit)
-
-        self.tb_charCounter = QLabel('140')
-        self.edit_tb_action.append(self.toolbar.addWidget(self.tb_charCounter))
-        self.tb_text.textChanged.connect(self.countCharsAndResize)
-
-        # Send tweet (Edit)
-
-        self.tb_send = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
-        self.tb_send.triggered.connect(self.do_tb_send)
-        self.tb_send.setVisible(False)
-        self.toolbar.addAction(self.tb_send)
-        self.edit_tb_action.append(self.tb_send)
-
         # Refresh (Default)
 
         self.tb_update = QAction(QIcon.fromTheme('general_refresh'), 'Update',
                                  self)
-        self.tb_update.triggered.connect(self.dbus_handler.require_update)
         self.toolbar.addAction(self.tb_update)
         self.list_tb_action.append(self.tb_update)
 
@@ -388,7 +347,6 @@ class KhweeteurWin(QMainWindow):
         # Search Button
 
         self.tb_search_menu = QMenu()
-        self.loadSearchMenu()
 
         # Search (Default)
 
@@ -404,7 +362,6 @@ class KhweeteurWin(QMainWindow):
         # Lists Button
 
         self.tb_list_menu = QMenu()
-        self.loadListMenu()
 
         # Lists (Default)
 
@@ -424,58 +381,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_fullscreen.triggered.connect(self.do_tb_fullscreen)
         self.toolbar.addAction(self.tb_fullscreen)
         self.list_tb_action.append(self.tb_fullscreen)
-
-        # Reply button (Action)
-
-        self.tb_reply = QAction('Reply', self)
-        self.tb_reply.setShortcut('Ctrl+M')
-        self.toolbar.addAction(self.tb_reply)
-        self.tb_reply.triggered.connect(self.do_tb_reply)
-        self.action_tb_action.append(self.tb_reply)
-
-        # Retweet (Action)
-
-        self.tb_retweet = QAction('Retweet', self)
-        self.tb_retweet.setShortcut('Ctrl+P')
-        self.toolbar.addAction(self.tb_retweet)
-        self.tb_retweet.triggered.connect(self.do_tb_retweet)
-        self.action_tb_action.append(self.tb_retweet)
-
-        # Follow (Action)
-
-        self.tb_follow = QAction('Follow', self)
-        self.tb_follow.triggered.connect(self.do_tb_follow)
-        self.toolbar.addAction(self.tb_follow)
-        self.action_tb_action.append(self.tb_follow)
-
-        # UnFollow (Action)
-
-        self.tb_unfollow = QAction('Unfollow', self)
-        self.tb_unfollow.triggered.connect(self.do_tb_unfollow)
-        self.toolbar.addAction(self.tb_unfollow)
-        self.action_tb_action.append(self.tb_unfollow)
-
-        # Favorite (Action)
-
-        self.tb_favorite = QAction('Favorite', self)
-        self.tb_favorite.triggered.connect(self.do_tb_favorite)
-        self.toolbar.addAction(self.tb_favorite)
-        self.action_tb_action.append(self.tb_favorite)
-
-        # Open URLs (Action)
-
-        self.tb_urls = QAction('Open URLs', self)
-        self.tb_urls.setShortcut('Ctrl+O')
-        self.toolbar.addAction(self.tb_urls)
-        self.tb_urls.triggered.connect(self.do_tb_openurl)
-        self.action_tb_action.append(self.tb_urls)
-
-        # Delete (Action)
-
-        self.tb_delete = QAction('Delete', self)
-        self.toolbar.addAction(self.tb_delete)
-        self.tb_delete.triggered.connect(self.do_tb_delete)
-        self.action_tb_action.append(self.tb_delete)
 
         # Actions not in toolbar
 
@@ -504,16 +409,128 @@ class KhweeteurWin(QMainWindow):
         self.tb_copy.triggered.connect(self.do_tb_copy)
         self.addAction(self.tb_copy)
 
-        self.switch_tb_default()
+#        self.switch_tb_default()
 
         self.setWindowTitle('Khweeteur : Home')
-        self.setCentralWidget(self.view)
-        QTimer.singleShot(100,self.post_init)
+        self.model.load('HomeTimeline')
+        self.show()
+        QTimer.singleShot(500,self.post_init)
 
     @Slot()
     def post_init(self):
-        self.model.load('HomeTimeline')
+        self.listen_dbus()
+        self.dbus_handler.require_update()
+        self.tb_update.triggered.connect(self.dbus_handler.require_update)
         self.geolocDoStart()
+
+        self.loadSearchMenu()
+        self.loadListMenu()
+
+        #Toolbar to set after startup
+        # Back button (Edit + Action)
+
+        self.tb_back = QAction(QIcon.fromTheme('general_back'), 'Back', self)
+        self.tb_back.triggered.connect(self.switch_tb_default)
+        self.toolbar.addAction(self.tb_back)
+        self.tb_back.setVisible(False)
+        self.edit_tb_action.append(self.tb_back)
+        self.action_tb_action.append(self.tb_back)
+
+        self.setupMenu()
+
+        # Twitpic button
+
+        self.tb_twitpic = QAction(QIcon.fromTheme('tasklaunch_images'),
+                                  'Twitpic', self)
+        self.tb_twitpic.triggered.connect(self.do_tb_twitpic)
+        self.tb_twitpic.setVisible(False)
+        self.toolbar.addAction(self.tb_twitpic)
+        self.edit_tb_action.append(self.tb_twitpic)
+
+        # Text field (edit)
+
+        self.tb_text = QPlainTextEdit()
+        self.tb_text_reply_id = 0
+        self.tb_text_reply_base_url = ''
+        self.tb_text.setFixedHeight(66)
+        action = self.toolbar.addWidget(self.tb_text)
+        action.setVisible(False)
+        self.edit_tb_action.append(action)
+
+        # Char count (Edit)
+
+        self.tb_charCounter = QLabel('140')
+        action = self.toolbar.addWidget(self.tb_charCounter)
+        action.setVisible(False)
+        self.edit_tb_action.append(action)
+        self.tb_text.textChanged.connect(self.countCharsAndResize)
+
+        # Send tweet (Edit)
+
+        self.tb_send = QAction(QIcon.fromTheme('khweeteur'), 'Tweet', self)
+        self.tb_send.triggered.connect(self.do_tb_send)
+        self.tb_send.setVisible(False)
+        self.toolbar.addAction(self.tb_send)
+        self.edit_tb_action.append(self.tb_send)
+        
+        # Reply button (Action)
+
+        self.tb_reply = QAction('Reply', self)
+        self.tb_reply.setShortcut('Ctrl+M')
+        self.tb_reply.setVisible(False)
+        self.toolbar.addAction(self.tb_reply)
+        self.tb_reply.triggered.connect(self.do_tb_reply)
+        self.action_tb_action.append(self.tb_reply)
+
+        # Retweet (Action)
+
+        self.tb_retweet = QAction('Retweet', self)
+        self.tb_retweet.setShortcut('Ctrl+P')
+        self.tb_retweet.setVisible(False)
+        self.toolbar.addAction(self.tb_retweet)
+        self.tb_retweet.triggered.connect(self.do_tb_retweet)
+        self.action_tb_action.append(self.tb_retweet)
+
+        # Follow (Action)
+
+        self.tb_follow = QAction('Follow', self)
+        self.tb_follow.triggered.connect(self.do_tb_follow)
+        self.tb_follow.setVisible(False)
+        self.toolbar.addAction(self.tb_follow)
+        self.action_tb_action.append(self.tb_follow)
+
+        # UnFollow (Action)
+
+        self.tb_unfollow = QAction('Unfollow', self)
+        self.tb_unfollow.triggered.connect(self.do_tb_unfollow)
+        self.tb_unfollow.setVisible(False)
+        self.toolbar.addAction(self.tb_unfollow)
+        self.action_tb_action.append(self.tb_unfollow)
+
+        # Favorite (Action)
+
+        self.tb_favorite = QAction('Favorite', self)
+        self.tb_favorite.triggered.connect(self.do_tb_favorite)
+        self.tb_favorite.setVisible(False)
+        self.toolbar.addAction(self.tb_favorite)
+        self.action_tb_action.append(self.tb_favorite)
+
+        # Open URLs (Action)
+
+        self.tb_urls = QAction('Open URLs', self)
+        self.tb_urls.setShortcut('Ctrl+O')
+        self.tb_urls.setVisible(False)
+        self.toolbar.addAction(self.tb_urls)
+        self.tb_urls.triggered.connect(self.do_tb_openurl)
+        self.action_tb_action.append(self.tb_urls)
+
+        # Delete (Action)
+
+        self.tb_delete = QAction('Delete', self)
+        self.tb_delete.setVisible(False)
+        self.toolbar.addAction(self.tb_delete)
+        self.tb_delete.triggered.connect(self.do_tb_delete)
+        self.action_tb_action.append(self.tb_delete)
 
     @Slot()
     def do_tb_fullscreen(self):
@@ -540,6 +557,7 @@ class KhweeteurWin(QMainWindow):
         self.model.refreshTimestamp()
 
     def listen_dbus(self):
+        from dbusobj import KhweeteurDBus
         from dbus.mainloop.qt import DBusQtMainLoop
         self.dbus_loop = DBusQtMainLoop()
         dbus.set_default_main_loop(self.dbus_loop)
@@ -1087,6 +1105,7 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def showPrefs(self):
+        from settings import KhweeteurPref
         khtsettings = KhweeteurPref(parent=self)
         khtsettings.save.connect(self.refreshPrefs)
         khtsettings.show()

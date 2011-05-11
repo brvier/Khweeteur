@@ -21,7 +21,7 @@ from settings import SUPPORTED_ACCOUNTS
 import pickle
 import re
 
-__version__ = '0.5.17'
+__version__ = '0.5.18'
 
 import dbus
 
