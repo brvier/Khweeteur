@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Add on demand gps feature, * Fix GPS Feature, * Add more recent pyside version as dependancy.'
+changes = '* Improve reply feature'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,

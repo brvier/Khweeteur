@@ -375,6 +375,7 @@ class KhweeteurDaemon(Daemon):
 
         logging.debug('Timer added')
         app.exec_()
+        logging.debug('Daemon stop')
 
     def post_tweet(
         self,
