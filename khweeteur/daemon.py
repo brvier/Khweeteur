@@ -158,9 +158,7 @@ class Daemon:
         """
         Start the daemon
         """
-
         # Check for a pidfile to see if the daemon already runs
-
         try:
             pf = file(self.pidfile, 'r')
             pid = int(pf.read().strip())
@@ -315,13 +313,24 @@ class KhweeteurDBusHandler(dbus.service.Object):
 class KhweeteurDaemon(Daemon):
 
     def run(self):
+        try:
+            from PySide import __version_info__ as __pyside_version__
+        except:
+            __pyside_version__ = None
+        try:
+            from PySide.QtCore import __version_info__ as __qt_version__
+        except:
+            __qt_version__ = None
+
         app = QCoreApplication(sys.argv)
 
-        logging.basicConfig(level=logging.INFO,
+        logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%a, %d %b %Y %H:%M:%S',
-                            filename='/home/user/.khweeteur.log', filemode='w')
+                            filename=os.path.expanduser('~/.khweeteur.log'), filemode='w')
         logging.info('Starting daemon %s' % __version__)
+        logging.info('PySide version %s' % repr(__pyside_version__))
+        logging.info('Qt Version %s' % repr(__qt_version__))
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur'
                                      , dbus_interface='net.khertan.Khweeteur',
@@ -338,7 +347,7 @@ class KhweeteurDaemon(Daemon):
         #On demand geoloc
         self.geoloc_source = None
         self.geoloc_coordinates = None
-        
+
         # Cache Folder
 
         self.cache_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
@@ -460,7 +469,7 @@ class KhweeteurDaemon(Daemon):
     def do_posts(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
         accounts = []
-        
+
         nb_accounts = settings.beginReadArray('accounts')
         for index in range(nb_accounts):
             settings.setArrayIndex(index)
@@ -475,7 +484,7 @@ class KhweeteurDaemon(Daemon):
         if len(items)>0:
             if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
                 if self.geoloc_source == None:
-                    self.geolocStart()                
+                    self.geolocStart()
                 if self.geoloc_coordinates == None:
                     return
 
@@ -859,7 +868,10 @@ class KhweeteurDaemon(Daemon):
 
 if __name__ == '__main__':
     install_excepthook(__version__)
-    daemon = KhweeteurDaemon('/var/run/khweeteurd/khweeteurd.pid')
+    if os.path.exists('/var/run/khweeteurd'):
+        daemon = KhweeteurDaemon('/var/run/khweeteurd/khweeteurd.pid')
+    else:
+        daemon = KhweeteurDaemon('/tmp/khweeteurd.pid')
     if len(sys.argv) == 2:
         if 'startfromprefs' == sys.argv[1]:
             daemon.startfromprefs()

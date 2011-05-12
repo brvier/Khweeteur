@@ -91,7 +91,7 @@ class OAuthView(QWebView):
             res = regex.findall(self.page().mainFrame().toHtml())
             if len(res) > 0:
                 self.pin = res[0]
-            
+
         self.loggedIn = self.pin not in (None, '')
 
         if self.loggedIn:
@@ -202,8 +202,11 @@ class KhweeteurPref(QMainWindow):
 
         self.settings = QSettings()
 
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        try:
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        except:
+            pass
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setWindowTitle('Khweeteur Prefs')
 
@@ -276,7 +279,7 @@ class KhweeteurPref(QMainWindow):
             self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'))))
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
-            
+
         if self.settings.contains('useGPSOnDemand'):
             self.useGPSOnDemand_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPSOnDemand'))))
         else:
@@ -407,8 +410,11 @@ class KhweeteurPref(QMainWindow):
             self.oauth_webview.gotpin.connect(self.do_verify_pin)
             self.oauth_win = QMainWindow(self)
             self.oauth_win.setCentralWidget(self.oauth_webview)
-            self.oauth_win.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-            self.oauth_win.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+            try:
+                self.oauth_win.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+                self.oauth_win.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+            except:
+                pass
             self.oauth_win.setWindowTitle('Khweeteur OAuth')
             self.oauth_win.show()
         except httplib2.ServerNotFoundError, err:
@@ -490,7 +496,7 @@ class KhweeteurPref(QMainWindow):
 
         self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
         self._umain_layout.addWidget(self.useGPS_value, 13, 1)
-        
+
         self.useGPSOnDemand_value = QCheckBox(self.tr('Use GPS On Demand'))
         self._umain_layout.addWidget(self.useGPSOnDemand_value, 14, 1)
 

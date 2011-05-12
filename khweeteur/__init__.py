@@ -26,11 +26,12 @@ def install_excepthook():
         #traceback give us all the errors information message like the method, file line ... everything like
         #we have in the python interpreter
         import traceback
+        import PySide
         from qwidget_gui import __version__
         s = ''.join(traceback.format_exception(exctype, value, tb))
         print 'Except hook', exctype
         print 'Except hook called : %s' % (s)
-        formatted_text = "%s Version %s\nTrace : %s\nComments : " % ('Khweeteur', __version__, s)
+        formatted_text = "Khweeteur Version %s\nPySide Version : %s\nQt Version : %s\nTrace : %s\n" % ( __version__, repr(PySide.__version_info__), repr(PySide.QtCore.__version_info__),s)
         write_report(formatted_text)
 
     sys.excepthook = my_excepthook

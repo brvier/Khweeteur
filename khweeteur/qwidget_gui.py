@@ -20,26 +20,33 @@ from PySide.QtGui import QMainWindow, QHBoxLayout, QSizePolicy, QToolButton, \
     QToolBar, QLabel, QWidget, QInputDialog, QMenu, QAction, QApplication, \
     QIcon, QMessageBox, QPlainTextEdit, QTextCursor
 from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal, QTimer
-from PySide.QtMaemo5 import *
+
+try:
+    from PySide.QtMaemo5 import *
+except:
+    pass
+
+try:
+    import osso
+except:
+    pass
+
 from qbadgebutton import QToolBadgeButton
 
-import osso
 
-import dbus
-import dbus.service
+
 import os
 import sys
-import pickle
-import time
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE
-import re
+
+import dbus.service
 
 try:
     from QtMobility.Location import QGeoPositionInfoSource
 except:
     print 'Pyside QtMobility not installed or broken'
-    
+
 class KhweeteurDBusHandler(dbus.service.Object):
 
     def __init__(self, parent):
@@ -54,7 +61,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
     def require_update(self, optional=None):
-        self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
+        try:
+            self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
+        except:
+            pass
 
     def post_tweet(
         self,
@@ -67,7 +77,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
         action='',
         tweet_id='0',
         ):
-
+        import time
+        import pickle
         if not os.path.exists(self.post_path):
             os.makedirs(self.post_path)
         with open(os.path.join(self.post_path, str(time.time())), 'wb') as \
@@ -101,7 +112,11 @@ class KhweeteurAbout(QMainWindow):
         except:
             self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
 
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        try:
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        except:
+            pass
+
         self.setWindowTitle(self.tr('Khweeteur About'))
 
         try:
@@ -211,7 +226,10 @@ class Khweeteur(QApplication):
         self.setOrganizationDomain('khertan.net')
         self.setApplicationName('Khweeteur')
 
-        self.osso_c = osso.Context('net.khertan.khweeteur', "0.0.1", False)
+        try:
+            self.osso_c = osso.Context('net.khertan.khweeteur', "0.0.1", False)
+        except:
+            pass
         self.run()
 
     def check_crash_report(self):
@@ -279,15 +297,18 @@ class KhweeteurWin(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
 
-        self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        try:
+            self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
+            self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
+        except:
+            pass
         self.setWindowTitle('Khweeteur')
 
         settings = QSettings()
 
         self.view = KhweetsView()
         self.setCentralWidget(self.view)
-        
+
         self.model = KhweetsModel()
         try:
             self.model.setLimit(int(settings.value('tweetHistory')))
@@ -472,7 +493,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_send.setVisible(False)
         self.toolbar.addAction(self.tb_send)
         self.edit_tb_action.append(self.tb_send)
-        
+
         # Reply button (Action)
 
         self.tb_reply = QAction('Reply', self)
@@ -557,6 +578,8 @@ class KhweeteurWin(QMainWindow):
         self.model.refreshTimestamp()
 
     def listen_dbus(self):
+        import dbus
+        import dbus.service
         from dbusobj import KhweeteurDBus
         from dbus.mainloop.qt import DBusQtMainLoop
         self.dbus_loop = DBusQtMainLoop()
@@ -731,6 +754,7 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def do_tb_openurl(self):
+        import re
         for index in self.view.selectedIndexes():
             status = self.model.data(index)
             try:
@@ -1015,14 +1039,14 @@ class KhweeteurWin(QMainWindow):
 #        local_self.setFixedHeight(min(370, text_height + (fr.height() - cr.height()) + 6))
 #        local_self.updateGeometry()
 #Resize
-#        doc = self.document()            
+#        doc = self.document()
         s = doc.size().toSize()
         s.setHeight((s.height() + 1) * (fm.lineSpacing()+1))
         fr = local_self.frameRect()
         cr = local_self.contentsRect()
         local_self.setFixedHeight(min(s.height() +  (fr.height() - cr.height() - 1) - 15,370))
         local_self.updateGeometry()
-        
+
     def loadSearchMenu(self):
         settings = QSettings()
         self.tb_search_menu.clear()
