@@ -58,7 +58,7 @@ setup(name='khweeteur',
       options = { 'sdist_maemo':{
       'debian_package':'khweeteur-experimental',
       'buildversion':'1',
-      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.2), python-pyside.qtwebkit (>=1.0.2), python-pyside.qtcore (>=1.0.2), python-pyside.qtgui (>=1.0.2), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2, python-qt4-dbus',
+      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.2), python-pyside.qtwebkit (>=1.0.2), python-pyside.qtcore (>=1.0.2), python-pyside.qtgui (>=1.0.2), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2, python2.5-qt4-dbus',
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',

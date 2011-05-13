@@ -16,11 +16,10 @@ from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
     QAbstractItemView, QFontMetrics, QFont, QStyle, QPixmap
 from PySide.QtCore import Qt, QSize, QSettings
 
-from settings import DEFAULTTHEME, WHITETHEME, \
+from theme import DEFAULTTHEME, WHITETHEME, \
                      COOLWHITETHEME, COOLGRAYTHEME, \
                      MINITHEME
               
-
 
 class DefaultCustomDelegate(QStyledItemDelegate):
 

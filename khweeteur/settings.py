@@ -8,7 +8,6 @@
 '''A simple Twitter client made with pyqt4'''
 
 import httplib2
-import re
 import os
 
 # import sip
@@ -22,11 +21,9 @@ from PySide.QtGui import QMainWindow, QSizePolicy, QSpinBox, QVBoxLayout, \
 from PySide.QtCore import Qt, QUrl, QAbstractListModel, QSettings, QModelIndex, \
     Signal
 
-DEFAULTTHEME = u'Default'
-WHITETHEME = u'White'
-COOLWHITETHEME = u'CoolWhite'
-COOLGRAYTHEME = u'CoolGray'
-MINITHEME = u'MiniDefault'
+from theme import DEFAULTTHEME, WHITETHEME, \
+                     COOLWHITETHEME, COOLGRAYTHEME, \
+                     MINITHEME
 
 SUPPORTED_ACCOUNTS = [{
     'name': 'Twitter',
@@ -87,6 +84,7 @@ class OAuthView(QWebView):
         return self
 
     def _loadFinished(self):
+        import re
 
         regex = re.compile('.*<div.*oauth_pin.*>(.*)<')
         res = regex.findall(self.page().mainFrame().toHtml())

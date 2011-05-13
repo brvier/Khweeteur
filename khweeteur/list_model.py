@@ -26,7 +26,7 @@ USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
 from PySide.QtGui import QPixmap
-import twitter #Not really unused. Avoid pickle to do it each time
+#import twitter #Not really unused. Avoid pickle to do it each time
 
 pyqtSignal = Signal
         
