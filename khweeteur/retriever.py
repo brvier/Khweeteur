@@ -9,7 +9,7 @@ import socket
 socket.setdefaulttimeout(60)
 from urllib import urlretrieve
 
-import pickle
+import cPickle as pickle
 try:
     from PIL import Image
 except:
@@ -22,7 +22,6 @@ from threading import Thread
 import logging
 import os
 import socket
-
 
 class KhweeteurRefreshWorker(Thread):
 

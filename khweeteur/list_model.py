@@ -8,7 +8,7 @@
 '''A simple Twitter client made with pyqt4 : QModel'''
 
 import time
-import pickle
+import cPickle as pickle
 import glob
 import os
 

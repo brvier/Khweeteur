@@ -22,6 +22,12 @@ from PySide.QtGui import QMainWindow, QSizePolicy, QSpinBox, QVBoxLayout, \
 from PySide.QtCore import Qt, QUrl, QAbstractListModel, QSettings, QModelIndex, \
     Signal
 
+DEFAULTTHEME = u'Default'
+WHITETHEME = u'White'
+COOLWHITETHEME = u'CoolWhite'
+COOLGRAYTHEME = u'CoolGray'
+MINITHEME = u'MiniDefault'
+
 SUPPORTED_ACCOUNTS = [{
     'name': 'Twitter',
     'consumer_key': 'uhgjkoA2lggG4Rh0ggUeQ',
@@ -48,7 +54,7 @@ try:
 except:
     from cgi import parse_qs
 
-from PySide.QtWebKit import *
+from PySide.QtWebKit import QWebView
 
 
 class OAuthView(QWebView):
@@ -186,11 +192,6 @@ class KhweeteurPref(QMainWindow):
 
     save = Signal()
 
-    DEFAULTTHEME = u'Default'
-    WHITETHEME = u'White'
-    COOLWHITETHEME = u'CoolWhite'
-    COOLGRAYTHEME = u'CoolGray'
-    MINITHEME = u'MiniDefault'
     THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME,
               MINITHEME]
 

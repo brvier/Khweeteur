@@ -18,10 +18,10 @@ import logging
 from retriever import KhweeteurRefreshWorker
 from settings import SUPPORTED_ACCOUNTS
 
-import pickle
+import cPickle as pickle
 import re
 
-__version__ = '0.5.18'
+from qwidget_gui import __version__
 
 import dbus
 

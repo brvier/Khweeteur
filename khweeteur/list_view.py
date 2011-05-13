@@ -16,7 +16,10 @@ from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
     QAbstractItemView, QFontMetrics, QFont, QStyle, QPixmap
 from PySide.QtCore import Qt, QSize, QSettings
 
-from settings import KhweeteurPref
+from settings import DEFAULTTHEME, WHITETHEME, \
+                     COOLWHITETHEME, COOLGRAYTHEME, \
+                     MINITHEME
+              
 
 
 class DefaultCustomDelegate(QStyledItemDelegate):
@@ -348,15 +351,15 @@ class KhweetsView(QListView):
     def refreshCustomDelegate(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
         theme = settings.value('theme')
-        if theme == KhweeteurPref.WHITETHEME:
+        if theme == WHITETHEME:
             self.custom_delegate = WhiteCustomDelegate(self)
-        elif theme == KhweeteurPref.DEFAULTTHEME:
+        elif theme == DEFAULTTHEME:
             self.custom_delegate = DefaultCustomDelegate(self)
-        elif theme == KhweeteurPref.COOLWHITETHEME:
+        elif theme == COOLWHITETHEME:
             self.custom_delegate = CoolWhiteCustomDelegate(self)
-        elif theme == KhweeteurPref.COOLGRAYTHEME:
+        elif theme == COOLGRAYTHEME:
             self.custom_delegate = CoolGrayCustomDelegate(self)
-        elif theme == KhweeteurPref.MINITHEME:
+        elif theme == MINITHEME:
             self.custom_delegate = MiniDefaultCustomDelegate(self)
         else:
             self.custom_delegate = DefaultCustomDelegate(self)
