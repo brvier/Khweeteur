@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.19'
+__version__ = '0.5.20'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -33,68 +33,16 @@ except:
 
 from qbadgebutton import QToolBadgeButton
 
-
-
 import os
 import sys
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE
 
-import dbus.service
 
 try:
     from QtMobility.Location import QGeoPositionInfoSource
 except:
     print 'Pyside QtMobility not installed or broken'
-
-class KhweeteurDBusHandler(dbus.service.Object):
-
-    def __init__(self, parent):
-        dbus.service.Object.__init__(self, dbus.SessionBus(),
-                                     '/net/khertan/Khweeteur')
-        self.parent = parent
-
-        # Post Folder
-
-        self.post_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
-                                      'topost')
-
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
-    def require_update(self, optional=None):
-        try:
-            self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
-        except:
-            pass
-
-    def post_tweet(
-        self,
-        shorten_url=1,
-        serialize=1,
-        text='',
-        lattitude='0',
-        longitude='0',
-        base_url='',
-        action='',
-        tweet_id='0',
-        ):
-        import time
-        import pickle
-        if not os.path.exists(self.post_path):
-            os.makedirs(self.post_path)
-        with open(os.path.join(self.post_path, str(time.time())), 'wb') as \
-            fhandle:
-            post = {
-                'shorten_url': shorten_url,
-                'serialize': serialize,
-                'text': text,
-                'lattitude': lattitude,
-                'longitude': longitude,
-                'base_url': base_url,
-                'action': action,
-                'tweet_id': tweet_id,
-                }
-            pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
-
 
 class KhweeteurAbout(QMainWindow):
 
@@ -107,16 +55,11 @@ class KhweeteurAbout(QMainWindow):
         self.settings = QSettings()
 
         try:  # Preferences not set yet
-            if int(self.settings.value('useAutoRotation')) == 2:
-                self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-        except:
             self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
-
-        try:
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         except:
             pass
-
+			
         self.setWindowTitle(self.tr('Khweeteur About'))
 
         try:
@@ -287,8 +230,6 @@ class Khweeteur(QApplication):
     def run(self):
         self.check_crash_report()
         self.win = KhweeteurWin()
-        self.win.show()
-
 
 class KhweeteurWin(QMainWindow):
 
@@ -302,6 +243,7 @@ class KhweeteurWin(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         except:
             pass
+			
         self.setWindowTitle('Khweeteur')
 
         settings = QSettings()
@@ -403,42 +345,21 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_fullscreen)
         self.list_tb_action.append(self.tb_fullscreen)
 
-        # Actions not in toolbar
-
-        self.tb_scrolltop = QAction('Scroll to top', self)
-        self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
-        self.tb_scrolltop.triggered.connect(self.view.scrollToTop)
-        self.addAction(self.tb_scrolltop)
-
-        self.tb_scrollbottom = QAction('Scroll to bottom', self)
-        self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
-        self.tb_scrollbottom.triggered.connect(self.view.scrollToBottom)
-        self.addAction(self.tb_scrollbottom)
-
-        self.tb_zoomin = QAction('ZoomIn', self)
-        self.tb_zoomin.setShortcut(Qt.CTRL + Qt.Key_Left)
-        self.tb_zoomin.triggered.connect(self.view.do_zoom_in)
-        self.addAction(self.tb_zoomin)
-
-        self.tb_zoomout = QAction('ZoomOut', self)
-        self.tb_zoomout.setShortcut(Qt.CTRL + Qt.Key_Right)
-        self.tb_zoomout.triggered.connect(self.view.do_zoom_out)
-        self.addAction(self.tb_zoomout)
-
-        self.tb_copy = QAction('Copy', self)
-        self.tb_copy.setShortcut(Qt.CTRL + Qt.Key_C)
-        self.tb_copy.triggered.connect(self.do_tb_copy)
-        self.addAction(self.tb_copy)
-
-#        self.switch_tb_default()
-
         self.setWindowTitle('Khweeteur : Home')
-        self.model.load('HomeTimeline')
+        
         self.show()
-        QTimer.singleShot(500,self.post_init)
+		
+        self.model.load('HomeTimeline',limit=5)
+        QTimer.singleShot(100,self.post_init_2)
+        QTimer.singleShot(500,self.post_init_3)
+        QApplication.processEvents()       
 
     @Slot()
-    def post_init(self):
+    def post_init_3(self):
+        self.model.load('HomeTimeline')
+
+    @Slot()
+    def post_init_2(self):
         self.listen_dbus()
         self.dbus_handler.require_update()
         self.tb_update.triggered.connect(self.dbus_handler.require_update)
@@ -553,6 +474,33 @@ class KhweeteurWin(QMainWindow):
         self.tb_delete.triggered.connect(self.do_tb_delete)
         self.action_tb_action.append(self.tb_delete)
 
+		# Actions not in toolbar
+
+        self.tb_scrolltop = QAction('Scroll to top', self)
+        self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
+        self.tb_scrolltop.triggered.connect(self.view.scrollToTop)
+        self.addAction(self.tb_scrolltop)
+
+        self.tb_scrollbottom = QAction('Scroll to bottom', self)
+        self.tb_scrollbottom.setShortcut(Qt.CTRL + Qt.Key_Down)
+        self.tb_scrollbottom.triggered.connect(self.view.scrollToBottom)
+        self.addAction(self.tb_scrollbottom)
+
+        self.tb_zoomin = QAction('ZoomIn', self)
+        self.tb_zoomin.setShortcut(Qt.CTRL + Qt.Key_Left)
+        self.tb_zoomin.triggered.connect(self.view.do_zoom_in)
+        self.addAction(self.tb_zoomin)
+
+        self.tb_zoomout = QAction('ZoomOut', self)
+        self.tb_zoomout.setShortcut(Qt.CTRL + Qt.Key_Right)
+        self.tb_zoomout.triggered.connect(self.view.do_zoom_out)
+        self.addAction(self.tb_zoomout)
+
+        self.tb_copy = QAction('Copy', self)
+        self.tb_copy.setShortcut(Qt.CTRL + Qt.Key_C)
+        self.tb_copy.triggered.connect(self.do_tb_copy)
+        self.addAction(self.tb_copy)
+
     @Slot()
     def do_tb_fullscreen(self):
         if self.isFullScreen():
@@ -581,6 +529,7 @@ class KhweeteurWin(QMainWindow):
         import dbus
         import dbus.service
         from dbusobj import KhweeteurDBus
+        from dbushandler import KhweeteurDBusHandler
         from dbus.mainloop.qt import DBusQtMainLoop
         self.dbus_loop = DBusQtMainLoop()
         dbus.set_default_main_loop(self.dbus_loop)

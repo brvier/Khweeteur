@@ -117,7 +117,7 @@ class QToolBadgeButton(QToolButton):
         self.badge_size = 25
 
         self.redGradient = QRadialGradient(0.0, 0.0, 17.0, self.badge_size - 3,
-                self.badge_size - 3)
+								self.badge_size - 3)
         self.redGradient.setColorAt(0.0, QColor(0xe0, 0x84, 0x9b))
         self.redGradient.setColorAt(0.5, QColor(0xe9, 0x34, 0x43))
         self.redGradient.setColorAt(1.0, QColor(0xdc, 0x0c, 0x00))

@@ -9,7 +9,7 @@
 
 import time
 import cPickle as pickle
-import glob
+#import glob
 import os
 
 SCREENNAMEROLE = 20
@@ -26,7 +26,7 @@ USERIDROLE = 29
 
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
 from PySide.QtGui import QPixmap
-#import twitter #Not really unused. Avoid pickle to do it each time
+import twitter #Not really unused. Avoid pickle to do it each time
 
 pyqtSignal = Signal
         
@@ -71,7 +71,7 @@ class KhweetsModel(QAbstractListModel):
         self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
                               len(self._items)))
 
-    def load(self, call):
+    def load(self, call, limit = None):
 
         self.now = time.time()
 
@@ -87,7 +87,12 @@ class KhweetsModel(QAbstractListModel):
 
         try:
             folder = self.getCacheFolder()
-            uids = glob.glob(folder + u'/*')
+#            uids = glob.glob(folder + u'/*')
+            uids = os.listdir(folder)
+            if limit:
+                uids.sort()
+                uids.reverse()
+                uids = uids[:limit]                
 #            pickleload = pickle.load
             _uids = self._uids[call]
             _items = self._items[call]            

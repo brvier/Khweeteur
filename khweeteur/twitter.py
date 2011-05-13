@@ -176,6 +176,7 @@ class Status(object):
     '''
 
         self.created_at = created_at
+        self._created_at_in_seconds = None
         self.favorited = favorited
         self.id = id
         self.text = text
@@ -219,8 +220,13 @@ class Status(object):
     Returns:
       The time this status message was posted, in seconds since the epoch.
     '''
-
-        return calendar.timegm(rfc822.parsedate(self.created_at))
+        try:
+            if not self._created_at_in_seconds:
+                self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+            return self._created_at_in_seconds                
+        except:            
+            self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+        return self._created_at_in_seconds
 
     created_at_in_seconds = property(GetCreatedAtInSeconds,
                                      doc='The time this status message was posted, in seconds since the epoch'
@@ -359,7 +365,7 @@ class Status(object):
     '''
 
         fudge = 1.25
-        delta = long(time_now) - long(self.created_at_in_seconds)
+        delta = long(time_now) - long(self.GetCreatedAtInSeconds())
 
         if delta < 1 * fudge:
             return 'about a second ago'
@@ -1553,6 +1559,7 @@ class DirectMessage(object):
 
         self.id = id
         self.created_at = created_at
+        self._created_at_in_seconds = None
         self.sender_id = sender_id
         self.sender_screen_name = sender_screen_name
         self.recipient_id = recipient_id
@@ -1606,8 +1613,13 @@ class DirectMessage(object):
     Returns:
       The time this direct message was posted, in seconds since the epoch.
     '''
-
-        return calendar.timegm(rfc822.parsedate(self.created_at))
+        try:
+            if not self._created_at_in_seconds:
+                self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+            return self._created_at_in_seconds                
+        except:            
+            self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+        return self._created_at_in_seconds
 
     created_at_in_seconds = property(GetCreatedAtInSeconds,
                                      doc='The time this direct message was posted, in seconds since the epoch'
@@ -1621,7 +1633,7 @@ class DirectMessage(object):
     '''
 
         fudge = 1.25
-        delta = long(time_now) - long(self.created_at_in_seconds)
+        delta = long(time_now) - long(self.GetCreatedAtInSeconds())
 
         if delta < 1 * fudge:
             return 'about a second ago'
