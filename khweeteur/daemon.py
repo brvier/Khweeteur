@@ -461,8 +461,8 @@ class KhweeteurDaemon(Daemon):
         if update.isValid():
             self.geoloc_coordinates = (update.coordinate().latitude(),
                                        update.coordinate().longitude())
-            self.geolocStop()
             self.update()
+            self.geolocStop()
         else:
             print 'GPS Update not valid'
 
@@ -704,6 +704,11 @@ class KhweeteurDaemon(Daemon):
             if settings.value('ShowInfos') == '2':
                 showInfos = True
 
+        useGPS = False
+        if settings.contains('useGPS'):
+            if settings.value('useGPS') == '2':
+                useGPS = True
+
         logging.debug('Setting loaded')
         try:
 
@@ -793,7 +798,6 @@ class KhweeteurDaemon(Daemon):
                 if self.me_users[access_token]:
 
                     # Worker
-
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api,
                                 'HomeTimeline', self.dbus_handler, me_user_id))
@@ -813,7 +817,6 @@ class KhweeteurDaemon(Daemon):
                         logging.error('DMs : %s' % str(err))
 
                     # Start searches thread
-
                     for terms in searches:
                         try:
                             self.threads.append(KhweeteurRefreshWorker(api,
@@ -823,15 +826,28 @@ class KhweeteurDaemon(Daemon):
                             logging.error('Search %s: %s' % (terms, str(err)))
 
                     # Start retrieving the list
-
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api,
                                 'RetrieveLists', self.dbus_handler, me_user_id))
                     except Exception, err:
                         logging.error('Retrieving List error %s' % (str(err), ))
 
-                    # Start lists thread
+                    # Near retrieving
+                    if useGPS:
+                        if not self.geoloc_source:
+                            self.geolocStart()
+                        if self.geoloc_coordinates:
+                            try:
+                                self.threads.append(KhweeteurRefreshWorker(api,
+                                        'Near:%s:%s' % \
+                                           (str(self.geoloc_coordinates[0]),
+                                            str(self.geoloc_coordinates[1])),
+                                        self.dbus_handler, me_user_id))
+                            except Exception, err:
+                                logging.error('Near: %s' % (str(err)))
 
+
+                    # Start lists thread
                     for (list_id, user) in lists:
                         try:
                             self.threads.append(KhweeteurRefreshWorker(api,
@@ -840,6 +856,7 @@ class KhweeteurDaemon(Daemon):
                         except Exception, err:
                             logging.error('List %s: %s' % (list_id, str(err)))
 
+                    # Start the thread
                     try:
                         for (idx, thread) in enumerate(self.threads):
                             logging.debug('Try to run Thread : %s'

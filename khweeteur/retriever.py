@@ -217,6 +217,14 @@ class KhweeteurRefreshWorker(Thread):
                 statuses = self.api.GetListStatuses(user=self.call.split(':'
                         )[1], id=self.call.split(':')[2], since_id=since)
                 logging.debug('%s finished' % self.call)
+
+            #Near GPS
+            elif self.call.startswith('Near:'):
+                logging.debug('%s running' % self.call)
+                statuses = self.api.GetSearch(since_id=since,
+                        term='', geocode="(%s,%s,%s)" % (str(self.call.split(':')[1]),
+                         str(self.call.split(':')[2]), '1km'))
+                logging.debug('%s finished' % self.call)
             else:
                 logging.error('Unknow call : %s' % (self.call, ))
         except Exception, err:

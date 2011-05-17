@@ -59,7 +59,7 @@ class KhweeteurAbout(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         except:
             pass
-			
+
         self.setWindowTitle(self.tr('Khweeteur About'))
 
         try:
@@ -243,7 +243,7 @@ class KhweeteurWin(QMainWindow):
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
         except:
             pass
-			
+
         self.setWindowTitle('Khweeteur')
 
         settings = QSettings()
@@ -337,6 +337,14 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.clicked.connect(self.show_list)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_list_button))
 
+        # Near (Default)
+        self.near_button = QToolBadgeButton(self)
+        self.near_button.setText('Nears')
+        self.near_button.setIcon(QIcon.fromTheme('general_web'))
+        self.near_button.setCheckable(True)
+        self.near_button.clicked.connect(self.show_nears)
+        self.list_tb_action.append(self.toolbar.addWidget(self.near_button))
+
         # Fullscreen
 
         self.tb_fullscreen = QAction(QIcon.fromTheme('general_fullsize'),
@@ -346,17 +354,25 @@ class KhweeteurWin(QMainWindow):
         self.list_tb_action.append(self.tb_fullscreen)
 
         self.setWindowTitle('Khweeteur : Home')
-        
+
         self.show()
-		
+
         self.model.load('HomeTimeline',limit=5)
         QTimer.singleShot(100,self.post_init_2)
         QTimer.singleShot(500,self.post_init_3)
-        QApplication.processEvents()       
+        QApplication.processEvents()
 
     @Slot()
     def post_init_3(self):
         self.model.load('HomeTimeline')
+        #Check if there is at least one account
+        nb_accounts = QSettings().beginReadArray('accounts')
+        if not nb_accounts:
+            if not (( QMessageBox.question(None,
+                "Kheeteur",
+                'None microblogging account found, would you want to add one now in preferences ?',
+                QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+                    self.showPrefs()
 
     @Slot()
     def post_init_2(self):
@@ -474,7 +490,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_delete.triggered.connect(self.do_tb_delete)
         self.action_tb_action.append(self.tb_delete)
 
-		# Actions not in toolbar
+        # Actions not in toolbar
 
         self.tb_scrolltop = QAction('Scroll to top', self)
         self.tb_scrolltop.setShortcut(Qt.CTRL + Qt.Key_Up)
@@ -551,7 +567,10 @@ class KhweeteurWin(QMainWindow):
         dbusobj.attach_win(self)
 
     def stop_spinning(self):
-        self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, False)
+        try:
+            self.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, False)
+        except AttributeError:
+            pass
 
     def new_tweets(self, count, msg):
         if msg == 'HomeTimeline':
@@ -564,6 +583,9 @@ class KhweeteurWin(QMainWindow):
         elif msg == 'DMs':
             self.msg_button.setCounter(self.msg_button.getCounter() + count)
             self.msg_button.update()
+        elif msg == 'Nears':
+            self.near_button.setCounter(self.near_button.getCounter() + count)
+            self.near_button.update()
         elif msg.startswith('Search:'):
             self.tb_search_button.setCounter(self.tb_search_button.getCounter()
                     + count)
@@ -585,6 +607,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setChecked(True)
         self.mention_button.setChecked(False)
         self.tb_list_button.setChecked(False)
+        self.near_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Search:' + terms)
         self.delete_search_action.setVisible(True)
@@ -602,6 +625,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setChecked(False)
         self.tb_list_button.setChecked(True)
         self.mention_button.setChecked(False)
+        self.near_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('List:' + user + ':' + tid)
         self.delete_search_action.setVisible(True)
@@ -613,6 +637,7 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(True)
         self.msg_button.setChecked(False)
         self.tb_search_button.setChecked(False)
+        self.near_button.setChecked(False)
         self.tb_list_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.view.scrollToTop()
@@ -936,6 +961,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.home_button.setChecked(False)
+        self.near_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('Mentions')
         self.setWindowTitle('Khweeteur : Mentions')
@@ -949,9 +975,35 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
+        self.near_button.setChecked(False)
         self.view.scrollToTop()
         self.model.load('DMs')
         self.setWindowTitle('Khweeteur : DMs')
+        self.delete_search_action.setVisible(False)
+
+    @Slot()
+    def show_nears(self):
+        settings = QSettings()
+        if settings.value('useGPS') != '2':
+            if not (( QMessageBox.question(None,
+                "Kheeteur",
+                'This feature require the activation of the GPS, would you want to activate it now ?',
+                QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
+                    settings.setValue('useGPS','2')
+                    settings.sync()
+                    self.geolocDoStart()
+                    self.dbus_handler.require_update()
+
+        self.near_button.setCounter(0)
+        self.near_button.setChecked(True)
+        self.msg_button.setChecked(False)
+        self.tb_list_button.setChecked(False)
+        self.home_button.setChecked(False)
+        self.tb_search_button.setChecked(False)
+        self.mention_button.setChecked(False)
+        self.view.scrollToTop()
+        self.model.load('Nears')
+        self.setWindowTitle('Khweeteur : Near Tweets')
         self.delete_search_action.setVisible(False)
 
     @Slot()
