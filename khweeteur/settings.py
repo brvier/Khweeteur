@@ -285,10 +285,14 @@ class KhweeteurPref(QMainWindow):
             self.useGPSOnDemand_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('showInfos'):
-            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value('showInfos'
-                    ))))
+            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value('showInfos'))))
         else:
             self.showInfos_value.setCheckState(Qt.CheckState(0))
+
+        if self.settings.contains('showNotifications'):
+            self.showNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showNotifications'))))
+        else:
+            self.showNotifications_value.setCheckState(Qt.CheckState(2))
 
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
@@ -315,6 +319,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
         self.settings.setValue('useGPSOnDemand', self.useGPSOnDemand_value.checkState())
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
+        self.settings.setValue('showNotifications', self.showNotifications_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
         self.save.emit()
@@ -501,6 +506,9 @@ class KhweeteurPref(QMainWindow):
 
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 15, 1)
+        
+        self.showNotification_value = QCheckBox(self.tr('Show Mentions/DMs notifications'))
+        self._umain_layout.addWidget(self.showNotification_value, 16, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 

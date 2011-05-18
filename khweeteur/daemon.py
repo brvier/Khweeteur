@@ -275,39 +275,40 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def new_tweets(self, count, ttype):
         logging.debug('New tweet notification ttype : %s (%s)' % (ttype,
                       str(type(ttype))))
-        if ttype in ('Mentions', 'DMs'):
-            m_bus = dbus.SystemBus()
-            m_notify = m_bus.get_object('org.freedesktop.Notifications',
-                                        '/org/freedesktop/Notifications')
-            iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-
-            if ttype == 'DMs':
-                msg = 'New DMs'
-            elif ttype == 'Mentions':
-                msg = 'New mentions'
-            else:
-                msg = 'New tweets'
-            try:
-                self.m_id = iface.Notify(
-                    'Khweeteur',
-                    self.m_id,
-                    'khweeteur',
-                    msg,
-                    msg,
-                    ['default', 'call'],
-                    {
-                        'category': 'khweeteur-new-tweets',
-                        'desktop-entry': 'khweeteur',
-                        'dbus-callback-default'
-                            : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
-                            ,
-                        'count': count,
-                        'amount': count,
-                        },
-                    -1,
-                    )
-            except:
-                pass
+        if QSettings('Khertan Software', 'Khweeteur').value('showNotifications') == '2':                      
+            if ttype in ('Mentions', 'DMs'):
+                m_bus = dbus.SystemBus()
+                m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                                            '/org/freedesktop/Notifications')
+                iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+    
+                if ttype == 'DMs':
+                    msg = 'New DMs'
+                elif ttype == 'Mentions':
+                    msg = 'New mentions'
+                else:
+                    msg = 'New tweets'
+                try:
+                    self.m_id = iface.Notify(
+                        'Khweeteur',
+                        self.m_id,
+                        'khweeteur',
+                        msg,
+                        msg,
+                        ['default', 'call'],
+                        {
+                            'category': 'khweeteur-new-tweets',
+                            'desktop-entry': 'khweeteur',
+                            'dbus-callback-default'
+                                : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
+                                ,
+                            'count': count,
+                            'amount': count,
+                            },
+                        -1,
+                        )
+                except:
+                    pass
 
 
 class KhweeteurDaemon(Daemon):
