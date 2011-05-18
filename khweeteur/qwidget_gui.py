@@ -985,7 +985,7 @@ class KhweeteurWin(QMainWindow):
     def show_nears(self):
         settings = QSettings()
         if settings.value('useGPS') != '2':
-            if not (( QMessageBox.question(None,
+            if (( QMessageBox.question(None,
                 "Kheeteur",
                 'This feature require the activation of the GPS, would you want to activate it now ?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
