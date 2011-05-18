@@ -441,7 +441,6 @@ class KhweeteurWin(QMainWindow):
         self.action_tb_action.append(self.tb_reply)
 
         # Retweet (Action)
-
         self.tb_retweet = QAction('Retweet', self)
         self.tb_retweet.setShortcut('Ctrl+P')
         self.tb_retweet.setVisible(False)
@@ -449,8 +448,14 @@ class KhweeteurWin(QMainWindow):
         self.tb_retweet.triggered.connect(self.do_tb_retweet)
         self.action_tb_action.append(self.tb_retweet)
 
-        # Follow (Action)
+        # RT (Action)
+        self.tb_rt = QAction('RT', self)
+        self.tb_rt.setVisible(False)
+        self.toolbar.addAction(self.tb_rt)
+        self.tb_rt.triggered.connect(self.do_tb_rt)
+        self.action_tb_action.append(self.tb_rt)
 
+        # Follow (Action)
         self.tb_follow = QAction('Follow', self)
         self.tb_follow.triggered.connect(self.do_tb_follow)
         self.tb_follow.setVisible(False)
@@ -458,7 +463,6 @@ class KhweeteurWin(QMainWindow):
         self.action_tb_action.append(self.tb_follow)
 
         # UnFollow (Action)
-
         self.tb_unfollow = QAction('Unfollow', self)
         self.tb_unfollow.triggered.connect(self.do_tb_unfollow)
         self.tb_unfollow.setVisible(False)
@@ -475,7 +479,7 @@ class KhweeteurWin(QMainWindow):
 
         # Open URLs (Action)
 
-        self.tb_urls = QAction('Open URLs', self)
+        self.tb_urls = QAction('URLs', self)
         self.tb_urls.setShortcut('Ctrl+O')
         self.tb_urls.setVisible(False)
         self.toolbar.addAction(self.tb_urls)
@@ -778,6 +782,23 @@ class KhweeteurWin(QMainWindow):
             self.switch_tb_edit()
 
     @Slot()
+    def do_tb_rt(self):
+        tweet_id = None
+        for index in self.view.selectedIndexes():
+            tweet_id = self.model.data(index, role=IDROLE)
+            tweet_screenname = self.model.data(index, role=SCREENNAMEROLE)
+            tweet_text = self.model.data(index, role=Qt.DisplayRole)
+        if tweet_id:
+            self.tb_text.setPlainText('RT @%s %s' % (tweet_screenname, tweet_text))
+            cur = self.tb_text.textCursor()
+            cur.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
+            self.tb_text.setTextCursor(cur)
+            self.switch_tb_edit()
+            self.tb_text.show()
+            self.tb_text.updateGeometry()
+            self.tb_text.textChanged.emit()
+            
+    @Slot()
     def do_tb_retweet(self):
 
         tweet_id = None
@@ -1013,34 +1034,7 @@ class KhweeteurWin(QMainWindow):
                                     - len(local_self.toPlainText())))
         doc = local_self.document()
         fm = local_self.fontMetrics()
-#        line_height = fm.boundingRect(local_self.toPlainText()).height()
 
-#        height = (line_height ) * doc.documentLayout().documentSize().height() + fm.lineSpacing()
-#        s = doc.documentLayout().documentSize()
-
-#        print 'Doc size', doc.size().height()
-
-#        doc.setHeight(s.height())
-#        s.setHeight((s.height() + 2) + (local_self.fontMetrics().lineSpacing()*2 + 2))
-#        s.setHeight(s.height())
-#        print 'Doc size', s.height()
-#        fr = local_self.frameRect()
-#        print 'frame size', fr.size().height()
-#        cr = local_self.contentsRect()
-#        print 'content size', cr.size().height()
-#        print 'page size', doc.pageSize().height()
-#        print 'page count', doc.pageCount()
-#        local_self.setFixedHeight(min(370, s.height() + fr.height()
-#                                  - cr.height() - 1))
-#        text_height = fm.boundingRect(0,0,local_self.size().width(),370, \
-#                    int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap), \
-#                    local_self.toPlainText()).height()
-#        print 'text height',text_height
-#        if height > 5 :
-#        local_self.setFixedHeight(min(370, text_height + (fr.height() - cr.height()) + 6))
-#        local_self.updateGeometry()
-#Resize
-#        doc = self.document()
         s = doc.size().toSize()
         s.setHeight((s.height() + 1) * (fm.lineSpacing()+1))
         fr = local_self.frameRect()

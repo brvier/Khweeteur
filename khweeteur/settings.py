@@ -289,10 +289,15 @@ class KhweeteurPref(QMainWindow):
         else:
             self.showInfos_value.setCheckState(Qt.CheckState(0))
 
-        if self.settings.contains('showNotifications'):
-            self.showNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showNotifications'))))
+        if self.settings.contains('showDMNotifications'):
+            self.showDMNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showDMNotifications'))))
         else:
-            self.showNotifications_value.setCheckState(Qt.CheckState(2))
+            self.showDMNotifications_value.setCheckState(Qt.CheckState(2))
+
+        if self.settings.contains('showMentionNotifications'):
+            self.showMentionNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showMentionNotifications'))))
+        else:
+            self.showMentionNotifications_value.setCheckState(Qt.CheckState(2))
 
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
@@ -319,7 +324,8 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
         self.settings.setValue('useGPSOnDemand', self.useGPSOnDemand_value.checkState())
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
-        self.settings.setValue('showNotifications', self.showNotifications_value.checkState())
+        self.settings.setValue('showDMNotifications', self.showDMNotifications_value.checkState())
+        self.settings.setValue('showMentionNotifications', self.showMentionNotifications_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
         self.save.emit()
@@ -507,8 +513,11 @@ class KhweeteurPref(QMainWindow):
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 15, 1)
         
-        self.showNotification_value = QCheckBox(self.tr('Show Mentions/DMs notifications'))
-        self._umain_layout.addWidget(self.showNotification_value, 16, 1)
+        self.showDMNotification_value = QCheckBox(self.tr('Use DMs notifications'))
+        self._umain_layout.addWidget(self.showDMNotification_value, 16, 1)
+        
+        self.showMentionNotification_value = QCheckBox(self.tr('Use Mentions notifications'))
+        self._umain_layout.addWidget(self.showMentionNotification_value, 17, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 
