@@ -221,6 +221,8 @@ class KhweeteurRefreshWorker(Thread):
             #Near GPS
             elif self.call.startswith('Near:'):
                 logging.debug('%s running' % self.call)
+                logging.debug('geocode=(%s,%s,%s)' % (str(self.call.split(':')[1]),
+                         str(self.call.split(':')[2]), '1km'))
                 statuses = self.api.GetSearch(since_id=since,
                         term='', geocode="(%s,%s,%s)" % (str(self.call.split(':')[1]),
                          str(self.call.split(':')[2]), '1km'))

@@ -2102,7 +2102,7 @@ class Api(object):
         term,
         geocode=None,
         since_id=None,
-        per_page=15,
+        per_page=60,
         page=1,
         lang=None,
         show_user='true',
@@ -2155,8 +2155,8 @@ class Api(object):
         parameters['page'] = page
 
         if geocode is not None:
-            parameters['geocode'] = ','.join(map(unicode, geocode))
-
+            parameters['geocode'] = geocode #','.join(map(unicode, geocode))
+            
     # Make and send requests
 
         if 'twitter' in self.base_url:
