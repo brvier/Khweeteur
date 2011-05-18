@@ -70,7 +70,7 @@ def install_excepthook(version):
     sys.excepthook = my_excepthook
 
 
-class Daemon:
+class Daemon(object):
 
     """
     A generic daemon class.
@@ -314,8 +314,16 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 pass
 
 
-class KhweeteurDaemon(Daemon):
+class KhweeteurDaemon(Daemon,QCoreApplication):
 
+    def __init__(self, pidfile,
+        stdin='/dev/null',
+        stdout='/dev/null',
+        stderr='/dev/null',):
+        QCoreApplication.__init__(self,sys.argv)
+        Daemon.__init__(self,pidfile,stdin=stdin, \
+                        stdout=stdout, \
+                        stderr=stderr)
     def run(self):
         try:
             from PySide import __version_info__ as __pyside_version__
@@ -326,7 +334,7 @@ class KhweeteurDaemon(Daemon):
         except:
             __qt_version__ = None
 
-        app = QCoreApplication(sys.argv)
+#        app = QCoreApplication(sys.argv)
 
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s %(levelname)-8s %(message)s',
@@ -387,7 +395,7 @@ class KhweeteurDaemon(Daemon):
         # gobject.timeout_add_seconds(refresh_interval, self.update, priority=gobject.PRIORITY_LOW)
 
         logging.debug('Timer added')
-        app.exec_()
+        self.exec_()
         logging.debug('Daemon stop')
 
     def post_tweet(
@@ -722,11 +730,11 @@ class KhweeteurDaemon(Daemon):
             logging.debug('Setting synced')
 
             # Cleaning old thread reference for keep for gc
-
-            for thread in self.threads:
-                if not thread.isAlive():
-                    self.threads.remove(thread)
-                    logging.debug('Removed a thread')
+            logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
+#            for thread in self.threads:
+#                if not thread.isAlive():
+#                    self.threads.remove(thread)
+#                    logging.debug('Removed a thread')
 
             # Remove old tweets in cache according to history prefs
 
@@ -866,26 +874,35 @@ class KhweeteurDaemon(Daemon):
                             logging.debug('Try to run Thread : %s'
                                     % str(thread))
                             try:
+                                self.threads[idx].finished.connect(self.athread_end)
+                                self.threads[idx].terminated.connect(self.athread_end)
                                 self.threads[idx].start()
+                                
                             except RuntimeError, err:
                                 logging.debug('Attempt to start a thread already running : %s'
                                          % (str(err), ))
-                    except:
-                        logging.error('Running Thread error')
+                    except Exception, err:
+                        logging.error('Running Thread error: %s' % err)
 
             settings.endArray()
 
-            while any([thread.isAlive() for thread in self.threads]):
-                time.sleep(2)
+#            while any([thread.isAlive() for thread in self.threads]):
+#                time.sleep(2)
 
-            self.dbus_handler.refresh_ended()
-
-            logging.debug('Finished loop')
         except Exception, err:
-
             logging.exception(str(err))
             logging.debug(str(err))
 
+    @Slot()
+    def athread_end(self):
+        try:
+            self.threads.remove(self.sender())
+        except ValueError:
+            pass
+        if all([thread.isFinished() for thread in self.threads]):            
+            self.dbus_handler.refresh_ended()
+            logging.debug('Finished loop')
+        
 
 if __name__ == '__main__':
     install_excepthook(__version__)

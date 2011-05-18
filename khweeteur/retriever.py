@@ -15,15 +15,15 @@ try:
 except:
     import Image
 
-from PySide.QtCore import QSettings
+from PySide.QtCore import QSettings,QThread
 
-from threading import Thread
+#from threading import Thread
 
 import logging
 import os
 import socket
 
-class KhweeteurRefreshWorker(Thread):
+class KhweeteurRefreshWorker(QThread):
 
     def __init__(
         self,
@@ -32,7 +32,7 @@ class KhweeteurRefreshWorker(Thread):
         dbus_handler,
         me_user_id,
         ):
-        Thread.__init__(self, None)
+        QThread.__init__(self)
         self.api = api
 
         self.me_user_id = me_user_id
