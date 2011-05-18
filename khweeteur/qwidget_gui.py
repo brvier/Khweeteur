@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.21'
+__version__ = '0.5.22'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -789,7 +789,7 @@ class KhweeteurWin(QMainWindow):
             tweet_screenname = self.model.data(index, role=SCREENNAMEROLE)
             tweet_text = self.model.data(index, role=Qt.DisplayRole)
         if tweet_id:
-            self.tb_text.setPlainText('RT @%s %s' % (tweet_screenname, tweet_text))
+            self.tb_text.setPlainText('RT @%s: %s' % (tweet_screenname, tweet_text))
             cur = self.tb_text.textCursor()
             cur.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
             self.tb_text.setTextCursor(cur)

@@ -458,7 +458,7 @@ class KhweeteurPref(QMainWindow):
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
         self.aWidget = QWidget(self.scrollArea)
-        self.aWidget.setMinimumSize(480, 1000)
+        self.aWidget.setMinimumSize(480, 1200)
         self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scrollArea.setSizePolicy(QSizePolicy.Expanding,
                                       QSizePolicy.Expanding)
@@ -513,11 +513,11 @@ class KhweeteurPref(QMainWindow):
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 15, 1)
         
-        self.showDMNotification_value = QCheckBox(self.tr('Use DMs notifications'))
-        self._umain_layout.addWidget(self.showDMNotification_value, 16, 1)
+        self.showDMNotifications_value = QCheckBox(self.tr('Use DMs notifications'))
+        self._umain_layout.addWidget(self.showDMNotifications_value, 16, 1)
         
-        self.showMentionNotification_value = QCheckBox(self.tr('Use Mentions notifications'))
-        self._umain_layout.addWidget(self.showMentionNotification_value, 17, 1)
+        self.showMentionNotifications_value = QCheckBox(self.tr('Use Mentions notifications'))
+        self._umain_layout.addWidget(self.showMentionNotifications_value, 17, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 
