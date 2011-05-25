@@ -182,6 +182,9 @@ class Daemon(object):
         self.daemonize()
         self.run()
 
+    def debug(self):
+        self.run()
+        
     def stop(self):
         """
         Stop the daemon
@@ -320,11 +323,11 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         stdin='/dev/null',
         stdout='/dev/null',
         stderr='/dev/null',):
-        QCoreApplication.__init__(self,sys.argv)
         Daemon.__init__(self,pidfile,stdin=stdin, \
                         stdout=stdout, \
                         stderr=stderr)
     def run(self):
+        QCoreApplication.__init__(self,sys.argv)
         try:
             from PySide import __version_info__ as __pyside_version__
         except:
@@ -375,7 +378,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             os.makedirs(self.post_path)
 
         self.dbus_handler = KhweeteurDBusHandler()
-
+                
         # mainloop = DBusQtMainLoop(set_as_default=True)
 
         settings = QSettings('Khertan Software', 'Khweeteur')
@@ -572,7 +575,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 if settings.contains('ShowInfos'):
                                     if settings.value('ShowInfos') == '2':
                                         self.dbus_handler.info('Khweeteur: Retweet posted to '
-         + account['name'])
+                                             + account['name'])
                         elif post['action'] == 'tweet':
 
                             # Else "simple" tweet
@@ -709,6 +712,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                           exc_value, exc_traceback)))
 
     def retrieve(self, options=None):
+        logging.debug('Start update')
         settings = QSettings('Khertan Software', 'Khweeteur')
 
         showInfos = False
@@ -799,6 +803,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     except Exception, err:
                         self.me_users[access_token] = None
                         logging.error('VerifyCredential2 : %s' % str(err))
+                        self.dbus_handler.refresh_ended()
+                        logging.debug('Finished loop')
                         if showInfos:
                             self.dbus_handler.info(str(err))
 
@@ -812,19 +818,25 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     # Worker
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api,
-                                'HomeTimeline', self.dbus_handler, me_user_id))
+                                'HomeTimeline', me_user_id))
+                        self.threads[-1].error.connect(self.dbus_handler.info)                        
+                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                     except Exception, err:
                         logging.error('Timeline : %s' % str(err))
 
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api,
-                                'Mentions', self.dbus_handler, me_user_id))
+                                'Mentions', me_user_id))
+                        self.threads[-1].error.connect(self.dbus_handler.info)                        
+                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                     except Exception, err:
                         logging.error('Mentions : %s' % str(err))
 
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api, 'DMs',
-                                self.dbus_handler, me_user_id))
+                                 me_user_id))
+                        self.threads[-1].error.connect(self.dbus_handler.info)                        
+                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                     except Exception, err:
                         logging.error('DMs : %s' % str(err))
 
@@ -832,15 +844,19 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     for terms in searches:
                         try:
                             self.threads.append(KhweeteurRefreshWorker(api,
-                                    'Search:' + terms, self.dbus_handler,
+                                    'Search:' + terms,
                                     me_user_id))
+                            self.threads[-1].error.connect(self.dbus_handler.info)                        
+                            self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets)                                     
                         except Exception, err:
                             logging.error('Search %s: %s' % (terms, str(err)))
 
                     # Start retrieving the list
                     try:
                         self.threads.append(KhweeteurRefreshWorker(api,
-                                'RetrieveLists', self.dbus_handler, me_user_id))
+                                'RetrieveLists', me_user_id))
+                        self.threads[-1].error.connect(self.dbus_handler.info)                        
+                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                     except Exception, err:
                         logging.error('Retrieving List error %s' % (str(err), ))
 
@@ -854,7 +870,9 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                         'Near:%s:%s' % \
                                            (str(self.geoloc_coordinates[0]),
                                             str(self.geoloc_coordinates[1])),
-                                        self.dbus_handler, me_user_id))
+                                        me_user_id))
+                                self.threads[-1].error.connect(self.dbus_handler.info)                        
+                                self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                             except Exception, err:
                                 logging.error('Near: %s' % (str(err)))
 
@@ -864,7 +882,9 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                         try:
                             self.threads.append(KhweeteurRefreshWorker(api,
                                     'List:' + user + ':' + list_id,
-                                    self.dbus_handler, me_user_id))
+                                    me_user_id))
+                            self.threads[-1].error.connect(self.dbus_handler.info)                        
+                            self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
                         except Exception, err:
                             logging.error('List %s: %s' % (list_id, str(err)))
 
@@ -886,13 +906,14 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
             settings.endArray()
 
-#            while any([thread.isAlive() for thread in self.threads]):
-#                time.sleep(2)
-
         except Exception, err:
             logging.exception(str(err))
-            logging.debug(str(err))
 
+    @Slot()
+    def kill_thread(self):
+        for thread in self.threads:
+            if not thread.isFinished():
+                thread.terminate()             
     @Slot()
     def athread_end(self):
         try:
@@ -919,6 +940,8 @@ if __name__ == '__main__':
             daemon.stop()
         elif 'restart' == sys.argv[1]:
             daemon.restart()
+        elif 'debug' == sys.argv[1]:
+            daemon.debug()
         else:
             logging.error('Unknown command')
             print 'Unknown command'

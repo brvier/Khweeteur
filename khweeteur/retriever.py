@@ -15,7 +15,7 @@ try:
 except:
     import Image
 
-from PySide.QtCore import QSettings,QThread
+from PySide.QtCore import QSettings,QThread, Signal
 
 #from threading import Thread
 
@@ -25,11 +25,14 @@ import socket
 
 class KhweeteurRefreshWorker(QThread):
 
+    new_tweets = Signal(int, str)
+    error = Signal(str)
+
     def __init__(
         self,
         api,
         call,
-        dbus_handler,
+        #dbus_handler,
         me_user_id,
         ):
         QThread.__init__(self)
@@ -37,11 +40,15 @@ class KhweeteurRefreshWorker(QThread):
 
         self.me_user_id = me_user_id
         self.call = call
-        self.dbus_handler = dbus_handler
+        #self.dbus_handler = dbus_handler
         socket.setdefaulttimeout(60)
 
-    def send_notification(self, msg, count):
-        self.dbus_handler.new_tweets(count, msg)
+#    def send_notification(self, msg, count):
+#        try:
+#            #self.dbus_handler.new_tweets(count, msg)
+#            self.new_tweets.emit(count, msg)
+#        except Exception, err:
+#            logging.debug('Retriever : %s' % str(err))
 
     def getCacheFolder(self):
         if not hasattr(self, 'folder_path'):
@@ -224,7 +231,7 @@ class KhweeteurRefreshWorker(QThread):
                 logging.debug('geocode=(%s,%s,%s)' % (str(self.call.split(':')[1]),
                          str(self.call.split(':')[2]), '1km'))
                 statuses = self.api.GetSearch(since_id=since,
-                        term='', geocode="(%s,%s,%s)" % (str(self.call.split(':')[1]),
+                        term='', geocode="%s,%s,%s" % (str(self.call.split(':')[1]),
                          str(self.call.split(':')[2]), '1km'))
                 logging.debug('%s finished' % self.call)
             else:
@@ -232,10 +239,14 @@ class KhweeteurRefreshWorker(QThread):
         except Exception, err:
 
             logging.debug('Retriever : %s' % str(err))
-            if settings.contains('ShowInfos'):
-                if settings.value('ShowInfos') == '2':
-                    self.dbus_handler.info('Khweeteur Error : ' + str(err))
-
+            try:
+                if settings.contains('ShowInfos'):
+                    if settings.value('ShowInfos') == '2':
+                        self.error.emit('Khweeteur Error : ' + str(err))
+                        #self.dbus_handler.info('Khweeteur Error : ' + str(err))
+            except Exception, err:
+                logging.debug('Retriever : %s' % str(err))
+            
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:
             logging.debug('%s start download avatars' % self.call)
@@ -253,7 +264,7 @@ class KhweeteurRefreshWorker(QThread):
             statuses.reverse()
             settings.setValue(self.api._access_token_key + '_' + self.call,
                               statuses[0].id)
-            self.send_notification(self.call, len(statuses))
+            self.new_tweets.emit(len(statuses), self.call)
         settings.sync()
         logging.debug('%s refreshed' % self.call)
 

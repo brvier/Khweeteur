@@ -15,9 +15,9 @@ try:
 except:
     pass
     
-from PySide.QtCore import Qt
+from PySide.QtCore import Qt,QObject
 
-class KhweeteurDBusHandler(dbus.service.Object):
+class KhweeteurDBusHandler(dbus.service.Object, QObject):
 
     def __init__(self, parent):
         dbus.service.Object.__init__(self, dbus.SessionBus(),
