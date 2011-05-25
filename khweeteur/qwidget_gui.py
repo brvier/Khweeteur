@@ -260,6 +260,7 @@ class KhweeteurWin(QMainWindow):
         self.view.clicked.connect(self.switch_tb_action)
 
         self.toolbar = QToolBar('Toolbar')
+#        self.toolbar.setMovable(False)
         self.addToolBar(Qt.BottomToolBarArea, self.toolbar)
 
         self.toolbar_mode = 0  # 0 - Default , 1 - Edit, 2 - Action
@@ -548,7 +549,7 @@ class KhweeteurWin(QMainWindow):
     def listen_dbus(self):
         import dbus
         import dbus.service
-        from dbusobj import KhweeteurDBus
+#        from dbusobj import KhweeteurDBus
         from dbushandler import KhweeteurDBusHandler
         from dbus.mainloop.qt import DBusQtMainLoop
         self.dbus_loop = DBusQtMainLoop()
@@ -566,9 +567,10 @@ class KhweeteurWin(QMainWindow):
                                      dbus_interface='net.khertan.Khweeteur',
                                      signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
+        self.dbus_handler.attach_win(self)
         self.activated_by_dbus.connect(self.activateWindow)
-        dbusobj = KhweeteurDBus()
-        dbusobj.attach_win(self)
+#        dbusobj = KhweeteurDBus()
+#        dbusobj.attach_win(self)
 
     def stop_spinning(self):
         try:

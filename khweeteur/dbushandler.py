@@ -15,9 +15,9 @@ try:
 except:
     pass
     
-from PySide.QtCore import Qt,QObject
+from PySide.QtCore import Qt
 
-class KhweeteurDBusHandler(dbus.service.Object, QObject):
+class KhweeteurDBusHandler(dbus.service.Object):
 
     def __init__(self, parent):
         dbus.service.Object.__init__(self, dbus.SessionBus(),
@@ -36,6 +36,15 @@ class KhweeteurDBusHandler(dbus.service.Object, QObject):
         except:
             pass
 
+    @dbus.service.method(dbus_interface='net.khertan.Khweeteur')
+    def show_now(self):
+        '''Callback called to active the window and reset counter'''
+        self.win.activated_by_dbus.emit()
+        return True
+
+    def attach_win(self, win):
+        self.win = win
+        
     def post_tweet(
         self,
         shorten_url=1,

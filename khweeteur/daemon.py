@@ -262,7 +262,9 @@ class KhweeteurDBusHandler(dbus.service.Object):
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
                                         '/org/freedesktop/Notifications')
             iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-            iface.SystemNoteInfoprint('Khweeteur : ' + message)
+            if not message.startswith('Khweeteur'):
+                message = 'Khweeteur : ' + message
+            iface.SystemNoteInfoprint(message)
         except:
             import traceback
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
