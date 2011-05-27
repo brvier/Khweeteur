@@ -25,10 +25,10 @@ from qwidget_gui import __version__
 
 import dbus
 
-# from dbus.mainloop.glib import DBusGMainLoop
+import dbus.mainloop.glib
 
-from dbus.mainloop.qt import DBusQtMainLoop
-DBusQtMainLoop(set_as_default=True)
+#from dbus.mainloop.qt import DBusQtMainLoop
+#DBusQtMainLoop(set_as_default=True)
 
 import twitter
 import glob
@@ -329,6 +329,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                         stderr=stderr)
     def run(self):
         QCoreApplication.__init__(self,sys.argv)
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         try:
             from PySide import __version_info__ as __pyside_version__
         except:

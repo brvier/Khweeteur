@@ -550,9 +550,11 @@ class KhweeteurWin(QMainWindow):
         import dbus
         import dbus.service
         from dbushandler import KhweeteurDBusHandler
-        from dbus.mainloop.qt import DBusQtMainLoop
-        self.dbus_loop = DBusQtMainLoop()
-        dbus.set_default_main_loop(self.dbus_loop)
+        import dbus.mainloop.glib
+        #from dbus.mainloop.qt import DBusQtMainLoop
+        #self.dbus_loop = DBusQtMainLoop()
+        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+        #dbus.set_default_main_loop(self.dbus_loop)
         self.bus = dbus.SessionBus()
 
         # Connect the new tweet signal
