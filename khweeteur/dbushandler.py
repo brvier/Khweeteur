@@ -36,7 +36,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
         except:
             pass
 
-    @dbus.service.method(dbus_interface='net.khertan.Khweeteur')
+    @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):
         '''Callback called to active the window and reset counter'''
         self.win.activated_by_dbus.emit()

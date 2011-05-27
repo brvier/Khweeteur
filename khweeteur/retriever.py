@@ -84,7 +84,6 @@ class KhweeteurRefreshWorker(QThread):
                         im.save(os.path.splitext(cache)[0] + '.png', 'PNG')
                     except StandardError, err:
                         logging.debug('DownloadProfilImage:' + str(err))
-                        print err
 
     def removeAlreadyInCache(self, statuses):
 
@@ -138,7 +137,6 @@ class KhweeteurRefreshWorker(QThread):
             return status.text
         except StandardError, err:
             logging.debug('getOneReplyContent:' + str(err))
-            print err
 
     def isMe(self, statuses):
         for status in statuses:
@@ -158,7 +156,6 @@ class KhweeteurRefreshWorker(QThread):
                         self.getOneReplyContent(status.in_reply_to_status_id)
             except StandardError, err:
                 logging.debug('getOneReplyContent:' + err)
-                print err
 
     def serialize(self, statuses):
         folder_path = self.getCacheFolder()

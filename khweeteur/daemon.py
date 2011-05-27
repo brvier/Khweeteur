@@ -173,7 +173,6 @@ class Daemon(object):
                 sys.stderr.write(message % self.pidfile)
                 sys.exit(1)
             except OSError:
-
                 sys.stderr.write('pidfile %s already exist. But daemon is dead.\n'
                                   % self.pidfile)
 
@@ -348,6 +347,12 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         logging.info('Starting daemon %s' % __version__)
         logging.info('PySide version %s' % repr(__pyside_version__))
         logging.info('Qt Version %s' % repr(__qt_version__))
+
+        try:
+            os.nice(10)
+        except:
+            pass
+            
         self.bus = dbus.SessionBus()
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur'
                                      , dbus_interface='net.khertan.Khweeteur',
@@ -394,7 +399,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         self.utimer = QTimer()
         self.utimer.timeout.connect(self.update)
         self.utimer.start(refresh_interval * 1000)
-
+                
         QTimer.singleShot(200, self.update)
 
         # gobject.timeout_add_seconds(refresh_interval, self.update, priority=gobject.PRIORITY_LOW)
@@ -737,6 +742,9 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
             # Cleaning old thread reference for keep for gc
             logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
+
+            if len(self.threads)>0:
+                return            
 #            for thread in self.threads:
 #                if not thread.isAlive():
 #                    self.threads.remove(thread)
@@ -793,7 +801,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             for index in range(nb_accounts):
                 settings.setArrayIndex(index)
                 access_token = settings.value('access_token')
-                if not access_token in self.apis:
+                if not access_token in self.apis:                    
                     self.apis[access_token] = self.get_api(dict((key,
                             settings.value(key)) for key in settings.allKeys()))
                     self.me_users[access_token] = None

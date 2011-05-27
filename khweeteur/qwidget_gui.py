@@ -359,8 +359,8 @@ class KhweeteurWin(QMainWindow):
         self.show()
 
         self.model.load('HomeTimeline',limit=5)
-        QTimer.singleShot(100,self.post_init_2)
-        QTimer.singleShot(500,self.post_init_3)
+        QTimer.singleShot(0,self.post_init_2)
+        QTimer.singleShot(0,self.post_init_3)
         QApplication.processEvents()
 
     @Slot()
@@ -549,7 +549,6 @@ class KhweeteurWin(QMainWindow):
     def listen_dbus(self):
         import dbus
         import dbus.service
-#        from dbusobj import KhweeteurDBus
         from dbushandler import KhweeteurDBusHandler
         from dbus.mainloop.qt import DBusQtMainLoop
         self.dbus_loop = DBusQtMainLoop()
@@ -569,8 +568,6 @@ class KhweeteurWin(QMainWindow):
         self.dbus_handler = KhweeteurDBusHandler(self)
         self.dbus_handler.attach_win(self)
         self.activated_by_dbus.connect(self.activateWindow)
-#        dbusobj = KhweeteurDBus()
-#        dbusobj.attach_win(self)
 
     def stop_spinning(self):
         try:
