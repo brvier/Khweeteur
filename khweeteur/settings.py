@@ -261,9 +261,9 @@ class KhweeteurPref(QMainWindow):
 
         if self.settings.contains('theme'):
             if not self.settings.value('theme') in self.THEMES:
-                self.settings.setValue('theme', KhweeteurPref.DEFAULTTHEME)
+                self.settings.setValue('theme', DEFAULTTHEME)
         else:
-            self.settings.setValue('theme', KhweeteurPref.DEFAULTTHEME)
+            self.settings.setValue('theme', DEFAULTTHEME)
 
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value('theme'
                 )))

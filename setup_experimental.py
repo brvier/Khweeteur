@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Switch to glib dbus mainloop\n * Fix qthread error creating random daemon segfault\n * Switch daemon thread to QThread\n * Increase result per page parameter on search \n * Improve stability of the daemon'
+changes = '* Fix bug #785'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -61,9 +61,9 @@ setup(name='khweeteur',
       'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.2), python-pyside.qtwebkit (>=1.0.2), python-pyside.qtcore (>=1.0.2), python-pyside.qtgui (>=1.0.2), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
       'conflicts':'khweeteur',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
-      'XB_Maemo_Display_Name':'Khweeteur',
+      'XB_Maemo_Display_Name':'Khweeteur Experimental',
       'XB_Maemo_Icon_26':'khweeteur.png',
-      'XB_Maemo_Upgrade_Description':'%s' % changes,
+      'XB_Maemo_Upgrade_Description':'Experimental ! %s' % changes,
       'section':'user/network',
       'changelog':changes,
       'architecture':'any',
