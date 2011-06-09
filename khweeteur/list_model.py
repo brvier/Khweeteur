@@ -172,8 +172,10 @@ class KhweetsModel(QAbstractListModel):
         elif role == PROTECTEDROLE:
             return self._items[self.call][index.row()].user.protected
         elif role == USERIDROLE:
-
-            return self._items[self.call][index.row()].user.id
+            try:
+                return self._items[self.call][index.row()].user.id
+            except AttributeError:
+                return self._items[self.call][index.row()].sender_id
         elif role == Qt.DecorationRole:
             try:
                 return self._avatars[self._items[self.call][index.row()].user.profile_image_url]

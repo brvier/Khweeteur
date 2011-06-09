@@ -85,7 +85,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             if not self.minifm:
                 self.miniFont = QFont(option.font)
                 self.miniFont.setPointSizeF(option.font.pointSizeF()
-                        * 0.80000000000000004 * self.fsize)
+                        * 0.8 * self.fsize)
                 self.minifm = QFontMetrics(self.miniFont)
 
             height = self.fm.boundingRect(
@@ -148,7 +148,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         if not self.minifm:
             self.miniFont = QFont(option.font)
             self.miniFont.setPointSizeF(option.font.pointSizeF()
-                                        * 0.80000000000000004 * self.fsize)
+                                        * 0.8 * self.fsize)
 
         # Query data
 

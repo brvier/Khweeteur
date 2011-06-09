@@ -394,8 +394,6 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             refresh_interval = 600
         else:
             refresh_interval = int(settings.value('refresh_interval')) * 60
-            if refresh_interval < 600:
-                refresh_interval = 600
 
         self.utimer = QTimer()
         self.utimer.timeout.connect(self.update)

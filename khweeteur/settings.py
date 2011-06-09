@@ -56,7 +56,7 @@ from PySide.QtWebKit import QWebView
 
 class OAuthView(QWebView):
 
-    gotpin = Signal(unicode)
+    gotpin = Signal(unicode,tuple)
 
     def __init__(
         self,
@@ -69,7 +69,8 @@ class OAuthView(QWebView):
         self.account_type = account_type
         self.use_for_tweet = use_for_tweet
         self.pin = None
-
+        self.request_token
+        
     def open(self, url):
         """."""
 
@@ -100,7 +101,7 @@ class OAuthView(QWebView):
 
         if self.loggedIn:
             self.loadFinished.disconnect(self._loadFinished)
-            self.gotpin.emit(self.pin)
+            self.gotpin.emit(self.pin,self.request_token)
 
 
 class AccountDlg(QDialog):
@@ -153,7 +154,10 @@ class AccountsModel(QAbstractListModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return self._items[index.row()].name
+            try:
+                return self._items[index.row()].name
+            except IndexError:
+                return None
         else:
             return None
 
@@ -235,15 +239,14 @@ class KhweeteurPref(QMainWindow):
 
         # load other prefs
 
-        if self.settings.contains('refresh_interval'):
-            self.refresh_value.setValue(int(self.settings.value('refreshInterval'
-                                        )))
+        self.refresh_value.valueChanged.connect(self.checkRefreshRate)
+        if self.settings.contains('refreshInterval'):
+            self.refresh_value.setValue(int(self.settings.value('refreshInterval')))
         else:
             self.refresh_value.setValue(10)
-
+            
         if self.settings.contains('useDaemon'):
-            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value('useDaemon'
-                    ))))
+            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value('useDaemon'))))
         else:
             self.useNotification_value.setCheckState(Qt.CheckState(2))
 
@@ -274,6 +277,7 @@ class KhweeteurPref(QMainWindow):
         else:
             self.history_value.setValue(60)
 
+        self.useGPS_value.stateChanged.connect(self.checkGPS)
         if self.settings.contains('useGPS'):
             self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'))))
         else:
@@ -299,6 +303,18 @@ class KhweeteurPref(QMainWindow):
         else:
             self.showMentionNotifications_value.setCheckState(Qt.CheckState(2))
 
+    def checkRefreshRate(self):
+        if self.refresh_value.value() < 10:
+            self.refresh_warning.show()
+        else:
+            self.refresh_warning.hide()
+
+    def checkGPS(self):
+        if self.useGPS_value.checkState() == Qt.CheckState(2):
+            self.usegps_warning.show()
+        else:
+            self.usegps_warning.hide()
+                    
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
 
@@ -407,6 +423,7 @@ class KhweeteurPref(QMainWindow):
             if resp['status'] != '200':
                 KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting temp token: %s'
                         ) % (account_type['name'], resp['status']))
+                return
             else:
                 request_token = parse_qs(content)
 
@@ -480,16 +497,19 @@ class KhweeteurPref(QMainWindow):
                                      )), 3, 0)
         self.refresh_value = QSpinBox()
         self._umain_layout.addWidget(self.refresh_value, 3, 1)
+        self.refresh_warning = QLabel('<font color=\'red\'>Setting low refresh rate can exceed<br>twitter limit rate</font>')
+
+        self._umain_layout.addWidget(self.refresh_warning, 4, 1)
 
         self._umain_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view :'
-                                     )), 4, 0)
+                                     )), 5, 0)
         self.history_value = QSpinBox()
-        self._umain_layout.addWidget(self.history_value, 4, 1)
+        self._umain_layout.addWidget(self.history_value, 5, 1)
 
-        self._umain_layout.addWidget(QLabel(self.tr('Theme :')), 5, 0)
+        self._umain_layout.addWidget(QLabel(self.tr('Theme :')), 6, 0)
 
         self.theme_value = QComboBox()
-        self._umain_layout.addWidget(self.theme_value, 5, 1)
+        self._umain_layout.addWidget(self.theme_value, 6, 1)
         for theme in self.THEMES:
             self.theme_value.addItem(theme)
 
@@ -508,16 +528,19 @@ class KhweeteurPref(QMainWindow):
         self._umain_layout.addWidget(self.useGPS_value, 13, 1)
 
         self.useGPSOnDemand_value = QCheckBox(self.tr('Use GPS On Demand'))
-        self._umain_layout.addWidget(self.useGPSOnDemand_value, 14, 1)
-
+        self._umain_layout.addWidget(self.useGPSOnDemand_value, 15, 1)
+        self.usegps_warning = QLabel('<font color=\'red\'>Use gps delay status posting<br>until a gps fix is caught</font>')
+        self._umain_layout.addWidget(self.usegps_warning, 14, 1)
+        self.checkGPS()
+        
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
-        self._umain_layout.addWidget(self.showInfos_value, 15, 1)
+        self._umain_layout.addWidget(self.showInfos_value, 16, 1)
         
         self.showDMNotifications_value = QCheckBox(self.tr('Use DMs notifications'))
-        self._umain_layout.addWidget(self.showDMNotifications_value, 16, 1)
+        self._umain_layout.addWidget(self.showDMNotifications_value, 17, 1)
         
         self.showMentionNotifications_value = QCheckBox(self.tr('Use Mentions notifications'))
-        self._umain_layout.addWidget(self.showMentionNotifications_value, 17, 1)
+        self._umain_layout.addWidget(self.showMentionNotifications_value, 18, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 

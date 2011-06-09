@@ -2155,7 +2155,7 @@ class Api(object):
         parameters['page'] = page
 
         if geocode is not None:
-            parameters['geocode'] = geocode #','.join(map(unicode, geocode))
+            parameters['geocode'] = ','.join(map(str, geocode))
             
     # Make and send requests
 
@@ -3793,8 +3793,8 @@ class Api(object):
         else:
             http_method = 'GET'
 
-        http_handler = self._urllib.HTTPHandler(debuglevel=0)
-        https_handler = self._urllib.HTTPSHandler(debuglevel=0)
+        http_handler = self._urllib.HTTPHandler(debuglevel=1)
+        https_handler = self._urllib.HTTPSHandler(debuglevel=1)
 
         opener = self._urllib.OpenerDirector()
         opener.add_handler(http_handler)

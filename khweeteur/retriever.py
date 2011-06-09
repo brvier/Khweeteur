@@ -12,7 +12,7 @@ from urllib import urlretrieve
 import cPickle as pickle
 try:
     from PIL import Image
-except:
+except ImportError:
     import Image
 
 from PySide.QtCore import QSettings,QThread, Signal
@@ -228,7 +228,7 @@ class KhweeteurRefreshWorker(QThread):
                 logging.debug('geocode=(%s,%s,%s)' % (str(self.call.split(':')[1]),
                          str(self.call.split(':')[2]), '1km'))
                 statuses = self.api.GetSearch(since_id=since,
-                        term='', geocode="%s,%s,%s" % (str(self.call.split(':')[1]),
+                        term='', geocode=(str(self.call.split(':')[1]),
                          str(self.call.split(':')[2]), '1km'))
                 logging.debug('%s finished' % self.call)
             else:

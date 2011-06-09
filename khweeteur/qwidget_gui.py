@@ -181,7 +181,7 @@ class Khweeteur(QApplication):
             import urllib
             import pickle
             if (( QMessageBox.question(None,
-                "Kheeteur Crash Report",
+                "Khweeteur Crash Report",
                 "An error occur on Khweeteur in the previous launch. Report this bug on the bug tracker ?",
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                 url = 'http://khertan.net/report.php' # write ur URL here
@@ -218,7 +218,7 @@ class Khweeteur(QApplication):
                 else:
                     print 'page:',the_page
                     QMessageBox.question(None,
-                    "KhtEditor Crash Report",
+                    "Khweeteur Crash Report",
                     "%s" % the_page,
                     QMessageBox.Close)
                     return False
@@ -370,7 +370,7 @@ class KhweeteurWin(QMainWindow):
         nb_accounts = QSettings().beginReadArray('accounts')
         if not nb_accounts:
             if not (( QMessageBox.question(None,
-                "Kheeteur",
+                "Khweeteur",
                 'None microblogging account found, would you want to add one now in preferences ?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                     self.showPrefs()
@@ -757,8 +757,8 @@ class KhweeteurWin(QMainWindow):
             1,
             1,
             self.tb_text.toPlainText(),
-            ('' if self.geoloc_source == None else self.geoloc_source[0]),
-            ('' if self.geoloc_source == None else self.geoloc_source[1]),
+            ('' if self.geoloc_source == None else self.geoloc_coordinates[0]),
+            ('' if self.geoloc_source == None else self.geoloc_coordinates[1]),
             ('' if is_not_reply else self.tb_text_reply_base_url),
             ('tweet' if is_not_reply else 'reply'),
             ('' if is_not_reply else str(self.tb_text_reply_id)),
@@ -814,7 +814,7 @@ class KhweeteurWin(QMainWindow):
                                      % screenname, QMessageBox.Close)
 
         if not (( QMessageBox.question(None,
-            "Kheeteur Retweet",
+            "Khweeteur Retweet",
             "Did you want to retweet '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             tweet_id = None
@@ -848,7 +848,7 @@ class KhweeteurWin(QMainWindow):
             tweet_text = self.model.data(index, role=Qt.DisplayRole)
 
         if not (( QMessageBox.question(None,
-            "Kheeteur Delete",
+            "Khweeteur Delete",
             "Did you really want to delete '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             tweet_id = None
@@ -882,7 +882,7 @@ class KhweeteurWin(QMainWindow):
             tweet_text = self.model.data(index, role=Qt.DisplayRole)
 
         if not (( QMessageBox.question(None,
-            "Kheeteur Favorite",
+            "Khweeteur Favorite",
             "Did you really want to favorite '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             tweet_id = None
@@ -916,7 +916,7 @@ class KhweeteurWin(QMainWindow):
             screenname = self.model.data(index, role=SCREENNAMEROLE)
 
         if not (( QMessageBox.question(None,
-            "Kheeteur Follow",
+            "Khweeteur Follow",
             "Did you really want to follow '%s'?" % screenname,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             user_id = None
@@ -950,7 +950,7 @@ class KhweeteurWin(QMainWindow):
             screenname = self.model.data(index, role=SCREENNAMEROLE)
 
         if not (( QMessageBox.question(None,
-            "Kheeteur Unfollow",
+            "Khweeteur Unfollow",
             "Did you really want to unfollow '%s'?" % screenname,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             user_id = None
@@ -1008,7 +1008,7 @@ class KhweeteurWin(QMainWindow):
         settings = QSettings()
         if settings.value('useGPS') != '2':
             if (( QMessageBox.question(None,
-                "Kheeteur",
+                "Khweeteur",
                 'This feature require the activation of the GPS, would you want to activate it now ?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                     settings.setValue('useGPS','2')

@@ -8,7 +8,7 @@ reload(sys).setdefaultencoding("UTF-8")
 
 try:
     from sdist_maemo import sdist_maemo as _sdist_maemo
-except:
+except ImportError:
     _sdist_maemo = None
     print 'sdist_maemo command not available'
 
@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Switch to glib dbus mainloop\n * Fix qthread error creating random daemon segfault\n * Switch daemon thread to QThread\n * Increase result per page parameter on search \n * Improve stability of the daemon\n * Fix bug #785'
+changes = '* Fix storage of refresh value and alow lower rate than 10min #796, Fix bug #786, Fix Bug #787, Fix Bug #789, Fix Bug #793, Fix Bug#794, Fix #795, Fix#800, Fix near tweet feature'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -58,7 +58,7 @@ setup(name='khweeteur',
       options = { 'sdist_maemo':{
       'debian_package':'khweeteur',
       'buildversion':'1',
-      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.2), python-pyside.qtwebkit (>=1.0.2), python-pyside.qtcore (>=1.0.2), python-pyside.qtgui (>=1.0.2), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
+      'depends':'python2.5, pyside-mobility, python-pyside.qtmaemo5 (>=1.0.3), python-pyside.qtwebkit (>=1.0.3), python-pyside.qtcore (>=1.0.3), python-pyside.qtgui (>=1.0.3), python-simplejson, python-conic, python-imaging, python-dbus, python-httplib2',
       'conflicts':'khweeteur-experimental',
       'XSBC_Bugtracker':'http://khertan.net/khweeteur:bugs',
       'XB_Maemo_Display_Name':'Khweeteur',
