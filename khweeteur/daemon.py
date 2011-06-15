@@ -271,6 +271,11 @@ class KhweeteurDBusHandler(dbus.service.Object):
                           % repr(traceback.format_exception(exc_type,
                           exc_value, exc_traceback)))
 
+    @dbus.service.method(dbus_interface='com.example.Sample',
+                         in_signature='', out_signature='b')
+    def isRunning(self):
+        return True
+        
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur', signature='')
     def refresh_ended(self):
         pass
@@ -957,5 +962,5 @@ if __name__ == '__main__':
             sys.exit(2)
         sys.exit(0)
     else:
-        print 'usage: %s start|stop|restart|startfromprefs' % sys.argv[0]
+        print 'usage: %s start|stop|restart|startfromprefs|debug' % sys.argv[0]
         sys.exit(2)

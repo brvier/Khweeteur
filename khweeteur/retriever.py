@@ -243,7 +243,7 @@ class KhweeteurRefreshWorker(QThread):
                         #self.dbus_handler.info('Khweeteur Error : ' + str(err))
             except Exception, err:
                 logging.debug('Retriever : %s' % str(err))
-            
+
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:
             logging.debug('%s start download avatars' % self.call)

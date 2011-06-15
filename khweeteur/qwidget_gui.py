@@ -369,7 +369,7 @@ class KhweeteurWin(QMainWindow):
         #Check if there is at least one account
         nb_accounts = QSettings().beginReadArray('accounts')
         if not nb_accounts:
-            if not (( QMessageBox.question(None,
+            if (( QMessageBox.question(None,
                 "Khweeteur",
                 'None microblogging account found, would you want to add one now in preferences ?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
@@ -798,7 +798,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_text.show()
             self.tb_text.updateGeometry()
             self.tb_text.textChanged.emit()
-            
+
     @Slot()
     def do_tb_retweet(self):
 

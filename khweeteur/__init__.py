@@ -31,7 +31,7 @@ def install_excepthook():
         s = ''.join(traceback.format_exception(exctype, value, tb))
         print 'Except hook', exctype
         print 'Except hook called : %s' % (s)
-        formatted_text = "Khweeteur Version %s\nPySide Version : %s\nQt Version : %s\nTrace : %s\n" % ( __version__, repr(PySide.__version_info__), repr(PySide.QtCore.__version_info__),s)
+        formatted_text = "Maemo Khweeteur Version %s\nPySide Version : %s\nQt Version : %s\nPython Trace : %s\n" % ( __version__, repr(PySide.__version_info__), repr(PySide.QtCore.__version_info__),s)
         write_report(formatted_text)
 
     sys.excepthook = my_excepthook
@@ -39,7 +39,7 @@ def install_excepthook():
 def takeScreenShot(app):
     from PySide.QtGui import QPixmap
     pvr = "/home/user/.cache/launch/net.khertan.khweeteur.pvr"
-    QPixmap.grabWidget(app.win).save(pvr, 'png') # tell it to grab only your self.centralwidget screen, which is just window screen without the menu status bar on top. 
+    QPixmap.grabWidget(app.win).save(pvr, 'png') # tell it to grab only your self.centralwidget screen, which is just window screen without the menu status bar on top.
 
 if __name__ == '__main__':
     from subprocess import Popen

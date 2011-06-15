@@ -10,12 +10,22 @@
 from __future__ import with_statement
 import dbus.service
 import os.path
+from subprocess import Popen, PIPE
+        
 try:
     from PySide.QtMaemo5 import *
-except:
+except ImportError:
     pass
     
 from PySide.QtCore import Qt
+
+def isThisRunning( process_name ):
+  ps = Popen("ps -eaf | grep %s" % process_name, shell=True, stdout=PIPE)
+  output = ps.stdout.read()
+  ps.stdout.close()
+  ps.wait()
+  return False if process_name not in output else True
+
 
 class KhweeteurDBusHandler(dbus.service.Object):
 
@@ -35,6 +45,11 @@ class KhweeteurDBusHandler(dbus.service.Object):
             self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
         except:
             pass
+        if not isThisRunning('daemon.py'):
+            Popen(['/usr/bin/python',
+                  os.path.join(os.path.dirname(__file__),
+                  'daemon.py'),
+                  'start'])
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):

@@ -69,8 +69,8 @@ class OAuthView(QWebView):
         self.account_type = account_type
         self.use_for_tweet = use_for_tweet
         self.pin = None
-        self.request_token
-        
+        self.request_token = None
+
     def open(self, url):
         """."""
 
@@ -244,7 +244,7 @@ class KhweeteurPref(QMainWindow):
             self.refresh_value.setValue(int(self.settings.value('refreshInterval')))
         else:
             self.refresh_value.setValue(10)
-            
+
         if self.settings.contains('useDaemon'):
             self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value('useDaemon'))))
         else:
@@ -314,7 +314,7 @@ class KhweeteurPref(QMainWindow):
             self.usegps_warning.show()
         else:
             self.usegps_warning.hide()
-                    
+
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
 
@@ -532,13 +532,13 @@ class KhweeteurPref(QMainWindow):
         self.usegps_warning = QLabel('<font color=\'red\'>Use gps delay status posting<br>until a gps fix is caught</font>')
         self._umain_layout.addWidget(self.usegps_warning, 14, 1)
         self.checkGPS()
-        
+
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 16, 1)
-        
+
         self.showDMNotifications_value = QCheckBox(self.tr('Use DMs notifications'))
         self._umain_layout.addWidget(self.showDMNotifications_value, 17, 1)
-        
+
         self.showMentionNotifications_value = QCheckBox(self.tr('Use Mentions notifications'))
         self._umain_layout.addWidget(self.showMentionNotifications_value, 18, 1)
 
