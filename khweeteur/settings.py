@@ -10,10 +10,6 @@
 import httplib2
 import os
 
-# import sip
-# sip.setapi('QString', 2)
-# sip.setapi('QVariant', 2)
-
 from PySide.QtGui import QMainWindow, QSizePolicy, QSpinBox, QVBoxLayout, \
     QAbstractItemView, QScrollArea, QListView, QComboBox, QCheckBox, QDialog, \
     QGridLayout, QWidget, QLabel, QPushButton, QApplication, QMessageBox
@@ -119,7 +115,7 @@ class AccountDlg(QDialog):
             self.accounts_type.addItem(account_type['name'])
 
         self.use_for_tweet = QCheckBox('Use for posting')
-
+        self.use_for_tweet.setCheckState(Qt.CheckState(2))
         self.add = QPushButton('&Add')
 
         gridLayout = QGridLayout()
