@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Change default value of use for post when creating new account'
+changes = '* Change default value of use for post when creating new account * Fix notification preferences checking'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,

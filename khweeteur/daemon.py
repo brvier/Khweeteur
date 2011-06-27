@@ -287,8 +287,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
         settings = QSettings('Khertan Software', 'Khweeteur')
         #.value('showNotifications') == '2':                      
 
-        if ((ttype == 'Mentions') and (settings.value('showDMNotifications'))) \
-            or ((ttype == 'DMs') and (settings.value('showDMNotifications'))):
+        if ((ttype == 'Mentions') and
+            (settings.value('showDMNotifications') == '2')) \
+            or ((ttype == 'DMs') and
+                (settings.value('showDMNotifications') == '2')):
             m_bus = dbus.SystemBus()
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
                                         '/org/freedesktop/Notifications')
