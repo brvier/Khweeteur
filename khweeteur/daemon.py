@@ -653,7 +653,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                         )
                                 params = {}
                                 params['media'] = 'file://' + post['base_url']
-                                params['message'] = post['text']
+                                params['message'] = unicode(post['text'])
                                 response = twitpic_client.create('upload',
                                         params)
                                 if 'url' in response:

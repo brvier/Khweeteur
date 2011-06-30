@@ -9,7 +9,7 @@
 
 from __future__ import with_statement
 
-__version__ = '0.5.26'
+__version__ = '0.5.27'
 
 # import sip
 # sip.setapi('QString', 2)
@@ -272,7 +272,7 @@ class KhweeteurWin(QMainWindow):
         # Switch to edit mode (default)
 
         self.tb_new = QAction(QIcon.fromTheme('khweeteur'), 'New', self)
-        self.tb_new.triggered.connect(self.switch_tb_edit)
+        #Move the tb_new connection after the tb_edit toolbar creation #848
         self.toolbar.addAction(self.tb_new)
         self.list_tb_action.append(self.tb_new)
 
@@ -521,6 +521,10 @@ class KhweeteurWin(QMainWindow):
         self.tb_copy.setShortcut(Qt.CTRL + Qt.Key_C)
         self.tb_copy.triggered.connect(self.do_tb_copy)
         self.addAction(self.tb_copy)
+        
+        #Bug #848
+        self.tb_new.triggered.connect(self.switch_tb_edit)
+
 
     @Slot()
     def do_tb_fullscreen(self):
