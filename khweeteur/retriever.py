@@ -234,15 +234,16 @@ class KhweeteurRefreshWorker(QThread):
             else:
                 logging.error('Unknow call : %s' % (self.call, ))
         except Exception, err:
-
+            raise
             logging.debug('Retriever : %s' % str(err))
             try:
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos') == '2':
-                        self.error.emit('Khweeteur Error : ' + str(err))
+                        self.error.emit('Khweeteur Error : %s' % str(err))
                         #self.dbus_handler.info('Khweeteur Error : ' + str(err))
             except Exception, err:
-                logging.debug('Retriever : %s' % str(err))
+                raise
+                logging.debug('Retriever : %s' % (str(err)))
 
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:

@@ -533,7 +533,6 @@ class Status(object):
     Returns:
       A twitter.Status instance
     '''
-
         if 'retweeted_status' in data:
             retweeted_status = Status.NewFromJsonDict(data['retweeted_status'])
         else:
@@ -1840,6 +1839,9 @@ class DirectMessage(object):
     Returns:
       A twitter.DirectMessage instance
     '''
+
+        if not type(data) == dict:
+            print type(data),data
 
         return DirectMessage(
             created_at=data.get('created_at', None),
@@ -3740,6 +3742,8 @@ class Api(object):
             data = simplejson.loads(json)
             if 'error' in data:
                 raise TwitterError(data['error'])
+            if 'errors' in data:
+                raise TwitterError(data['errors'])
         except ValueError:
             if '<title>Twitter / Over capacity</title>' in json:
                 raise TwitterError('Capacity Error')
@@ -3793,8 +3797,8 @@ class Api(object):
         else:
             http_method = 'GET'
 
-        http_handler = self._urllib.HTTPHandler(debuglevel=1)
-        https_handler = self._urllib.HTTPSHandler(debuglevel=1)
+        http_handler = self._urllib.HTTPHandler(debuglevel=0)
+        https_handler = self._urllib.HTTPSHandler(debuglevel=0)
 
         opener = self._urllib.OpenerDirector()
         opener.add_handler(http_handler)
