@@ -265,8 +265,7 @@ class KhweeteurRefreshWorker(QThread):
                 self.isMe(statuses)
             logging.debug('%s start serialize' % self.call)
             self.serialize(statuses)
-            statuses.sort()
-            statuses.reverse()
+            statuses.sort(reverse=True)
             settings.setValue(self.api._access_token_key + '_' + self.call,
                               statuses[0].id)
             self.new_tweets.emit(len(statuses), self.call)
