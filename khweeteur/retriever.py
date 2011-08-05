@@ -204,7 +204,7 @@ class KhweeteurRefreshWorker(QThread):
                 statuses = self.api.GetSearch(since_id=since,
                         term=self.call.split(':', 1)[1])
                 logging.debug('%s finished' % self.call)
-            elif 'RetrieveLists' in self.call:
+            elif self.call == 'RetrieveLists':
                 logging.debug('%s running' % self.call)
 
                 # Get the list subscriptions
