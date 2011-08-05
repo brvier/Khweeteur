@@ -3,6 +3,7 @@
 
 #
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 '''A simple Twitter client made with pyqt4 : QModel'''
@@ -65,7 +66,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
         shorten_url=1,
         serialize=1,
         text='',
-        lattitude='0',
+        latitude='0',
         longitude='0',
         base_url='',
         action='',
@@ -81,7 +82,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 'shorten_url': shorten_url,
                 'serialize': serialize,
                 'text': text,
-                'lattitude': lattitude,
+                'latitude': latitude,
                 'longitude': longitude,
                 'base_url': base_url,
                 'action': action,

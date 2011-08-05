@@ -3,6 +3,7 @@
 
 #
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 '''A Twitter client made with Python and Qt'''
@@ -719,7 +720,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =
@@ -754,7 +755,7 @@ class KhweeteurWin(QMainWindow):
         self.dbus_handler.post_tweet(  # shorten_url=\
                                        # serialize=\
                                        # text=\
-                                       # lattitude =
+                                       # latitude =
                                        # longitude =
                                        # base_url
                                        # action
@@ -827,7 +828,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =
@@ -861,7 +862,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =
@@ -895,7 +896,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =
@@ -929,7 +930,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =
@@ -963,7 +964,7 @@ class KhweeteurWin(QMainWindow):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
-                                           # lattitude =
+                                           # latitude =
                                            # longitude =
                                            # base_url =
                                            # tweet_id =

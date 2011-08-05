@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 from __future__ import with_statement
@@ -419,7 +420,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         shorten_url=True,
         serialize=True,
         text='',
-        lattitude='',
+        latitude='',
         longitude='',
         base_url='',
         action='',
@@ -438,7 +439,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 'shorten_url': shorten_url,
                 'serialize': serialize,
                 'text': text,
-                'lattitude': lattitude,
+                'latitude': latitude,
                 'longitude': longitude,
                 'base_url': base_url,
                 'action': action,
@@ -537,13 +538,13 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                     pass
 
                     if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
-                        post['lattitude'], post['longitude'] = \
+                        post['latitude'], post['longitude'] = \
                             self.geoloc_coordinates
 
-                    if not post['lattitude']:
-                        post['lattitude'] = None
+                    if not post['latitude']:
+                        post['latitude'] = None
                     else:
-                        post['lattitude'] = int(post['lattitude'])
+                        post['latitude'] = int(post['latitude'])
                     if not post['longitude']:
                         post['longitude'] = None
                     else:
@@ -562,12 +563,12 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 if post['serialize'] == 1:
                                     api.PostSerializedUpdates(text,
                                             in_reply_to_status_id=int(post['tweet_id'
-                                            ]), latitude=post['lattitude'],
+                                            ]), latitude=post['latitude'],
                                             longitude=post['longitude'])
                                 else:
                                     api.PostUpdate(text,
                                             in_reply_to_status_id=int(post['tweet_id'
-                                            ]), latitude=post['lattitude'],
+                                            ]), latitude=post['latitude'],
                                             longitude=post['longitude'])
                                 logging.debug('Posted reply %s : %s' % (text,
                                         post['tweet_id']))
@@ -597,11 +598,11 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 api = self.get_api(account)
                                 if post['serialize'] == 1:
                                     api.PostSerializedUpdates(text,
-                                            latitude=post['lattitude'],
+                                            latitude=post['latitude'],
                                             longitude=post['longitude'])
                                 else:
                                     api.PostUpdate(text,
-                                            latitude=post['lattitude'],
+                                            latitude=post['latitude'],
                                             longitude=post['longitude'])
                                 logging.debug('Posted %s' % (text, ))
                                 if settings.contains('ShowInfos'):
@@ -662,7 +663,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                         post['shorten_url'],
                                         unicode(response['url']) + u' : '
                                             + post['text'],
-                                        post['lattitude'],
+                                        post['latitude'],
                                         post['longitude'],
                                         '',
                                         'tweet',
