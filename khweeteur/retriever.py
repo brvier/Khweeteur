@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
+
+from __future__ import with_statement
 
 import twitter
 import socket
@@ -116,9 +119,8 @@ class KhweeteurRefreshWorker(QThread):
             for afile in files:
                 if unicode(tid) == afile:
                     try:
-                        fhandle = open(os.path.join(root, afile), 'rb')
-                        status = pickle.load(fhandle)
-                        fhandle.close()
+                        with open(os.path.join(root, afile), 'rb') as fhandle:
+                            status = pickle.load(fhandle)
                         return status.text
                     except StandardError, err:
                         logging.debug('getOneReplyContent:' + err)
@@ -130,15 +132,19 @@ class KhweeteurRefreshWorker(QThread):
                 os.makedirs(rpath)
 
             status = self.api.GetStatus(tid)
-            fhandle = open(os.path.join(os.path.join(rpath,
-                           unicode(status.id))), 'wb')
-            pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
-            fhandle.close()
+            with open(os.path.join(os.path.join(rpath, unicode(status.id))),
+                      'wb') as fhandle:
+                pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             return status.text
         except StandardError, err:
             logging.debug('getOneReplyContent:' + str(err))
 
     def isMe(self, statuses):
+        """
+        statuses is a list of status updates (twitter.Status objects).
+        For each status update, sets status.is_me according to whether
+        the status's user id is the user's id.
+        """
         for status in statuses:
             if status.user.id == self.me_user_id:
                 status.is_me = True
@@ -162,10 +168,9 @@ class KhweeteurRefreshWorker(QThread):
 
         for status in statuses:
             try:
-                fhandle = open(os.path.join(folder_path, unicode(status.id)),
-                               'wb')
-                pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
-                fhandle.close()
+                with open(os.path.join(folder_path, unicode(status.id)),
+                          'wb') as fhandle:
+                    pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             except:
                 logging.debug('Serialization of %s failed' % (status.id, ))
 
