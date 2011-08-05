@@ -202,7 +202,7 @@ class KhweeteurRefreshWorker(QThread):
 
                 logging.debug('%s running' % self.call)
                 statuses = self.api.GetSearch(since_id=since,
-                        term=self.call.split(':')[1])
+                        term=self.call.split(':', 1)[1])
                 logging.debug('%s finished' % self.call)
             elif 'RetrieveLists' in self.call:
                 logging.debug('%s running' % self.call)
@@ -225,18 +225,18 @@ class KhweeteurRefreshWorker(QThread):
                 settings.sync()
             elif self.call.startswith('List:'):
                 logging.debug('%s running' % self.call)
-                statuses = self.api.GetListStatuses(user=self.call.split(':'
-                        )[1], id=self.call.split(':')[2], since_id=since)
+                user, id = self.call.split(':', 2)[1:]
+                statuses = self.api.GetListStatuses(user=user, id=id,
+                                                    since_id=since)
                 logging.debug('%s finished' % self.call)
 
             #Near GPS
             elif self.call.startswith('Near:'):
                 logging.debug('%s running' % self.call)
-                logging.debug('geocode=(%s,%s,%s)' % (str(self.call.split(':')[1]),
-                         str(self.call.split(':')[2]), '1km'))
+                geocode = self.call.split(':', 2)[1:] + ['1km']
+                logging.debug('geocode=(%s)', str(geocode))
                 statuses = self.api.GetSearch(since_id=since,
-                        term='', geocode=(str(self.call.split(':')[1]),
-                         str(self.call.split(':')[2]), '1km'))
+                        term='', geocode=geocode)
                 logging.debug('%s finished' % self.call)
             else:
                 logging.error('Unknow call : %s' % (self.call, ))
