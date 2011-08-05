@@ -180,7 +180,7 @@ class KhweeteurRefreshWorker(QThread):
         settings = QSettings('Khertan Software', 'Khweeteur')
         statuses = []
 
-        logging.debug('Thread Runned')
+        logging.debug('Thread Running')
         try:
             since = settings.value(self.api._access_token_key + '_' + self.call)
 
@@ -239,7 +239,7 @@ class KhweeteurRefreshWorker(QThread):
                         term='', geocode=geocode)
                 logging.debug('%s finished' % self.call)
             else:
-                logging.error('Unknow call : %s' % (self.call, ))
+                logging.error('Unknown call : %s' % (self.call, ))
         except Exception, err:
             raise
             logging.debug('Retriever : %s' % str(err))

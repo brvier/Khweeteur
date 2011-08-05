@@ -689,13 +689,13 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     logging.error('Do_posts : %s' % (err.message, ))
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occur while posting : '
+                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
                                  + err.message)
             except StandardError, err:
                 logging.error('Do_posts : %s' % (str(err), ))
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occur while posting : '
+                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
                                  + str(err))
                 import traceback
                 (exc_type, exc_value, exc_traceback) = sys.exc_info()
@@ -709,10 +709,10 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 logging.error('Do_posts : %s' % str(err))
                 if settings.contains('ShowInfos'):
                     if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occur while posting : '
+                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
                                  + str(err))
             except:
-                logging.error('Do_posts : Unknow error')
+                logging.error('Do_posts : Unknown error')
 
     @Slot()
     def update(self):
