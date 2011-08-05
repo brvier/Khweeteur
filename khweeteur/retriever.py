@@ -7,6 +7,7 @@
 
 from __future__ import with_statement
 
+import sys
 import twitter
 import socket
 socket.setdefaulttimeout(60)
@@ -172,7 +173,8 @@ class KhweeteurRefreshWorker(QThread):
                           'wb') as fhandle:
                     pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             except:
-                logging.debug('Serialization of %s failed' % (status.id, ))
+                logging.debug('Serialization of %s failed: %s'
+                              % (status.id, str (sys.exc_info()[0])))
 
     def run(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
