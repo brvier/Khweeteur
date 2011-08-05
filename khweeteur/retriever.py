@@ -39,6 +39,24 @@ class KhweeteurRefreshWorker(QThread):
         #dbus_handler,
         me_user_id,
         ):
+        """
+        api: An instance of the twitter.Api class.
+
+        call is one of
+
+          'HomeTimeline': Fetch the home time line
+          'Mentions': Fetch user mentions
+          'DMs': Fetch direct messages
+          'Search:*': Fetch search results where * is the terms to search for
+          'RetrieveLists': Retrive lists
+          'List:*:*': The first * should be replace with the user and
+                      the second with the id
+          'Near:*:*': Fetch tweets near (1km) a the specified
+                      location.  The first start is the the first
+                      geocode and the second * is the second geocode.
+
+        me_user_id: The user's user id.
+        """
         QThread.__init__(self)
         self.api = api
 
@@ -90,7 +108,11 @@ class KhweeteurRefreshWorker(QThread):
                         logging.debug('DownloadProfilImage:' + str(err))
 
     def removeAlreadyInCache(self, statuses):
+        """
+        Delete the file associated with the statuses.
 
+        statuses is a list of status updates (twitter.Status objects).
+        """
         # Load cached statuses
 
         try:
@@ -107,6 +129,12 @@ class KhweeteurRefreshWorker(QThread):
             logging.debug(err)
 
     def applyOrigin(self, statuses):
+        """
+        Set the statuses origin (the account from which the status was
+        fetch).
+
+        statuses is a list of status updates (twitter.Status objects).
+        """
         for status in statuses:
             status.base_url = self.api.base_url
 
@@ -165,6 +193,10 @@ class KhweeteurRefreshWorker(QThread):
                 logging.debug('getOneReplyContent:' + err)
 
     def serialize(self, statuses):
+        """
+        statuses is a list of status updates (twitter.Status objects).
+        For each status update, writes the status update to disk.
+        """
         folder_path = self.getCacheFolder()
 
         for status in statuses:
@@ -197,9 +229,6 @@ class KhweeteurRefreshWorker(QThread):
                 statuses = self.api.GetDirectMessages(since_id=since)
                 logging.debug('%s finished' % self.call)
             elif self.call.startswith('Search:'):
-
-            # Its a search .... or a list
-
                 logging.debug('%s running' % self.call)
                 statuses = self.api.GetSearch(since_id=since,
                         term=self.call.split(':', 1)[1])
