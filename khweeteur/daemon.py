@@ -271,7 +271,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
                           % repr(traceback.format_exception(exc_type,
                           exc_value, exc_traceback)))
 
-    @dbus.service.method(dbus_interface='com.example.Sample',
+    @dbus.service.method(dbus_interface='net.khertan.Khweeteur',
                          in_signature='', out_signature='b')
     def isRunning(self):
         return True
