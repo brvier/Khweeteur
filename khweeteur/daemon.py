@@ -587,204 +587,212 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 if self.geoloc_coordinates == None:
                     return
 
-        accounts = self.accounts
-
         for item in items:
             logging.debug('Try to post %s' % (item, ))
-            try:
-                with open(item, 'rb') as fhandle:
-                    post = pickle.load(fhandle)
-                    text = post['text']
-                    if post['shorten_url'] == 1:
-                        urls = re.findall("(?P<url>https?://[^\s]+)", text)
-                        if len(urls) > 0:
-                            import bitly
-                            a = bitly.Api(login='pythonbitly',
-                                    apikey='R_06871db6b7fd31a4242709acaf1b6648')
+            self.do_post(item, settings)
 
-                            for url in urls:
-                                try:
-                                    short_url = a.shorten(url)
-                                    text = text.replace(url, short_url)
-                                except:
-                                    pass
+    def do_post(self, item, settings=None):
+        """
+        Post a status update.  item is the name of a file containing a
+        pickled status update.
+        """
+        if settings is None:
+            settings = settings_db()
 
-                    if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
-                        post['latitude'], post['longitude'] = \
-                            self.geoloc_coordinates
+        try:
+            with open(item, 'rb') as fhandle:
+                post = pickle.load(fhandle)
 
-                    if not post['latitude']:
-                        post['latitude'] = None
-                    else:
-                        post['latitude'] = int(post['latitude'])
-                    if not post['longitude']:
-                        post['longitude'] = None
-                    else:
-                        post['longitude'] = int(post['longitude'])
+            text = post['text']
+            if post['shorten_url'] == 1:
+                urls = re.findall("(?P<url>https?://[^\s]+)", text)
+                if len(urls) > 0:
+                    import bitly
+                    a = bitly.Api(login='pythonbitly',
+                            apikey='R_06871db6b7fd31a4242709acaf1b6648')
 
-                    # Loop on accounts
+                    for url in urls:
+                        try:
+                            short_url = a.shorten(url)
+                            text = text.replace(url, short_url)
+                        except:
+                            pass
 
-                    for account in self.accounts:
+            if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
+                post['latitude'], post['longitude'] = \
+                    self.geoloc_coordinates
 
-                        # Reply
+            if not post['latitude']:
+                post['latitude'] = None
+            else:
+                post['latitude'] = int(post['latitude'])
+            if not post['longitude']:
+                post['longitude'] = None
+            else:
+                post['longitude'] = int(post['longitude'])
 
-                        if post['action'] == 'reply':  # Reply tweet
-                            if account['base_url'] == post['base_url'] \
-                                and account['use_for_tweet'] == 'true':
-                                api = self.get_api(account)
-                                if post['serialize'] == 1:
-                                    api.PostSerializedUpdates(text,
-                                            in_reply_to_status_id=int(post['tweet_id'
-                                            ]), latitude=post['latitude'],
-                                            longitude=post['longitude'])
-                                else:
-                                    api.PostUpdate(text,
-                                            in_reply_to_status_id=int(post['tweet_id'
-                                            ]), latitude=post['latitude'],
-                                            longitude=post['longitude'])
-                                logging.debug('Posted reply %s : %s' % (text,
-                                        post['tweet_id']))
-                                if settings.contains('ShowInfos'):
-                                    if settings.value('ShowInfos') == '2':
-                                        self.dbus_handler.info('Khweeteur: Reply posted to '
-                                         + account['name'])
-                        elif post['action'] == 'retweet':
+            # Loop on accounts
+            for account in self.accounts:
 
-                            # Retweet
+                # Reply
 
-                            if account['base_url'] == post['base_url'] \
-                                and account['use_for_tweet'] == 'true':
-                                api = self.get_api(account)
-                                api.PostRetweet(tweet_id=int(post['tweet_id']))
-                                logging.debug('Posted retweet %s'
-                                        % (post['tweet_id'], ))
-                                if settings.contains('ShowInfos'):
-                                    if settings.value('ShowInfos') == '2':
-                                        self.dbus_handler.info('Khweeteur: Retweet posted to '
-                                             + account['name'])
-                        elif post['action'] == 'tweet':
+                if post['action'] == 'reply':  # Reply tweet
+                    if account['base_url'] == post['base_url'] \
+                        and account['use_for_tweet'] == 'true':
+                        api = self.get_api(account)
+                        if post['serialize'] == 1:
+                            api.PostSerializedUpdates(text,
+                                    in_reply_to_status_id=int(post['tweet_id'
+                                    ]), latitude=post['latitude'],
+                                    longitude=post['longitude'])
+                        else:
+                            api.PostUpdate(text,
+                                    in_reply_to_status_id=int(post['tweet_id'
+                                    ]), latitude=post['latitude'],
+                                    longitude=post['longitude'])
+                        logging.debug('Posted reply %s : %s' % (text,
+                                post['tweet_id']))
+                        if settings.contains('ShowInfos'):
+                            if settings.value('ShowInfos') == '2':
+                                self.dbus_handler.info('Khweeteur: Reply posted to '
+                                 + account['name'])
+                elif post['action'] == 'retweet':
 
-                            # Else "simple" tweet
+                    # Retweet
 
-                            if account['use_for_tweet'] == 'true':
-                                api = self.get_api(account)
-                                if post['serialize'] == 1:
-                                    api.PostSerializedUpdates(text,
-                                            latitude=post['latitude'],
-                                            longitude=post['longitude'])
-                                else:
-                                    api.PostUpdate(text,
-                                            latitude=post['latitude'],
-                                            longitude=post['longitude'])
-                                logging.debug('Posted %s' % (text, ))
-                                if settings.contains('ShowInfos'):
-                                    if settings.value('ShowInfos') == '2':
-                                        self.dbus_handler.info('Khweeteur: Status posted to '
-         + account['name'])
-                        elif post['action'] == 'delete':
-                            if account['base_url'] == post['base_url']:
-                                api = self.get_api(account)
-                                api.DestroyStatus(int(post['tweet_id']))
-                                path = os.path.join(os.path.expanduser('~'),
-                                        '.khweeteur', 'cache', 'HomeTimeline',
-                                        post['tweet_id'])
-                                os.remove(path)
-                                logging.debug('Deleted %s' % (post['tweet_id'],
-                                        ))
-                                if settings.contains('ShowInfos'):
-                                    if settings.value('ShowInfos') == '2':
-                                        self.dbus_handler.info('Khweeteur: Status deleted on '
-         + account['name'])
-                        elif post['action'] == 'favorite':
-                            if account['base_url'] == post['base_url']:
-                                api = self.get_api(account)
-                                api.CreateFavorite(int(post['tweet_id']))
-                                logging.debug('Favorited %s' % (post['tweet_id'
-                                        ], ))
-                        elif post['action'] == 'follow':
-                            if account['base_url'] == post['base_url']:
-                                api = self.get_api(account)
-                                api.CreateFriendship(int(post['tweet_id']))
-                                logging.debug('Follow %s' % (post['tweet_id'],
-                                        ))
-                        elif post['action'] == 'unfollow':
-                            if account['base_url'] == post['base_url']:
-                                api = self.get_api(account)
-                                api.DestroyFriendship(int(post['tweet_id']))
-                                logging.debug('Follow %s' % (post['tweet_id'],
-                                        ))
-                        elif post['action'] == 'twitpic':
-                            if account['base_url'] \
-                                == SUPPORTED_ACCOUNTS[0]['base_url']:
-                                api = self.get_api(account)
-                                import twitpic
-                                twitpic_client = \
-                                    twitpic.TwitPicOAuthClient(consumer_key=api._username,
-                                        consumer_secret=api._password,
-                                        access_token=api._oauth_token.to_string(),
-                                        service_key='f9b7357e0dc5473df5f141145e4dceb0'
-                                        )
-                                params = {}
-                                params['media'] = 'file://' + post['base_url']
-                                params['message'] = unicode(post['text'])
-                                response = twitpic_client.create('upload',
-                                        params)
-                                if 'url' in response:
-                                    self.post_tweet(
-                                        post['serialize'],
-                                        post['shorten_url'],
-                                        unicode(response['url']) + u' : '
-                                            + post['text'],
-                                        post['latitude'],
-                                        post['longitude'],
-                                        '',
-                                        'tweet',
-                                        '',
-                                        )
-                                else:
+                    if account['base_url'] == post['base_url'] \
+                        and account['use_for_tweet'] == 'true':
+                        api = self.get_api(account)
+                        api.PostRetweet(tweet_id=int(post['tweet_id']))
+                        logging.debug('Posted retweet %s'
+                                % (post['tweet_id'], ))
+                        if settings.contains('ShowInfos'):
+                            if settings.value('ShowInfos') == '2':
+                                self.dbus_handler.info('Khweeteur: Retweet posted to '
+                                     + account['name'])
+                elif post['action'] == 'tweet':
 
-                                    raise StandardError('No twitpic url')
+                    # Else "simple" tweet
+
+                    if account['use_for_tweet'] == 'true':
+                        api = self.get_api(account)
+                        if post['serialize'] == 1:
+                            api.PostSerializedUpdates(text,
+                                    latitude=post['latitude'],
+                                    longitude=post['longitude'])
+                        else:
+                            api.PostUpdate(text,
+                                    latitude=post['latitude'],
+                                    longitude=post['longitude'])
+                        logging.debug('Posted %s' % (text, ))
+                        if settings.contains('ShowInfos'):
+                            if settings.value('ShowInfos') == '2':
+                                self.dbus_handler.info('Khweeteur: Status posted to '
+ + account['name'])
+                elif post['action'] == 'delete':
+                    if account['base_url'] == post['base_url']:
+                        api = self.get_api(account)
+                        api.DestroyStatus(int(post['tweet_id']))
+                        path = os.path.join(os.path.expanduser('~'),
+                                '.khweeteur', 'cache', 'HomeTimeline',
+                                post['tweet_id'])
+                        os.remove(path)
+                        logging.debug('Deleted %s' % (post['tweet_id'],
+                                ))
+                        if settings.contains('ShowInfos'):
+                            if settings.value('ShowInfos') == '2':
+                                self.dbus_handler.info('Khweeteur: Status deleted on '
+ + account['name'])
+                elif post['action'] == 'favorite':
+                    if account['base_url'] == post['base_url']:
+                        api = self.get_api(account)
+                        api.CreateFavorite(int(post['tweet_id']))
+                        logging.debug('Favorited %s' % (post['tweet_id'
+                                ], ))
+                elif post['action'] == 'follow':
+                    if account['base_url'] == post['base_url']:
+                        api = self.get_api(account)
+                        api.CreateFriendship(int(post['tweet_id']))
+                        logging.debug('Follow %s' % (post['tweet_id'],
+                                ))
+                elif post['action'] == 'unfollow':
+                    if account['base_url'] == post['base_url']:
+                        api = self.get_api(account)
+                        api.DestroyFriendship(int(post['tweet_id']))
+                        logging.debug('Follow %s' % (post['tweet_id'],
+                                ))
+                elif post['action'] == 'twitpic':
+                    if account['base_url'] \
+                        == SUPPORTED_ACCOUNTS[0]['base_url']:
+                        api = self.get_api(account)
+                        import twitpic
+                        twitpic_client = \
+                            twitpic.TwitPicOAuthClient(consumer_key=api._username,
+                                consumer_secret=api._password,
+                                access_token=api._oauth_token.to_string(),
+                                service_key='f9b7357e0dc5473df5f141145e4dceb0'
+                                )
+                        params = {}
+                        params['media'] = 'file://' + post['base_url']
+                        params['message'] = unicode(post['text'])
+                        response = twitpic_client.create('upload',
+                                params)
+                        if 'url' in response:
+                            self.post_tweet(
+                                post['serialize'],
+                                post['shorten_url'],
+                                unicode(response['url']) + u' : '
+                                    + post['text'],
+                                post['latitude'],
+                                post['longitude'],
+                                '',
+                                'tweet',
+                                '',
+                                )
                         else:
 
-                            logging.error('Unknow action : %s' % post['action'])
-
-                    os.remove(item)
-            except twitter.TwitterError, err:
-
-                if err.message == 'Status is a duplicate.':
-                    logging.error('Do_posts (remove): %s' % (err.message, ))
-                    os.remove(item)
-                elif 'ID' in err.message:
-                    logging.error('Do_posts (remove): %s' % (err.message, ))
-                    os.remove(item)
+                            raise StandardError('No twitpic url')
                 else:
-                    logging.error('Do_posts : %s' % (err.message, ))
-                if settings.contains('ShowInfos'):
-                    if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                                 + err.message)
-            except StandardError, err:
-                logging.error('Do_posts : %s' % (str(err), ))
-                if settings.contains('ShowInfos'):
-                    if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                                 + str(err))
-                import traceback
-                (exc_type, exc_value, exc_traceback) = sys.exc_info()
-                logging.error('%s' % repr(traceback.format_exception(exc_type,
-                              exc_value, exc_traceback)))
-            except Exception, err:
 
-                # Emitting the error will block the other tweet post
-                # raise #can t post, we will keep the file to do it later
+                    logging.error('Unknow action : %s' % post['action'])
 
-                logging.error('Do_posts : %s' % str(err))
-                if settings.contains('ShowInfos'):
-                    if settings.value('ShowInfos') == '2':
-                        self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                                 + str(err))
-            except:
-                logging.error('Do_posts : Unknown error')
+            os.remove(item)
+        except twitter.TwitterError, err:
+
+            if err.message == 'Status is a duplicate.':
+                logging.error('Do_posts (remove): %s' % (err.message, ))
+                os.remove(item)
+            elif 'ID' in err.message:
+                logging.error('Do_posts (remove): %s' % (err.message, ))
+                os.remove(item)
+            else:
+                logging.error('Do_posts : %s' % (err.message, ))
+            if settings.contains('ShowInfos'):
+                if settings.value('ShowInfos') == '2':
+                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
+                             + err.message)
+        except StandardError, err:
+            logging.error('Do_posts : %s' % (str(err), ))
+            if settings.contains('ShowInfos'):
+                if settings.value('ShowInfos') == '2':
+                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
+                             + str(err))
+            import traceback
+            (exc_type, exc_value, exc_traceback) = sys.exc_info()
+            logging.error('%s' % repr(traceback.format_exception(exc_type,
+                          exc_value, exc_traceback)))
+        except Exception, err:
+
+            # Emitting the error will block the other tweet post
+            # raise #can t post, we will keep the file to do it later
+
+            logging.error('Do_posts : %s' % str(err))
+            if settings.contains('ShowInfos'):
+                if settings.value('ShowInfos') == '2':
+                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
+                             + str(err))
+        except:
+            logging.error('Do_posts : Unknown error')
 
     @Slot()
     def update(self):
@@ -914,6 +922,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
     def kill_thread(self):
         for thread in self.threads:
             if not thread.isFinished():
+                logging.debug("Terminating thread %s" % (str(thread),))
                 thread.terminate()             
     @Slot()
     def athread_end(self):
