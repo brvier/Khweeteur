@@ -70,6 +70,31 @@ def install_excepthook(version):
 
     sys.excepthook = my_excepthook
 
+_settings = None
+_settings_synced = None
+def settings_db():
+    """
+    Return the setting's database, a QSettings instance, ensuring that
+    it is sufficiently up to date.
+    """
+    global _settings
+    global _settings_synced
+
+    if _settings is None:
+        # First time through.
+        _settings = QSettings('Khertan Software', 'Khweeteur')
+        _settings_synced = time.time()
+        return _settings
+
+    # Ensure that the in-memory settings database is synchronized
+    # with the values on disk.
+    now = time.time()
+    if now - _settings_synced > 10:
+        # Last synchronized more than 10 seconds ago.
+        _settings.sync()
+        _settings_synced = now
+
+    return _settings
 
 class Daemon(object):
 
@@ -150,7 +175,7 @@ class Daemon(object):
         os.remove(self.pidfile)
 
     def startfromprefs(self):
-        settings = QSettings('Khertan Software', 'Khweeteur')
+        settings = settings_db()
         if settings.contains('useDaemon'):
             if settings.value('useDaemon') == '2':
                 self.start()
@@ -285,7 +310,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def new_tweets(self, count, ttype):
         logging.debug('New tweet notification ttype : %s (%s)' % (ttype,
                       str(type(ttype))))
-        settings = QSettings('Khertan Software', 'Khweeteur')
+        settings = settings_db()
         #.value('showNotifications') == '2':                      
 
         if ((ttype == 'Mentions') and
@@ -397,7 +422,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 
         # mainloop = DBusQtMainLoop(set_as_default=True)
 
-        settings = QSettings('Khertan Software', 'Khweeteur')
+        settings = settings_db()
         if not settings.contains('refresh_interval'):
             refresh_interval = 600
         else:
@@ -496,7 +521,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             print 'GPS Update not valid'
 
     def do_posts(self):
-        settings = QSettings('Khertan Software', 'Khweeteur')
+        settings = settings_db()
         accounts = []
 
         nb_accounts = settings.beginReadArray('accounts')
@@ -727,7 +752,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
     def retrieve(self, options=None):
         logging.debug('Start update')
-        settings = QSettings('Khertan Software', 'Khweeteur')
+        settings = settings_db()
 
         showInfos = False
         if settings.contains('ShowInfos'):
@@ -739,14 +764,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             if settings.value('useGPS') == '2':
                 useGPS = True
 
-        logging.debug('Setting loaded')
         try:
-
-            # Re read the settings
-
-            settings.sync()
-            logging.debug('Setting synced')
-
             # Cleaning old thread reference for keep for gc
             logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
 
