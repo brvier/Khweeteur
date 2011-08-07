@@ -811,108 +811,104 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             if settings.value('useGPS') == '2':
                 useGPS = True
 
+        # Cleaning old thread reference for keep for gc
+        logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
+
+        if len(self.threads)>0:
+            # Update in progress.
+            return            
+
+        # Remove old tweets in cache according to history prefs
+
         try:
-            # Cleaning old thread reference for keep for gc
-            logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
+            keep = int(settings.value('tweetHistory'))
+        except:
+            keep = 60
 
-            if len(self.threads)>0:
-                # Update in progress.
-                return            
+        for (root, folders, files) in os.walk(self.cache_path):
+            for folder in folders:
+                statuses = []
+                uids = glob.glob(os.path.join(root, folder, '*'))
+                for uid in uids:
+                    uid = os.path.basename(uid)
+                    try:
+                        pkl_file = open(os.path.join(root, folder, uid),
+                                'rb')
+                        status = pickle.load(pkl_file)
+                        pkl_file.close()
+                        statuses.append(status)
+                    except StandardError, err:
+                        logging.debug('Error in cache cleaning: %s,%s'
+                                % (err, os.path.join(root, uid)))
+                statuses.sort(key=lambda status: \
+                              status.created_at_in_seconds, reverse=True)
+                for status in statuses[keep:]:
+                    try:
+                        os.remove(os.path.join(root, folder,
+                                  str(status.id)))
+                    except StandardError, err:
+                        logging.debug('Cannot remove : %s : %s'
+                                % (str(status.id), str(err)))
 
-            # Remove old tweets in cache according to history prefs
+        nb_searches = settings.beginReadArray('searches')
+        searches = []
+        for index in range(nb_searches):
+            settings.setArrayIndex(index)
+            searches.append(settings.value('terms'))
+        settings.endArray()
 
-            try:
-                keep = int(settings.value('tweetHistory'))
-            except:
-                keep = 60
+        nb_lists = settings.beginReadArray('lists')
+        lists = []
+        for index in range(nb_lists):
+            settings.setArrayIndex(index)
+            lists.append((settings.value('id'), settings.value('user')))
+        settings.endArray()
 
-            for (root, folders, files) in os.walk(self.cache_path):
-                for folder in folders:
-                    statuses = []
-                    uids = glob.glob(os.path.join(root, folder, '*'))
-                    for uid in uids:
-                        uid = os.path.basename(uid)
-                        try:
-                            pkl_file = open(os.path.join(root, folder, uid),
-                                    'rb')
-                            status = pickle.load(pkl_file)
-                            pkl_file.close()
-                            statuses.append(status)
-                        except StandardError, err:
-                            logging.debug('Error in cache cleaning: %s,%s'
-                                    % (err, os.path.join(root, uid)))
-                    statuses.sort(key=lambda status: \
-                                  status.created_at_in_seconds, reverse=True)
-                    for status in statuses[keep:]:
-                        try:
-                            os.remove(os.path.join(root, folder,
-                                      str(status.id)))
-                        except StandardError, err:
-                            logging.debug('Cannot remove : %s : %s'
-                                    % (str(status.id), str(err)))
+        for account in self.accounts:
+            api = self.get_api(account)
+            me_user_id = self.me_users[account['token_key']]
 
-            nb_searches = settings.beginReadArray('searches')
-            searches = []
-            for index in range(nb_searches):
-                settings.setArrayIndex(index)
-                searches.append(settings.value('terms'))
-            settings.endArray()
+            # If have an authorized user:
+            if me_user_id:
 
-            nb_lists = settings.beginReadArray('lists')
-            lists = []
-            for index in range(nb_lists):
-                settings.setArrayIndex(index)
-                lists.append((settings.value('id'), settings.value('user')))
-            settings.endArray()
+                def spawn(thing):
+                    # Worker
+                    try:
+                        t = KhweeteurRefreshWorker(api, thing, me_user_id)
+                        t.error.connect(self.dbus_handler.info)
+                        t.finished.connect(self.athread_end)
+                        t.terminated.connect(self.athread_end)
+                        t.new_tweets.connect(self.dbus_handler.new_tweets)
+                        t.start()
+                        self.threads.append(t)
+                    except Exception, err:
+                        logging.error(
+                            'Creating worker for account %s, job %s: %s'
+                            % (str(account), thing, str(err)))
 
-            for account in self.accounts:
-                api = self.get_api(account)
-                me_user_id = self.me_users[account['token_key']]
+                spawn('HomeTimeline')
+                spawn('Mentions')
+                spawn('DMs')
 
-                # If have an authorized user:
-                if me_user_id:
+                # Start searches thread
+                for terms in searches:
+                    spawn('Search:' + terms)
 
-                    def spawn(thing):
-                        # Worker
-                        try:
-                            t = KhweeteurRefreshWorker(api, thing, me_user_id)
-                            t.error.connect(self.dbus_handler.info)
-                            t.finished.connect(self.athread_end)
-                            t.terminated.connect(self.athread_end)
-                            t.new_tweets.connect(self.dbus_handler.new_tweets)
-                            t.start()
-                            self.threads.append(t)
-                        except Exception, err:
-                            logging.error(
-                                'Creating worker for account %s, job %s: %s'
-                                % (str(account), thing, str(err)))
+                # Start retrieving the list
+                spawn('RetrieveLists')
 
-                    spawn('HomeTimeline')
-                    spawn('Mentions')
-                    spawn('DMs')
+                # Near retrieving
+                if useGPS:
+                    if not self.geoloc_source:
+                        self.geolocStart()
+                    if self.geoloc_coordinates:
+                        spawn('Near:%s:%s'
+                              % (str(self.geoloc_coordinates[0]),
+                                 str(self.geoloc_coordinates[1])))
 
-                    # Start searches thread
-                    for terms in searches:
-                        spawn('Search:' + terms)
-
-                    # Start retrieving the list
-                    spawn('RetrieveLists')
-
-                    # Near retrieving
-                    if useGPS:
-                        if not self.geoloc_source:
-                            self.geolocStart()
-                        if self.geoloc_coordinates:
-                            spawn('Near:%s:%s'
-                                  % (str(self.geoloc_coordinates[0]),
-                                     str(self.geoloc_coordinates[1])))
-
-                    # Start lists thread
-                    for (list_id, user) in lists:
-                        spawn('List:' + user + ':' + list_id)
-
-        except Exception, err:
-            logging.exception(str(err))
+                # Start lists thread
+                for (list_id, user) in lists:
+                    spawn('List:' + user + ':' + list_id)
 
     @Slot()
     def kill_thread(self):
