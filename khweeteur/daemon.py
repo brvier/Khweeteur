@@ -816,11 +816,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
 
             if len(self.threads)>0:
+                # Update in progress.
                 return            
-#            for thread in self.threads:
-#                if not thread.isAlive():
-#                    self.threads.remove(thread)
-#                    logging.debug('Removed a thread')
 
             # Remove old tweets in cache according to history prefs
 
@@ -875,95 +872,44 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 # If have an authorized user:
                 if me_user_id:
 
-                    # Worker
-                    try:
-                        self.threads.append(KhweeteurRefreshWorker(api,
-                                'HomeTimeline', me_user_id))
-                        self.threads[-1].error.connect(self.dbus_handler.info)                        
-                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                    except Exception, err:
-                        logging.error('Timeline : %s' % str(err))
+                    def spawn(thing):
+                        # Worker
+                        try:
+                            t = KhweeteurRefreshWorker(api, thing, me_user_id)
+                            t.error.connect(self.dbus_handler.info)
+                            t.finished.connect(self.athread_end)
+                            t.terminated.connect(self.athread_end)
+                            t.new_tweets.connect(self.dbus_handler.new_tweets)
+                            t.start()
+                            self.threads.append(t)
+                        except Exception, err:
+                            logging.error(
+                                'Creating worker for account %s, job %s: %s'
+                                % (str(account), thing, str(err)))
 
-                    try:
-                        self.threads.append(KhweeteurRefreshWorker(api,
-                                'Mentions', me_user_id))
-                        self.threads[-1].error.connect(self.dbus_handler.info)                        
-                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                    except Exception, err:
-                        logging.error('Mentions : %s' % str(err))
-
-                    try:
-                        self.threads.append(KhweeteurRefreshWorker(api, 'DMs',
-                                 me_user_id))
-                        self.threads[-1].error.connect(self.dbus_handler.info)                        
-                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                    except Exception, err:
-                        logging.error('DMs : %s' % str(err))
+                    spawn('HomeTimeline')
+                    spawn('Mentions')
+                    spawn('DMs')
 
                     # Start searches thread
                     for terms in searches:
-                        try:
-                            self.threads.append(KhweeteurRefreshWorker(api,
-                                    'Search:' + terms,
-                                    me_user_id))
-                            self.threads[-1].error.connect(self.dbus_handler.info)                        
-                            self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets)                                     
-                        except Exception, err:
-                            logging.error('Search %s: %s' % (terms, str(err)))
+                        spawn('Search:' + terms)
 
                     # Start retrieving the list
-                    try:
-                        self.threads.append(KhweeteurRefreshWorker(api,
-                                'RetrieveLists', me_user_id))
-                        self.threads[-1].error.connect(self.dbus_handler.info)                        
-                        self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                    except Exception, err:
-                        logging.error('Retrieving List error %s' % (str(err), ))
+                    spawn('RetrieveLists')
 
                     # Near retrieving
                     if useGPS:
                         if not self.geoloc_source:
                             self.geolocStart()
                         if self.geoloc_coordinates:
-                            try:
-                                self.threads.append(KhweeteurRefreshWorker(api,
-                                        'Near:%s:%s' % \
-                                           (str(self.geoloc_coordinates[0]),
-                                            str(self.geoloc_coordinates[1])),
-                                        me_user_id))
-                                self.threads[-1].error.connect(self.dbus_handler.info)                        
-                                self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                            except Exception, err:
-                                logging.error('Near: %s' % (str(err)))
-
+                            spawn('Near:%s:%s'
+                                  % (str(self.geoloc_coordinates[0]),
+                                     str(self.geoloc_coordinates[1])))
 
                     # Start lists thread
                     for (list_id, user) in lists:
-                        try:
-                            self.threads.append(KhweeteurRefreshWorker(api,
-                                    'List:' + user + ':' + list_id,
-                                    me_user_id))
-                            self.threads[-1].error.connect(self.dbus_handler.info)                        
-                            self.threads[-1].new_tweets.connect(self.dbus_handler.new_tweets) 
-                        except Exception, err:
-                            logging.error('List %s: %s' % (list_id, str(err)))
-
-                    # Start the thread
-                    try:
-                        for (idx, thread) in enumerate(self.threads):
-                            logging.debug('Try to run Thread : %s'
-                                    % str(thread))
-                            try:
-                                self.threads[idx].finished.connect(self.athread_end)
-                                self.threads[idx].terminated.connect(self.athread_end)
-                                self.threads[idx].start()
-                                
-                            except RuntimeError, err:
-                                logging.debug('Attempt to start a thread already running : %s'
-                                         % (str(err), ))
-                    except Exception, err:
-                        logging.error('Running Thread error: %s' % err)
-
+                        spawn('List:' + user + ':' + list_id)
 
         except Exception, err:
             logging.exception(str(err))
