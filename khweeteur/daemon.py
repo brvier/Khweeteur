@@ -72,6 +72,11 @@ def install_excepthook(version):
 
 _settings = None
 _settings_synced = None
+# Each time the DB changes, this is incremented.  Our current
+# implementation just rereads the DB periodically.  A better approach
+# would be to use the last modification time of the underlying file
+# (determined using QSettings.fileName).
+settings_db_generation = 0
 def settings_db():
     """
     Return the setting's database, a QSettings instance, ensuring that
@@ -79,6 +84,7 @@ def settings_db():
     """
     global _settings
     global _settings_synced
+    global settings_db_generation
 
     if _settings is None:
         # First time through.
@@ -93,6 +99,7 @@ def settings_db():
         # Last synchronized more than 10 seconds ago.
         _settings.sync()
         _settings_synced = now
+        settings_db_generation += 1
 
     return _settings
 
@@ -404,6 +411,10 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         self.me_users = {}
         self.idtag = None
 
+        # The last time the accounts were reread from the setting's
+        # DB.
+        self._accounts_read_at = None
+
         #On demand geoloc
         self.geoloc_source = None
         self.geoloc_coordinates = None
@@ -506,6 +517,29 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
         return api
 
+    @property
+    def accounts(self):
+        """A list of dictionaries where each dictionary
+        describes an account."""
+        settings = settings_db()
+
+        if self._accounts_read_at == settings_db_generation:
+            return self._accounts
+
+        nb_accounts = settings.beginReadArray('accounts')
+        accounts = []
+        for index in range(nb_accounts):
+            settings.setArrayIndex(index)
+            account = dict((key, settings.value(key))
+                           for key in settings.allKeys())
+            accounts.append(account)
+        settings.endArray()
+
+        self._accounts = accounts
+        self._accounts_read_at = settings_db_generation
+
+        return accounts
+
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
         self.geoloc_coordinates = None
@@ -543,16 +577,6 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
     def do_posts(self):
         settings = settings_db()
-        accounts = []
-
-        nb_accounts = settings.beginReadArray('accounts')
-        for index in range(nb_accounts):
-            settings.setArrayIndex(index)
-            accounts.append(dict((key, settings.value(key)) for key in
-                            settings.allKeys()))
-        settings.endArray()
-
-        logging.debug('Number of account : %s' % len(accounts))
 
         items = glob.glob(os.path.join(self.post_path, '*'))
 
@@ -562,6 +586,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     self.geolocStart()
                 if self.geoloc_coordinates == None:
                     return
+
+        accounts = self.accounts
 
         for item in items:
             logging.debug('Try to post %s' % (item, ))
@@ -598,7 +624,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                     # Loop on accounts
 
-                    for account in accounts:
+                    for account in self.accounts:
 
                         # Reply
 
@@ -842,14 +868,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 lists.append((settings.value('id'), settings.value('user')))
             settings.endArray()
 
-            nb_accounts = settings.beginReadArray('accounts')
-            logging.info('Found %s account' % (str(nb_accounts), ))
-            for index in range(nb_accounts):
-                settings.setArrayIndex(index)
-
-                account = dict((key, settings.value(key))
-                               for key in settings.allKeys())
-
+            for account in self.accounts:
                 api = self.get_api(account)
                 me_user_id = self.me_users[account['token_key']]
 
@@ -945,7 +964,6 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     except Exception, err:
                         logging.error('Running Thread error: %s' % err)
 
-            settings.endArray()
 
         except Exception, err:
             logging.exception(str(err))
