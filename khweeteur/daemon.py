@@ -396,8 +396,12 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                      dbus_interface='net.khertan.Khweeteur',
                                      signal_name='post_tweet')
         self.threads = []  # Here to avoid gc
-        self.me_users = {}
+        # Hash from an account's token_key to an authenticated twitter.Api.
         self.apis = {}
+        # Hash from an account's token_key to the user's identifier.
+        # If the value is None, the account was not successfully
+        # authenticated.
+        self.me_users = {}
         self.idtag = None
 
         #On demand geoloc
@@ -476,12 +480,29 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 #        self.do_posts() #Else we loop when action create a post
 
     def get_api(self, account):
-        api = twitter.Api(username=account['consumer_key'],
-                          password=account['consumer_secret'],
-                          access_token_key=account['token_key'],
-                          access_token_secret=account['token_secret'],
-                          base_url=account['base_url'])
-        api.SetUserAgent('Khweeteur')
+        """
+        Return an unauthenticated twitter.Api object cor
+        """
+        token_key = account['token_key']
+        api = self.apis.get(token_key, None)
+        if api is None:
+            api = twitter.Api(username=account['consumer_key'],
+                              password=account['consumer_secret'],
+                              access_token_key=token_key,
+                              access_token_secret=account['token_secret'],
+                              base_url=account['base_url'])
+            api.SetUserAgent('Khweeteur')
+            self.apis[token_key] = api
+
+            try:
+                id = api.VerifyCredentials().id
+            except Exception, err:
+                id = None
+                logging.error(
+                    'Failed to verify the credentials for account %s: %s'
+                    % (account, str(err)))
+
+            self.me_users[token_key] = id
 
         return api
 
@@ -825,30 +846,15 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             logging.info('Found %s account' % (str(nb_accounts), ))
             for index in range(nb_accounts):
                 settings.setArrayIndex(index)
-                access_token = settings.value('access_token')
-                if not access_token in self.apis:                    
-                    self.apis[access_token] = self.get_api(dict((key,
-                            settings.value(key)) for key in settings.allKeys()))
-                    self.me_users[access_token] = None
 
-                if not self.me_users[access_token]:
-                    try:
-                        self.me_users[access_token] = \
-                            self.apis[access_token].VerifyCredentials().id
-                    except Exception, err:
-                        self.me_users[access_token] = None
-                        logging.error('VerifyCredential2 : %s' % str(err))
-                        self.dbus_handler.refresh_ended()
-                        logging.debug('Finished loop')
-                        if showInfos:
-                            self.dbus_handler.info(str(err))
+                account = dict((key, settings.value(key))
+                               for key in settings.allKeys())
 
-                api = self.apis[access_token]
-                me_user_id = self.me_users[access_token]
+                api = self.get_api(account)
+                me_user_id = self.me_users[account['token_key']]
 
-                # If have user:
-
-                if self.me_users[access_token]:
+                # If have an authorized user:
+                if me_user_id:
 
                     # Worker
                     try:
