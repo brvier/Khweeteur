@@ -605,7 +605,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
             text = post['text']
             if post['shorten_url'] == 1:
-                urls = re.findall("(?P<url>https?://[^\s]+)", text)
+                urls = re.findall("(?:^|\s)(?P<url>https?://[^\s]+)", text)
                 if len(urls) > 0:
                     import bitly
                     a = bitly.Api(login='pythonbitly',
