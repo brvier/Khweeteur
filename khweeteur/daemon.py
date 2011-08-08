@@ -506,8 +506,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         tweet_id: If action is 'retweet', 'delete' or 'favorite', the
            tweet id of the tweet in question.
 
-           If action is 'follow' or 'unfollow': the user id of the
-           user to follow.
+           If action is 'follow' or 'unfollow': the user id or the
+               screen name of the user to follow.
 
            Otherwise, ''.
 
@@ -778,15 +778,15 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 elif post['action'] == 'follow':
                     if aid == post['base_url']:
                         api = self.get_api(account)
-                        api.CreateFriendship(int(post['tweet_id']))
-                        logging.debug('Follow %s' % (post['tweet_id'],
-                                ))
+                        friend = api.CreateFriendship(post['tweet_id'])
+                        logging.debug('Follow %s (account: %s) -> %s'
+                                      % (repr(post), repr(account), friend))
                 elif post['action'] == 'unfollow':
                     if aid == post['base_url']:
                         api = self.get_api(account)
-                        api.DestroyFriendship(int(post['tweet_id']))
-                        logging.debug('Follow %s' % (post['tweet_id'],
-                                ))
+                        friend = api.DestroyFriendship(post['tweet_id'])
+                        logging.debug('Unfollow %s (account: %s) -> %s'
+                                      % (repr(post), repr(account), friend))
                 elif post['action'] == 'twitpic':
                     if account['base_url'] \
                             == SUPPORTED_ACCOUNTS[0]['base_url']:

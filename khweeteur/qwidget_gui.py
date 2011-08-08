@@ -923,6 +923,12 @@ class KhweeteurWin(QMainWindow):
             tweet_source = self.model.data(index, role=ORIGINROLE)
             screenname = self.model.data(index, role=SCREENNAMEROLE)
 
+        if user_id is None:
+            user_id = screenname
+
+        print ("do_tb_follow(user_id: %s; tweet_source: %s; screenname %s)"
+               % (user_id, tweet_source, screenname))
+
         if not (( QMessageBox.question(None,
             "Khweeteur Follow",
             "Did you really want to follow '%s'?" % screenname,
