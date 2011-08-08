@@ -739,8 +739,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 params)
                         if 'url' in response:
                             self.post_tweet(
-                                post['serialize'],
                                 post['shorten_url'],
+                                post['serialize'],
                                 unicode(response['url']) + u' : '
                                     + post['text'],
                                 post['latitude'],
