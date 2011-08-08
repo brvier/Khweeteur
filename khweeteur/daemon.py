@@ -895,10 +895,20 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 useGPS = True
 
         if len(self.threads)>0:
-            # Update in progress.
-            logging.info('Update in progress (%s jobs still running: %s)'
-                         % (len (self.threads), str(self.threads.values())))
-            return            
+            for t, job in self.threads.items():
+                # Check whether the threads are really running.  the
+                # finished and terminate signals appear rather
+                # unreliable.
+                logging.debug("%s: %s: isRunning: %d; isFinished: %d"
+                              % (str(t), job, t.isRunning(), t.isFinished()))
+                if t.isFinished():
+                    self.thread_exited(t)
+
+            if len(self.threads)>0:
+                # Update in progress.
+                logging.info('Update in progress (%s jobs still running: %s)'
+                             % (len (self.threads), str(self.threads.values())))
+                return            
 
         # Remove old tweets in cache according to history prefs
 
@@ -999,15 +1009,15 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             if not thread.isFinished():
                 logging.debug("Terminating thread %s: %s"
                               % (str(thread), tid))
-                thread.terminate()             
-    @Slot()
-    def athread_end(self):
+                thread.terminate()
+
+    def thread_exited(self, thread):
         logging.debug("Job %s finished; Jobs still running: %s"
-                      % (self.threads[self.sender()],
+                      % (self.threads[thread],
                          str ([v for k, v in self.threads.items()
-                               if k != self.sender()])))
+                               if k != thread])))
         try:
-            del self.threads[self.sender()]
+            del self.threads[thread]
         except ValueError, exception:
             logging.debug("Unregistered thread %s called athread_end (%s)!"
                           % (str(thread), str (exception)))
@@ -1015,7 +1025,15 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         if len(self.threads) == 0:
             self.dbus_handler.refresh_ended()
             logging.debug('Finished update')
-        
+
+    @Slot()
+    def athread_end(self):
+        if self.sender() not in self.threads:
+            logging.debug("athread_end called by %s, but not in self.threads"
+                          % (self.sender()))
+            return
+
+        return self.thread_exited(self.sender())
 
 if __name__ == '__main__':
     install_excepthook(__version__)
