@@ -695,10 +695,12 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                 post['longitude'] = int(post['longitude'])
 
             # Loop on accounts
+            did_something = False
             for account in self.accounts:
 
                 # Reply
 
+                acted = True
                 if post['action'] == 'reply':  # Reply tweet
                     if account['base_url'] == post['base_url'] \
                         and account['use_for_tweet'] == 'true':
@@ -816,9 +818,19 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                             raise StandardError('No twitpic url')
                 else:
+                    acted = False
+                    logging.error('Processing post %s: unknown action: %s'
+                                  % (str(post), post['action']))
+                if acted:
+                    did_something = True
 
-                    logging.error('Unknow action : %s' % post['action'])
-
+            if not did_something:
+                logging.error('Post %s not handled by any accounts!'
+                              % (str(post)))
+                if settings.value('ShowInfos', None) == '2':
+                    self.dbus_handler.info(
+                        'Khweeteur: Post %s not handled by any accounts!'
+                        % (str(post)))
             os.remove(item)
         except twitter.TwitterError, err:
 
