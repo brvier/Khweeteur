@@ -19,7 +19,8 @@ __version__ = '0.5.27'
 from PySide.QtGui import QMainWindow, QHBoxLayout, QSizePolicy, QToolButton, \
     QVBoxLayout, QFileDialog, QDesktopServices, QScrollArea, QPushButton, \
     QToolBar, QLabel, QWidget, QInputDialog, QMenu, QAction, QApplication, \
-    QIcon, QMessageBox, QPlainTextEdit, QTextCursor
+    QIcon, QMessageBox, QPlainTextEdit, QTextCursor, QDialog, QCheckBox, \
+    QDialogButtonBox
 from PySide.QtCore import Qt, QUrl, QSettings, Slot, Signal, QTimer
 
 try:
@@ -749,25 +750,138 @@ class KhweeteurWin(QMainWindow):
             except:
                 raise
 
+    def select_accounts(self, message='Select Accounts',
+                        default_accounts=None, service=None):
+        """
+        Ask the user what accounts should be used for some action,
+        which is described by message.
+
+        If default_accounts is not None, it must be a list of account
+        identifiers that should be selected by default.  Otherwise,
+        the default is those accounts with 'use_for_tweet' set to
+        'true'.
+
+        If service is not None, only asks about those accounts for the
+        specified service.
+
+        The make default button is only shown if default_accoutns and
+        service is None.
+
+        Returns account identifiers (use as the base_url).
+        """
+        print("Default accounts: %s; service: %s"
+              % (str (default_accounts), str(service)))
+
+        def make_default():
+            settings.beginWriteArray('accounts')
+            for (index, account) in enumerate(accounts):
+                if account['box'].checkState():
+                    account['use_for_tweet'] = 'true'
+                else:
+                    account['use_for_tweet'] = 'false'
+
+                settings.setArrayIndex(index)
+                settings.setValue('name', account['name'])
+                settings.setValue('consumer_key', account['consumer_key'])
+                settings.setValue('consumer_secret', account['consumer_secret'])
+                settings.setValue('token_key', account['token_key'])
+                settings.setValue('token_secret', account['token_secret'])
+                settings.setValue('use_for_tweet', account['use_for_tweet'])
+                settings.setValue('base_url', account['base_url'])
+            settings.endArray()
+
+        settings = QSettings('Khertan Software', 'Khweeteur')
+        nb_accounts = settings.beginReadArray('accounts')
+        accounts = []
+        for index in range(nb_accounts):
+            settings.setArrayIndex(index)
+            account = dict((key, settings.value(key))
+                           for key in settings.allKeys())
+            if service is None or service == account['base_url']:
+                accounts.append(account)
+        settings.endArray()
+
+        if nb_accounts == 1:
+            # We have exactly one account that is marked as
+            # appropriate for sending tweets.  Use it.
+            pass
+        else:
+            d = QDialog()
+            d.setWindowTitle(message)
+
+            layout = QVBoxLayout()
+            for a in accounts:
+                a['box'] = QCheckBox(a['name'])
+
+                checked = False
+                if default_accounts is not None:
+                    aid = a['base_url'] + ';' + a['token_key']
+                    if aid in default_accounts:
+                        checked = True
+                else:
+                    if a['use_for_tweet'] == 'true':
+                        checked = True
+
+                a['box'].setCheckState(Qt.Checked if checked else Qt.Unchecked)
+
+                layout.addWidget(a['box'])
+
+            buttonbox = QDialogButtonBox(
+                QDialogButtonBox.Ok|QDialogButtonBox.Cancel,
+                parent=d)
+            buttonbox.accepted.connect(d.accept)
+            buttonbox.rejected.connect(d.reject)
+
+            if default_accounts is None and service is None:
+                make_default_button = QPushButton("Make &Default")
+                buttonbox.addButton(make_default_button,
+                                    QDialogButtonBox.ApplyRole)
+                make_default_button.clicked.connect(make_default)
+
+            layout.addWidget(buttonbox)
+
+            d.setLayout(layout)
+            if d.exec_() == QDialog.Accepted:
+                accounts = [a for a in accounts
+                            if a['box'].checkState()]
+            else:
+                accounts = []
+
+        base_urls = [a['base_url'] + ';' + a['token_key']
+                     for a in accounts]
+
+        return base_urls
+
     @Slot()
     def do_tb_send(self):
         is_not_reply = self.tb_text_reply_id == 0
-        self.dbus_handler.post_tweet(  # shorten_url=\
-                                       # serialize=\
-                                       # text=\
-                                       # latitude =
-                                       # longitude =
-                                       # base_url
-                                       # action
-            1,
-            1,
-            self.tb_text.toPlainText(),
-            ('' if self.geoloc_source == None else self.geoloc_coordinates[0]),
-            ('' if self.geoloc_source == None else self.geoloc_coordinates[1]),
-            ('' if is_not_reply else self.tb_text_reply_base_url),
-            ('tweet' if is_not_reply else 'reply'),
-            ('' if is_not_reply else str(self.tb_text_reply_id)),
-            )
+
+        default_accounts = None
+        if not is_not_reply:
+            default_accounts = [self.tb_text_reply_base_url]
+
+        base_urls = self.select_accounts(default_accounts=default_accounts)
+        if not base_urls:
+            # Nothing selected => cancelled.
+            return
+
+        for base_url in base_urls:
+            self.dbus_handler.post_tweet(  # shorten_url=\
+                                           # serialize=\
+                                           # text=\
+                                           # latitude =
+                                           # longitude =
+                                           # base_url
+                                           # action
+                1,
+                1,
+                self.tb_text.toPlainText(),
+                ('' if self.geoloc_source == None else self.geoloc_coordinates[0]),
+                ('' if self.geoloc_source == None else self.geoloc_coordinates[1]),
+                base_url,
+                ('tweet' if is_not_reply else 'reply'),
+                ('' if is_not_reply else str(self.tb_text_reply_id)),
+                )
         self.switch_tb_default()
         self.dbus_handler.require_update()
 
@@ -822,9 +936,9 @@ class KhweeteurWin(QMainWindow):
             "Khweeteur Retweet",
             "Did you want to retweet '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
-            tweet_id = None
+            return
 
-        if tweet_id:
+        for base_url in self.select_accounts(default_accounts=[tweet_source]):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
@@ -838,7 +952,7 @@ class KhweeteurWin(QMainWindow):
                 '',
                 '',
                 '',
-                tweet_source,
+                base_url,
                 'retweet',
                 str(tweet_id),
                 )
@@ -892,9 +1006,9 @@ class KhweeteurWin(QMainWindow):
             "Khweeteur Favorite",
             "Did you really want to favorite '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
-            tweet_id = None
+            return
 
-        if tweet_id:
+        for base_url in self.select_accounts(default_accounts=[tweet_source]):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
@@ -908,7 +1022,7 @@ class KhweeteurWin(QMainWindow):
                 '',
                 '',
                 '',
-                tweet_source,
+                base_url,
                 'favorite',
                 str(tweet_id),
                 )
@@ -926,16 +1040,13 @@ class KhweeteurWin(QMainWindow):
         if user_id is None:
             user_id = screenname
 
-        print ("do_tb_follow(user_id: %s; tweet_source: %s; screenname %s)"
-               % (user_id, tweet_source, screenname))
-
         if not (( QMessageBox.question(None,
             "Khweeteur Follow",
-            "Did you really want to follow '%s'?" % screenname,
+            "Do you really want to follow '%s'?" % screenname,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
-            user_id = None
+            return
 
-        if user_id:
+        for base_url in self.select_accounts(default_accounts=[tweet_source]):
             self.dbus_handler.post_tweet(  # shorten_url=\
                                            # serialize=\
                                            # text=\
@@ -949,7 +1060,7 @@ class KhweeteurWin(QMainWindow):
                 '',
                 '',
                 '',
-                tweet_source,
+                base_url,
                 'follow',
                 str(user_id),
                 )

@@ -703,8 +703,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                 acted = True
                 if post['action'] == 'reply':  # Reply tweet
-                    if aid == post['base_url'] \
-                        and account['use_for_tweet'] == 'true':
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
@@ -726,8 +725,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                     # Retweet
 
-                    if aid == post['base_url'] \
-                        and account['use_for_tweet'] == 'true':
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         api.PostRetweet(tweet_id=int(post['tweet_id']))
                         logging.debug('Posted retweet %s'
@@ -740,7 +738,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                     # Else "simple" tweet
 
-                    if account['use_for_tweet'] == 'true':
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
