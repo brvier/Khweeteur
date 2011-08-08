@@ -831,7 +831,13 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     self.dbus_handler.info(
                         'Khweeteur: Post %s not handled by any accounts!'
                         % (str(post)))
-            os.remove(item)
+
+            logging.debug("post processed, deleting %s" % item)
+            try:
+                os.remove(item)
+            except OSError, exception:
+                logging.error("remove (processed) file %s: %s"
+                              % (item, str(exception)))
         except twitter.TwitterError, err:
 
             if err.message == 'Status is a duplicate.':
