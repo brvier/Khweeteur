@@ -263,8 +263,8 @@ class KhweeteurPref(QMainWindow):
         # load other prefs
 
         self.refresh_value.valueChanged.connect(self.checkRefreshRate)
-        if self.settings.contains('refreshInterval'):
-            self.refresh_value.setValue(int(self.settings.value('refreshInterval')))
+        if self.settings.contains('refresh_interval'):
+            self.refresh_value.setValue(int(self.settings.value('refresh_interval')))
         else:
             self.refresh_value.setValue(10)
 
@@ -356,7 +356,7 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('base_url', account.base_url)
         self.settings.endArray()
 
-        self.settings.setValue('refreshInterval', self.refresh_value.value())
+        self.settings.setValue('refresh_interval', self.refresh_value.value())
         self.settings.setValue('useDaemon',
                                self.useNotification_value.checkState())
         self.settings.setValue('useSerialization',
@@ -432,7 +432,8 @@ class KhweeteurPref(QMainWindow):
         del self.oauth_webview
 
     def do_ask_token(self, account_type, use_for_tweet):
-        print account_type, use_for_tweet
+        print ("Ask for token for: %s (use for tweet: %s)"
+               % (account_type, str(use_for_tweet)))
 
         oauth_consumer = oauth.Consumer(key=account_type['consumer_key'],
                                         secret=account_type['consumer_secret'])
