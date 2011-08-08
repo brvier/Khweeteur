@@ -576,7 +576,10 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         settings = settings_db()
 
         if self._accounts_read_at == settings_db_generation:
+            logging.debug("accounts(): Using cached version (%d accounts)."
+                          % (len(self._accounts),))
             return self._accounts
+        logging.debug("accounts(): Reloading accounts from settings file.")
 
         nb_accounts = settings.beginReadArray('accounts')
         accounts = []
@@ -585,7 +588,11 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             account = dict((key, settings.value(key))
                            for key in settings.allKeys())
             accounts.append(account)
+
+            logging.debug("accounts(): Account %d: %s"
+                          % (index + 1, repr(account)))
         settings.endArray()
+        logging.debug("accounts(): Loaded %d accounts" % (len(accounts),))
 
         self._accounts = accounts
         self._accounts_read_at = settings_db_generation
