@@ -403,7 +403,12 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                      path='/net/khertan/Khweeteur',
                                      dbus_interface='net.khertan.Khweeteur',
                                      signal_name='post_tweet')
-        self.threads = []  # Here to avoid gc
+        # We maintain the list of currently running jobs so that we
+        # know when all jbos complete, to improve debugging output,
+        # and because we have to: if the QThread object goes out of
+        # scope and is gced while the thread is still running, Bad
+        # Things Happen.
+        self.threads = {}
         # Hash from an account's token_key to an authenticated twitter.Api.
         self.apis = {}
         # Hash from an account's token_key to the user's identifier.
@@ -870,11 +875,10 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             if settings.value('useGPS') == '2':
                 useGPS = True
 
-        # Cleaning old thread reference for keep for gc
-        logging.debug('Number of thread not gc : %s' % str(len(self.threads)))
-
         if len(self.threads)>0:
             # Update in progress.
+            logging.info('Update in progress (%s jobs still running: %s)'
+                         % (len (self.threads), str(self.threads.values())))
             return            
 
         # Remove old tweets in cache according to history prefs
@@ -939,7 +943,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                         t.terminated.connect(self.athread_end)
                         t.new_tweets.connect(self.dbus_handler.new_tweets)
                         t.start()
-                        self.threads.append(t)
+                        self.threads[t] = (thing + ' on ' + account['base_url']
+                                           + ';' + account['token_key'])
                     except Exception, err:
                         logging.error(
                             'Creating worker for account %s, job %s: %s'
@@ -971,19 +976,26 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
     @Slot()
     def kill_thread(self):
-        for thread in self.threads:
+        for thread, tid in self.threads.items():
             if not thread.isFinished():
-                logging.debug("Terminating thread %s" % (str(thread),))
+                logging.debug("Terminating thread %s: %s"
+                              % (str(thread), tid))
                 thread.terminate()             
     @Slot()
     def athread_end(self):
+        logging.debug("Job %s finished; Jobs still running: %s"
+                      % (self.threads[self.sender()],
+                         str ([v for k, v in self.threads.items()
+                               if k != self.sender()])))
         try:
-            self.threads.remove(self.sender())
-        except ValueError:
-            pass
-        if all([thread.isFinished() for thread in self.threads]):            
+            del self.threads[self.sender()]
+        except ValueError, exception:
+            logging.debug("Unregistered thread %s called athread_end (%s)!"
+                          % (str(thread), str (exception)))
+
+        if len(self.threads) == 0:
             self.dbus_handler.refresh_ended()
-            logging.debug('Finished loop')
+            logging.debug('Finished update')
         
 
 if __name__ == '__main__':
