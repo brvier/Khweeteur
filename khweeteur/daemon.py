@@ -697,12 +697,13 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             # Loop on accounts
             did_something = False
             for account in self.accounts:
+                aid = account['base_url'] + ';' + account['token_key']
 
                 # Reply
 
                 acted = True
                 if post['action'] == 'reply':  # Reply tweet
-                    if account['base_url'] == post['base_url'] \
+                    if aid == post['base_url'] \
                         and account['use_for_tweet'] == 'true':
                         api = self.get_api(account)
                         if post['serialize'] == 1:
@@ -725,7 +726,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
 
                     # Retweet
 
-                    if account['base_url'] == post['base_url'] \
+                    if aid == post['base_url'] \
                         and account['use_for_tweet'] == 'true':
                         api = self.get_api(account)
                         api.PostRetweet(tweet_id=int(post['tweet_id']))
@@ -755,7 +756,7 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 self.dbus_handler.info('Khweeteur: Status posted to '
  + account['name'])
                 elif post['action'] == 'delete':
-                    if account['base_url'] == post['base_url']:
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         api.DestroyStatus(int(post['tweet_id']))
                         path = os.path.join(os.path.expanduser('~'),
@@ -769,26 +770,26 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                                 self.dbus_handler.info('Khweeteur: Status deleted on '
  + account['name'])
                 elif post['action'] == 'favorite':
-                    if account['base_url'] == post['base_url']:
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         api.CreateFavorite(int(post['tweet_id']))
                         logging.debug('Favorited %s' % (post['tweet_id'
                                 ], ))
                 elif post['action'] == 'follow':
-                    if account['base_url'] == post['base_url']:
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         api.CreateFriendship(int(post['tweet_id']))
                         logging.debug('Follow %s' % (post['tweet_id'],
                                 ))
                 elif post['action'] == 'unfollow':
-                    if account['base_url'] == post['base_url']:
+                    if aid == post['base_url']:
                         api = self.get_api(account)
                         api.DestroyFriendship(int(post['tweet_id']))
                         logging.debug('Follow %s' % (post['tweet_id'],
                                 ))
                 elif post['action'] == 'twitpic':
                     if account['base_url'] \
-                        == SUPPORTED_ACCOUNTS[0]['base_url']:
+                            == SUPPORTED_ACCOUNTS[0]['base_url']:
                         api = self.get_api(account)
                         import twitpic
                         twitpic_client = \
