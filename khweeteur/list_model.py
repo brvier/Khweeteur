@@ -7,6 +7,8 @@
 
 '''A simple Twitter client made with pyqt4 : QModel'''
 
+from __future__ import with_statement
+
 import time
 import cPickle as pickle
 #import glob
@@ -94,9 +96,8 @@ class KhweetsModel(QAbstractListModel):
             _items = self._items[call]
             for uid in uids:
                 if uid not in _uids:
-                    pkl_file = open(os.path.join(folder, str(uid)), 'rb')
-                    status = pickle.load(pkl_file)
-                    pkl_file.close()
+                    with open(os.path.join(folder, str(uid)), 'rb') as pkl_file:
+                        status = pickle.load(pkl_file)
                     _uids.append(uid)
                     _items.append(status)
                     if hasattr(status, 'user'):
