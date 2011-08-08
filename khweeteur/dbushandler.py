@@ -73,11 +73,14 @@ class KhweeteurDBusHandler(dbus.service.Object):
         tweet_id='0',
         ):
         import time
+        import random
         import pickle
         if not os.path.exists(self.post_path):
             os.makedirs(self.post_path)
-        with open(os.path.join(self.post_path, str(time.time())), 'wb') as \
-            fhandle:
+
+        filename = os.path.join(self.post_path,
+                                str(time.time()) + '-' + str (random.random()))
+        with open(filename, 'wb') as fhandle:
             post = {
                 'shorten_url': shorten_url,
                 'serialize': serialize,

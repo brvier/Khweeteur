@@ -13,6 +13,7 @@ from PySide.QtCore import QSettings, Slot, QTimer, QCoreApplication
 import atexit
 import os
 from signal import SIGTERM
+import random
 
 import logging
 
@@ -473,8 +474,9 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             except IOError, e:
                 logging.debug('post_tweet:' + e)
 
-        with open(os.path.join(self.post_path, str(time.time())), 'wb') as \
-            fhandle:
+        with open(os.path.join(self.post_path,
+                               str(time.time()) + '-' + str (random.random())),
+                  'wb') as fhandle:
             post = {
                 'shorten_url': shorten_url,
                 'serialize': serialize,
