@@ -3,6 +3,7 @@
 
 #
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 '''A simple Twitter client made with pyqt4'''
@@ -49,6 +50,28 @@ except:
 
 from PySide.QtWebKit import QWebView
 
+import twitter
+
+def screenname(account):
+    """
+    Given a KhweeteurAccount, refresh the name attribute with the
+    screen name.
+
+    Returns True if account.name was updated.
+    """
+    api = twitter.Api(username=account.consumer_key,
+                      password=account.consumer_secret,
+                      access_token_key=account.token_key,
+                      access_token_secret=account.token_secret,
+                      base_url=account.base_url)
+    creds = api.VerifyCredentials()
+    account_type = [a['name'] for a in SUPPORTED_ACCOUNTS
+                    if a['base_url'] == account.base_url][0]
+    name = account_type + ': ' + creds.name
+    if name == account.name:
+        return False
+    account.name = name
+    return True
 
 class OAuthView(QWebView):
 
@@ -219,9 +242,10 @@ class KhweeteurPref(QMainWindow):
 
         self.accounts = []
         nb_accounts = self.settings.beginReadArray('accounts')
+        have_update = False
         for index in range(nb_accounts):
             self.settings.setArrayIndex(index)
-            self.accounts.append(KhweeteurAccount(
+            account = KhweeteurAccount(
                 name=self.settings.value('name'),
                 consumer_key=self.settings.value('consumer_key'),
                 consumer_secret=self.settings.value('consumer_secret'),
@@ -229,7 +253,10 @@ class KhweeteurPref(QMainWindow):
                 token_secret=self.settings.value('token_secret'),
                 use_for_tweet=self.settings.value('use_for_tweet'),
                 base_url=self.settings.value('base_url'),
-                ))
+                )
+            if screenname(account):
+                have_update = True
+            self.accounts.append(account)
         self.settings.endArray()
         self.accounts_model.set(self.accounts)
 
@@ -298,6 +325,9 @@ class KhweeteurPref(QMainWindow):
             self.showMentionNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showMentionNotifications'))))
         else:
             self.showMentionNotifications_value.setCheckState(Qt.CheckState(2))
+
+        if have_update:
+            self.savePrefs()
 
     def checkRefreshRate(self):
         if self.refresh_value.value() < 10:
@@ -372,8 +402,7 @@ class KhweeteurPref(QMainWindow):
             if resp['status'] == '200':
 
                 # Create the account
-
-                self.accounts.append(KhweeteurAccount(
+                account = KhweeteurAccount(
                     name=self.oauth_webview.account_type['name'],
                     base_url=self.oauth_webview.account_type['base_url'],
                     consumer_key=self.oauth_webview.account_type['consumer_key'
@@ -383,7 +412,9 @@ class KhweeteurPref(QMainWindow):
                     token_key=access_token['oauth_token'][0],
                     token_secret=access_token['oauth_token_secret'][0],
                     use_for_tweet=self.oauth_webview.use_for_tweet,
-                    ))
+                    )
+                screenname(account)
+                self.accounts.append(account)
                 self.accounts_model.set(self.accounts)
                 self.savePrefs()
             else:
