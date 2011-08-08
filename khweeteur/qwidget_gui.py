@@ -831,6 +831,7 @@ class KhweeteurWin(QMainWindow):
                                            # latitude =
                                            # longitude =
                                            # base_url =
+                                           # action =
                                            # tweet_id =
                 0,
                 0,
@@ -865,6 +866,7 @@ class KhweeteurWin(QMainWindow):
                                            # latitude =
                                            # longitude =
                                            # base_url =
+                                           # action =
                                            # tweet_id =
                 0,
                 0,
@@ -899,6 +901,7 @@ class KhweeteurWin(QMainWindow):
                                            # latitude =
                                            # longitude =
                                            # base_url =
+                                           # action =
                                            # tweet_id =
                 0,
                 0,
@@ -933,6 +936,7 @@ class KhweeteurWin(QMainWindow):
                                            # latitude =
                                            # longitude =
                                            # base_url =
+                                           # action =
                                            # tweet_id =
                 0,
                 0,
@@ -967,6 +971,7 @@ class KhweeteurWin(QMainWindow):
                                            # latitude =
                                            # longitude =
                                            # base_url =
+                                           # action =
                                            # tweet_id =
                 0,
                 0,

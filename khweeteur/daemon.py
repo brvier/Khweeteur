@@ -467,27 +467,72 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         action='',
         tweet_id='',
         ):
+        """
+        Queue a status update.
+
+        shorten_url: A boolean indicating whether to shorten any URLs
+            embedded in text.  If true, text is searched for any URLs
+            and they are shortened using the configured URL shortener.
+
+        serialize: A boolean indicating whether to send the tweet as
+            multiple status updates if the length of text exceeds the
+            single tweet limit.
+
+        text: The body of the tweet.
+
+        latitude, longitude: The latitude and longitude of where the
+           status update was made
+
+        base_url: Meaning depends on the value of 'action':
+
+           If 'twitpic': the filename of the picture to tweet.
+
+           If 'tweet': ''.
+
+           If 'reply': the base url of the tweet to which this tweet
+               is a reply.
+
+           If 'retweet', 'delete', 'favorite', 'follow' or 'unfollow':
+               the base url of the account.
+
+        action: 'twitpic', 'tweet', 'reply', 'retweet', 'delete',
+          'favorite', 'follow'
+
+        tweet_id: If action is 'retweet', 'delete' or 'favorite', the
+           tweet id of the tweet in question.
+
+           If action is 'follow' or 'unfollow': the user id of the
+           user to follow.
+
+           Otherwise, ''.
+
+        The status update will actually be sent when do_posts is
+        called.
+        """
+
+        post = {'shorten_url':shorten_url,
+                'serialize':serialize,
+                'text': text, 
+                'latitude':latitude,
+                'longitude':longitude,
+                'base_url':base_url,
+                'action':action,
+                'tweet_id':tweet_id,
+                }
+        logging.debug('post_tweet %s' % (repr(post),))
 
         if not os.path.isdir(self.post_path):
             try:
                 os.makedirs(self.post_path)
             except IOError, e:
-                logging.debug('post_tweet:' + e)
+                logging.error('post_tweet %s: creating directory %s: %s'
+                              % (repr(post), self.post_path, e))
 
-        with open(os.path.join(self.post_path,
-                               str(time.time()) + '-' + str (random.random())),
-                  'wb') as fhandle:
-            post = {
-                'shorten_url': shorten_url,
-                'serialize': serialize,
-                'text': text,
-                'latitude': latitude,
-                'longitude': longitude,
-                'base_url': base_url,
-                'action': action,
-                'tweet_id': tweet_id,
-                }
-            logging.debug('%s' % (post.__repr__(), ))
+        filename = os.path.join(self.post_path,
+                                str(time.time()) + '-' + str (random.random()))
+        logging.debug('Saving status update %s to %s'
+                      % (post.__repr__(), filename))
+        with open(filename, 'wb') as fhandle:
             pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
 
 #        self.do_posts() #Else we loop when action create a post
@@ -578,6 +623,9 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
             print 'GPS Update not valid'
 
     def do_posts(self):
+        """
+        Post any queued posts.
+        """
         settings = settings_db()
 
         items = glob.glob(os.path.join(self.post_path, '*'))
@@ -590,7 +638,6 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
                     return
 
         for item in items:
-            logging.debug('Try to post %s' % (item, ))
             self.do_post(item, settings)
 
     def do_post(self, item, settings=None):
@@ -604,6 +651,8 @@ class KhweeteurDaemon(Daemon,QCoreApplication):
         try:
             with open(item, 'rb') as fhandle:
                 post = pickle.load(fhandle)
+
+            logging.debug('Posting %s: %s' % (item, repr(post)))
 
             text = post['text']
             if post['shorten_url'] == 1:
