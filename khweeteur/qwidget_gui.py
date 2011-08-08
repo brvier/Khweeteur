@@ -380,7 +380,12 @@ class KhweeteurWin(QMainWindow):
     @Slot()
     def post_init_2(self):
         self.listen_dbus()
-        self.dbus_handler.require_update()
+        # This has been known to fail with an interrupt system call.
+        # Don't let this stop us from completing initialization.
+        try:
+            self.dbus_handler.require_update()
+        except IOError, exception:
+            print "Calling require_update: %s" % (str(exception))
         self.tb_update.triggered.connect(self.dbus_handler.require_update)
         self.geolocDoStart()
 
