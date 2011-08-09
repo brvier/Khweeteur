@@ -12,6 +12,7 @@ import twitter
 import socket
 socket.setdefaulttimeout(60)
 from urllib import urlretrieve
+import re
 
 import cPickle as pickle
 try:
@@ -87,6 +88,15 @@ class KhweeteurRefreshWorker(QThread):
 
         return self.folder_path
 
+    def statusFilename(self, status):
+        # Place each service in its own name space.
+        if not hasattr(self, 'filename_prefix'):
+            self.filename_prefix = re.sub(
+                '^https?://', '', self.api.base_url).replace('/', '_') + '-'
+
+        return os.path.join(self.getCacheFolder(),
+                            self.filename_prefix + str(status.id))
+
     def downloadProfilesImage(self, statuses):
         avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                    'avatars')
@@ -116,15 +126,15 @@ class KhweeteurRefreshWorker(QThread):
         # Load cached statuses
 
         try:
-            folder_path = self.getCacheFolder()
             for status in statuses:
-                if os.path.exists(os.path.join(folder_path, str(status.id))):
+                filename = self.statusFilename(status)
+                if os.path.exists(filename):
                     statuses.remove(status)
-                    logging.debug('%s found in cache (%s)' % (str(status.id),
-                                  folder_path))
+                    logging.debug('%s found in cache (%s)'
+                                  % (str(status.id), filename))
                 else:
                     logging.debug('%s not found in cache (%s)'
-                                  % (str(status.id), folder_path))
+                                  % (str(status.id), filename))
         except StandardError, err:
             logging.debug(err)
 
@@ -198,12 +208,10 @@ class KhweeteurRefreshWorker(QThread):
         statuses is a list of status updates (twitter.Status objects).
         For each status update, writes the status update to disk.
         """
-        folder_path = self.getCacheFolder()
-
         for status in statuses:
+            filename = self.statusFilename(status)
             try:
-                with open(os.path.join(folder_path, unicode(status.id)),
-                          'wb') as fhandle:
+                with open(filename, 'wb') as fhandle:
                     pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             except:
                 logging.debug('Serialization of %s failed: %s'

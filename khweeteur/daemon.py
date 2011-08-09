@@ -760,14 +760,15 @@ class KhweeteurDaemon(QCoreApplication):
         for (root, folders, files) in os.walk(self.cache_path):
             for folder in folders:
                 statuses = []
+                filenames = {}
                 uids = glob.glob(os.path.join(root, folder, '*'))
                 for uid in uids:
                     uid = os.path.basename(uid)
                     try:
-                        pkl_file = open(os.path.join(root, folder, uid),
-                                'rb')
-                        status = pickle.load(pkl_file)
-                        pkl_file.close()
+                        filename = os.path.join(root, folder, uid)
+                        with open(filename, 'rb') as pkl_file:
+                            status = pickle.load(pkl_file)
+                        filenames[status] = filename
                         statuses.append(status)
                     except StandardError, err:
                         logging.debug('Error in cache cleaning: %s,%s'
@@ -776,11 +777,10 @@ class KhweeteurDaemon(QCoreApplication):
                               status.created_at_in_seconds, reverse=True)
                 for status in statuses[keep:]:
                     try:
-                        os.remove(os.path.join(root, folder,
-                                  str(status.id)))
+                        os.remove(filenames[status])
                     except StandardError, err:
-                        logging.debug('Cannot remove : %s : %s'
-                                % (str(status.id), str(err)))
+                        logging.debug('Cannot remove: %s : %s'
+                                      % (str(status.id), str(err)))
 
         nb_searches = settings.beginReadArray('searches')
         searches = []
