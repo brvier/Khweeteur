@@ -1,0 +1,65 @@
+diff -u -r python-daemon-1.5.5/daemon/runner.py pydaemon/runner.py
+--- python-daemon-1.5.5/daemon/runner.py	2010-01-20 12:33:10.000000000 +0100
++++ pydaemon/runner.py	2011-08-09 23:48:08.000000000 +0200
+@@ -21,10 +21,11 @@
+ import os
+ import signal
+ import errno
++import time
+ 
+-import pidlockfile
++import pydaemon.pidlockfile as pidlockfile
+ 
+-from daemon import DaemonContext
++from pydaemon.daemon import DaemonContext
+ 
+ 
+ class DaemonRunnerError(Exception):
+@@ -75,11 +76,27 @@
+             """
+         self.parse_args()
+         self.app = app
+-        self.daemon_context = DaemonContext()
+-        self.daemon_context.stdin = open(app.stdin_path, 'r')
+-        self.daemon_context.stdout = open(app.stdout_path, 'w+')
+-        self.daemon_context.stderr = open(
+-            app.stderr_path, 'w+', buffering=0)
++        detach_process = None
++        try:
++            detach_process = app.detach_process
++        except AttributeError:
++            pass
++        self.daemon_context = DaemonContext(detach_process=detach_process)
++        if hasattr(app, 'stdin_path'):
++            self.daemon_context.stdin = open(app.stdin_path, 'r')
++        else:
++            self.daemon_context.stdin = sys.stdin
++            
++        if hasattr(app, 'stdout_path'):
++            self.daemon_context.stdout = open(app.stdout_path, 'w+')
++        else:
++            self.daemon_context.stdout = sys.stdout
++
++        if hasattr(app, 'stderr_path'):
++            self.daemon_context.stderr = open(
++                app.stderr_path, 'w+', buffering=0)
++        else:
++            self.daemon_context.stderr = sys.stderr
+ 
+         self.pidfile = None
+         if app.pidfile_path is not None:
+@@ -136,6 +153,14 @@
+         pid = self.pidfile.read_pid()
+         try:
+             os.kill(pid, signal.SIGTERM)
++            time.sleep(3)
++            try:
++                os.kill(pid, signal.SIGKILL)
++            except OSError, exc:
++                # It might already be dead.  If we now get a no such
++                # process error, ignore it.
++                if 'No such process' not in str(exc):
++                    raise
+         except OSError, exc:
+             raise DaemonRunnerStopFailureError(
+                 "Failed to terminate %(pid)d: %(exc)s" % vars())
