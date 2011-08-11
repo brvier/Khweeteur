@@ -137,26 +137,12 @@ class KhweeteurRefreshWorker(QThread):
 
     def removeAlreadyInCache(self, statuses):
         """
-        Delete the file associated with the statuses.
+        If a status was already downloaded, remove it from statuses.
 
         statuses is a list of status updates (twitter.Status objects).
         """
-        # Load cached statuses
-
-        try:
-            keep = []
-            for status in statuses:
-                filename = self.statusFilename(status)
-                if os.path.exists(filename):
-                    logging.debug('%s found in cache (%s)'
-                                  % (str(status.id), filename))
-                else:
-                    keep.append(status)
-                    logging.debug('%s not found in cache (%s)'
-                                  % (str(status.id), filename))
-            statuses[:] = keep
-        except StandardError, err:
-            logging.debug(err)
+        statuses = [status for status in statuses
+                    if os.path.exists(self.statusFilename(status))]
 
     def applyOrigin(self, statuses):
         """
