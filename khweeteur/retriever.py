@@ -207,15 +207,38 @@ class KhweeteurRefreshWorker(QThread):
         """
         statuses is a list of status updates (twitter.Status objects).
         For each status update, writes the status update to disk.
+
+        If the status was already written to disk, removes it from the
+        statuses list.
         """
+        # Don't modify a list over which we are iterating.  Consider:
+        #   a=[1,2,3,4,5]
+        #   for i in a:
+        #     a.remove(i)
+        #   print a
+        #   [2, 4]
+        keep = []
         for status in statuses:
             filename = self.statusFilename(status)
             try:
-                with open(filename, 'wb') as fhandle:
+                # Open the file exclusively.
+                with open(filename, 'wbx') as fhandle:
                     pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
-            except:
+            except IOError, exception:
+                if 'File exists' in str(exception):
+                    # Another thread downloaded this status update.
+                    pass
+                else:
+                    raise
+            except pickle.PickleError, exception:
                 logging.debug('Serialization of %s failed: %s'
-                              % (status.id, str (sys.exc_info()[0])))
+                              % (status.id, str (exception)))
+                # Remove the empty file.
+                os.remove(filename)
+            else:
+                keep.append(status)
+
+        statuses[:] = keep
 
     def run(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
@@ -303,10 +326,11 @@ class KhweeteurRefreshWorker(QThread):
                 self.isMe(statuses)
             logging.debug('%s start serialize' % self.call)
             self.serialize(statuses)
-            statuses.sort(reverse=True)
-            settings.setValue(self.api._access_token_key + '_' + self.call,
-                              statuses[0].id)
-            self.new_tweets.emit(len(statuses), self.call)
+
+            if len(statuses) > 0:
+                settings.setValue(self.api._access_token_key + '_' + self.call,
+                                  max(statuses).id)
+                self.new_tweets.emit(len(statuses), self.call)
         settings.sync()
         logging.debug('%s refreshed' % self.call)
 
