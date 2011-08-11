@@ -105,17 +105,35 @@ class KhweeteurRefreshWorker(QThread):
 
         for status in statuses:
             if type(status) != twitter.DirectMessage:
-                cache = os.path.join(avatar_path,
-                                     os.path.basename(status.user.profile_image_url.replace('/'
-                                     , '_')))
-                if not os.path.exists(cache):
-                    try:
-                        urlretrieve(status.user.profile_image_url, cache)
-                        im = Image.open(cache)
-                        im = im.resize((50, 50))
-                        im.save(os.path.splitext(cache)[0] + '.png', 'PNG')
-                    except StandardError, err:
-                        logging.debug('DownloadProfilImage:' + str(err))
+                filename = os.path.join(
+                    avatar_path,
+                    os.path.basename(
+                        status.user.profile_image_url.replace('/', '_')))
+                filename = os.path.splitext(filename)[0] + '.png'
+
+                # Try to open the file.  If it already exists, another
+                # thread is downloading it.
+                try:
+                    with open(filename, "wbx") as fhandle:
+                        pass
+                except IOError, exception:
+                    if 'File exists' in exception:
+                        continue
+                    raise
+
+                try:
+                    urlretrieve(status.user.profile_image_url, filename)
+                    im = Image.open(filename)
+                    im = im.resize((50, 50))
+                    im.save(filename, 'PNG')
+                except StandardError, err:
+                    os.remove(filename)
+                    logging.debug('DownloadProfilImage: %s -> %s: %s'
+                                  % (status.user.profile_image_url, filename,
+                                     str(err)))
+                except:
+                    os.remove(filename)
+                    raise
 
     def removeAlreadyInCache(self, statuses):
         """
