@@ -144,15 +144,17 @@ class KhweeteurRefreshWorker(QThread):
         # Load cached statuses
 
         try:
+            keep = []
             for status in statuses:
                 filename = self.statusFilename(status)
                 if os.path.exists(filename):
-                    statuses.remove(status)
                     logging.debug('%s found in cache (%s)'
                                   % (str(status.id), filename))
                 else:
+                    keep.append(status)
                     logging.debug('%s not found in cache (%s)'
                                   % (str(status.id), filename))
+            statuses[:] = keep
         except StandardError, err:
             logging.debug(err)
 
