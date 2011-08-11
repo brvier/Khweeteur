@@ -27,6 +27,7 @@ from PySide.QtCore import QSettings,QThread, Signal
 import logging
 import os
 import socket
+import glob
 
 class KhweeteurRefreshWorker(QThread):
 
@@ -88,14 +89,17 @@ class KhweeteurRefreshWorker(QThread):
 
         return self.folder_path
 
-    def statusFilename(self, status):
-        # Place each service in its own name space.
+    def statusIdFilename(self, status_id):
         if not hasattr(self, 'filename_prefix'):
             self.filename_prefix = re.sub(
                 '^https?://', '', self.api.base_url).replace('/', '_') + '-'
 
         return os.path.join(self.getCacheFolder(),
-                            self.filename_prefix + str(status.id))
+                            self.filename_prefix + str(status_id))
+
+    def statusFilename(self, status):
+        # Place each service in its own name space.
+        return self.statusIdFilename(status.id)
 
     def downloadProfilesImage(self, statuses):
         avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
@@ -155,36 +159,6 @@ class KhweeteurRefreshWorker(QThread):
             status.base_url = (
                 self.api.base_url + ';' + self.api._access_token_key)
 
-    def getOneReplyContent(self, tid):
-
-        # Got from cache
-
-        status = None
-        for (root, dirs, files) in os.walk(os.path.join(os.path.expanduser('~'
-                ), '.khweeteur', 'cache')):
-            for afile in files:
-                if unicode(tid) == afile:
-                    try:
-                        with open(os.path.join(root, afile), 'rb') as fhandle:
-                            status = pickle.load(fhandle)
-                        return status.text
-                    except StandardError, err:
-                        logging.debug('getOneReplyContent:' + err)
-
-        try:
-            rpath = os.path.join(os.path.expanduser('~'), '.khweeteur', 'cache'
-                                 , 'Replies')
-            if not os.path.exists(rpath):
-                os.makedirs(rpath)
-
-            status = self.api.GetStatus(tid)
-            with open(os.path.join(os.path.join(rpath, unicode(status.id))),
-                      'wb') as fhandle:
-                pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
-            return status.text
-        except StandardError, err:
-            logging.debug('getOneReplyContent:' + str(err))
-
     def isMe(self, statuses):
         """
         statuses is a list of status updates (twitter.Status objects).
@@ -198,16 +172,92 @@ class KhweeteurRefreshWorker(QThread):
                 status.is_me = False
 
     def getRepliesContent(self, statuses):
+        """
+        If a status update is a reply, ensure that the message to
+        which it is a reply is downloaded and include its text in the
+        reply's data structure.
+        """
+        # If a reply to status is not available, we download it.  If
+        # that's a reply to something, we *don't* fetch the third
+        # thing.
+        new_statuses = []
         for status in statuses:
             try:
+                # If the status update is a reply, create include the
+                # text of the origin message in the reply.
                 if not hasattr(status, 'in_reply_to_status_id'):
+                    # It is not a reply.
                     status.in_reply_to_status_text = None
-                elif not status.in_reply_to_status_text \
-                    and status.in_reply_to_status_id:
-                    status.in_reply_to_status_text = \
-                        self.getOneReplyContent(status.in_reply_to_status_id)
+                    continue
+                if not (not status.in_reply_to_status_text
+                        and status.in_reply_to_status_id):
+                    # We have the text or we don't know the original's
+                    # id.
+                    continue
+
+                # We don't have the text and we know the original
+                # message's id.
+                logging.debug("%s:%s: Looking for reply to %s"
+                              % (self.call, str(status.id), str(status)))
+
+                reply_to_id = status.in_reply_to_status_id
+                reply_to = None
+
+                # First check whether we just downloaded the
+                # message to which this is a reply.
+                reply_tos = [s for s in statuses if s.id == reply_to_id]
+                if reply_tos:
+                    # It is.
+                    reply_to = reply_tos[0]
+                    logging.debug("%s:%s: Reply found in update (%s)"
+                                  % (self.call, str(status.id), str(reply_to)))
+                else:
+                    # Nope.  See if it is in the message cache.
+                    reply_tos = glob.glob(os.path.join(
+                            os.path.expanduser('~'),
+                            '.khweeteur', 'cache', '*',
+                            self.statusIdFilename(
+                                status.in_reply_to_status_id)))
+                    if reply_tos:
+                        # It is.
+                        with open(reply_tos[0], 'rb') as fhandle:
+                            reply_to = pickle.load(fhandle)
+                            logging.debug(
+                                "%s:%s: Reply found in cache (%s)"
+                                % (self.call, str(status.id), str(reply_to)))
+                    else:
+                        # Try downloading it.
+                        logging.debug("%s:%s: Downloading %s"
+                                      % (self.call, status.id, reply_to_id))
+                        try:
+                            reply_to = self.api.GetStatus(
+                                status.in_reply_to_status_id)
+                        except twitter.TwitterError, exception:
+                            logging.debug(
+                                "%s:%s: Download failed: %s"
+                                % (self.call, str(status.id), str(exception)))
+                        else:
+                            new_statuses.append(reply_to)
+                            logging.debug(
+                                "%s:%s: Reply to %s downloaded (%s)"
+                                % (self.call, str(status.id), str(reply_to)))
+
+                if reply_to:
+                    status.in_reply_to_status_text = reply_to.text
+                else:
+                    logging.debug(
+                        "%s:%s: No reply to %s found."
+                        % (self.call, str(status.id),
+                           status.in_reply_to_status_id))
             except StandardError, err:
-                logging.debug('getOneReplyContent:' + err)
+                import traceback
+                (exc_type, exc_value, exc_traceback) = sys.exc_info()
+                logging.debug('%s: getRepliesContent(%s): %s: %s'
+                              % (self.call, str(status), str(err),
+                                 repr(traceback.format_exception(
+                                          exc_type, exc_value, exc_traceback))))
+
+        statuses += new_statuses
 
     def serialize(self, statuses):
         """
@@ -322,11 +372,11 @@ class KhweeteurRefreshWorker(QThread):
         self.removeAlreadyInCache(statuses)
         if len(statuses) > 0:
             logging.debug('%s start download avatars' % self.call)
+            self.getRepliesContent(statuses)
             self.downloadProfilesImage(statuses)
             logging.debug('%s start applying origin' % self.call)
             self.applyOrigin(statuses)
             logging.debug('%s start getreply' % self.call)
-            self.getRepliesContent(statuses)
             if self.call != 'DMs':
                 logging.debug('%s start isMe' % self.call)
                 self.isMe(statuses)
