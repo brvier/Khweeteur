@@ -754,35 +754,74 @@ class KhweeteurDaemon(QCoreApplication):
 
         # Remove old tweets in cache according to history prefs
 
-        try:
-            keep = int(settings.value('tweetHistory'))
-        except:
-            keep = 60
+        # By default, flush status updates 3 days after their last
+        # modification.
+        keep_time = int(settings.value('tweetHistoryKeepTime',
+                                       3 * 24 * 60 * 60))
 
-        for (root, folders, files) in os.walk(self.cache_path):
-            for folder in folders:
-                statuses = []
-                filenames = {}
-                uids = glob.glob(os.path.join(root, folder, '*'))
-                for uid in uids:
-                    uid = os.path.basename(uid)
-                    try:
-                        filename = os.path.join(root, folder, uid)
-                        with open(filename, 'rb') as pkl_file:
-                            status = pickle.load(pkl_file)
-                        filenames[status] = filename
-                        statuses.append(status)
-                    except StandardError, err:
-                        logging.debug('Error in cache cleaning: %s,%s'
-                                % (err, os.path.join(root, uid)))
-                statuses.sort(key=lambda status: \
-                              status.created_at_in_seconds, reverse=True)
-                for status in statuses[keep:]:
-                    try:
-                        os.remove(filenames[status])
-                    except StandardError, err:
-                        logging.debug('Cannot remove: %s : %s'
-                                      % (str(status.id), str(err)))
+        # But, always keep at least 60 status updates.
+        keep_count = int(settings.value('tweetHistory', 60))
+
+        now = time.time()
+
+        for folder in os.listdir(self.cache_path):
+            folder = os.path.join(self.cache_path, folder)
+
+            if not os.path.isdir(folder):
+                continue
+
+            uids = os.listdir(folder)
+
+            uid_count = len(uids)
+            logging.debug("%s: %d files (threshold: %d)"
+                          % (folder, uid_count, keep_count))
+
+            if uid_count <= keep_count:
+                # The total number of files does not exceed the keep
+                # threshhold.  There is definately nothing to do.
+                continue
+
+            statuses = []
+            filenames = {}
+            kept = 0
+            for uid in uids:
+                try:
+                    with open(os.path.join (folder, uid), 'rb') as pkl_file:
+                        status = pickle.load(pkl_file)
+                except StandardError, err:
+                    logging.debug('Error loading %s: %s' % (uid, str(err)))
+                    continue
+
+                if status.created_at_in_seconds > now - keep_time:
+                    kept += 1
+                    continue
+
+                filenames[status] = uid
+                statuses.append(status)
+
+            statuses.sort(key=lambda status: status.created_at_in_seconds,
+                          reverse=True)
+
+            to_keep = keep_count - kept
+            if to_keep < 0:
+                to_keep = 0
+
+            logging.debug(("%s: %d files less than %d days old; %d more; "
+                           + "will keep %d of the latter (keep count: %d)")
+                          % (folder, kept, keep_time / (24 * 60 * 60),
+                             len(statuses), to_keep, keep_count))
+
+            if to_keep > 0:
+                statuses = statuses[to_keep:]
+
+            logging.debug("%s: expunging %d files" % (folder, len(statuses)))
+            for status in statuses:
+                filename = os.path.join (folder, filenames[status])
+                try:
+                    os.remove(filename)
+                except StandardError, err:
+                    logging.debug('remove(%s): %s'
+                                  % (filename, str(err)))
 
         nb_searches = settings.beginReadArray('searches')
         searches = []
