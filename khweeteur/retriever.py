@@ -132,7 +132,7 @@ class KhweeteurRefreshWorker(QThread):
                     im.save(filename, 'PNG')
                 except StandardError, err:
                     os.remove(filename)
-                    logging.debug('DownloadProfilImage: %s -> %s: %s'
+                    logging.debug('DownloadProfileImage: %s -> %s: %s'
                                   % (status.user.profile_image_url, filename,
                                      str(err)))
                 except:
@@ -300,30 +300,21 @@ class KhweeteurRefreshWorker(QThread):
         settings = QSettings('Khertan Software', 'Khweeteur')
         statuses = []
 
-        logging.debug('Thread Running')
+        logging.debug("Thread for '%s' running" % self.call)
         try:
             since = settings.value(self.api._access_token_key + '_' + self.call)
 
+            logging.debug('%s running' % self.call)
             if self.call == 'HomeTimeline':
-                logging.debug('%s running' % self.call)
                 statuses = self.api.GetHomeTimeline(since_id=since)
-                logging.debug('%s finished' % self.call)
             elif self.call == 'Mentions':
-                logging.debug('%s running' % self.call)
                 statuses = self.api.GetMentions(since_id=since)
-                logging.debug('%s finished' % self.call)
             elif self.call == 'DMs':
-                logging.debug('%s running' % self.call)
                 statuses = self.api.GetDirectMessages(since_id=since)
-                logging.debug('%s finished' % self.call)
             elif self.call.startswith('Search:'):
-                logging.debug('%s running' % self.call)
                 statuses = self.api.GetSearch(since_id=since,
                         term=self.call.split(':', 1)[1])
-                logging.debug('%s finished' % self.call)
             elif self.call == 'RetrieveLists':
-                logging.debug('%s running' % self.call)
-
                 # Get the list subscriptions
 
                 lists = \
@@ -338,49 +329,39 @@ class KhweeteurRefreshWorker(QThread):
 
                 # Get the status of list
 
-                logging.debug('%s finished' % self.call)
                 settings.sync()
             elif self.call.startswith('List:'):
-                logging.debug('%s running' % self.call)
                 user, id = self.call.split(':', 2)[1:]
                 statuses = self.api.GetListStatuses(user=user, id=id,
                                                     since_id=since)
-                logging.debug('%s finished' % self.call)
 
             #Near GPS
             elif self.call.startswith('Near:'):
-                logging.debug('%s running' % self.call)
                 geocode = self.call.split(':', 2)[1:] + ['1km']
                 logging.debug('geocode=(%s)', str(geocode))
                 statuses = self.api.GetSearch(since_id=since,
                         term='', geocode=geocode)
-                logging.debug('%s finished' % self.call)
             else:
-                logging.error('Unknown call : %s' % (self.call, ))
+                logging.error('Unknown call: %s' % (self.call, ))
         except Exception, err:
-            raise
-            logging.debug('Retriever : %s' % str(err))
-            try:
-                if settings.contains('ShowInfos'):
-                    if settings.value('ShowInfos') == '2':
-                        self.error.emit('Khweeteur Error : %s' % str(err))
-                        #self.dbus_handler.info('Khweeteur Error : ' + str(err))
-            except Exception, err:
-                raise
-                logging.debug('Retriever : %s' % (str(err)))
+            logging.debug('Retriever %s: %s' % (self.call, str(err)))
+            if settings.value('ShowInfos') == '2':
+                self.error.emit('Khweeteur Error : %s' % str(err))
+                #self.dbus_handler.info('Khweeteur Error : ' + str(err))
+
+        downloaded_statuses = len(statuses)
 
         self.removeAlreadyInCache(statuses)
+
+        logging.debug('%s: %d statuses downloaded; %d new statuses'
+                      % (self.call, downloaded_statuses, len(statuses)))
+
         if len(statuses) > 0:
-            logging.debug('%s start download avatars' % self.call)
             self.getRepliesContent(statuses)
             self.downloadProfilesImage(statuses)
-            logging.debug('%s start applying origin' % self.call)
             self.applyOrigin(statuses)
-            logging.debug('%s start getreply' % self.call)
             if self.call != 'DMs':
-                logging.debug('%s start isMe' % self.call)
                 self.isMe(statuses)
-            logging.debug('%s start serialize' % self.call)
             self.serialize(statuses)
 
             if len(statuses) > 0:
@@ -388,6 +369,6 @@ class KhweeteurRefreshWorker(QThread):
                                   max(statuses).id)
                 self.new_tweets.emit(len(statuses), self.call)
         settings.sync()
-        logging.debug('%s refreshed' % self.call)
+        logging.debug('%s finished' % self.call)
 
 

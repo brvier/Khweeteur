@@ -156,8 +156,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
     @dbus.service.signal(dbus_interface='net.khertan.Khweeteur', signature='us')
     def new_tweets(self, count, ttype):
-        logging.debug('New tweet notification ttype : %s (%s)' % (ttype,
-                      str(type(ttype))))
+        logging.debug('New tweet notification ttype : %s (%s); count: %d'
+                      % (ttype, str(type(ttype)), count))
         settings = settings_db()
         #.value('showNotifications') == '2':                      
 
@@ -217,10 +217,12 @@ class KhweeteurDaemon(QCoreApplication):
 
 #        app = QCoreApplication(sys.argv)
 
-        logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            datefmt='%a, %d %b %Y %H:%M:%S',
-                            filename=os.path.expanduser('~/.khweeteur.log'), filemode='w')
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format=(str(os.getpid()) + ' '
+                    + '%(asctime)s %(levelname)-8s %(message)s'),
+            datefmt='%a, %d %b %Y %H:%M:%S',
+            filename=os.path.expanduser('~/.khweeteur.log'), filemode='w')
         logging.info('Starting daemon %s' % __version__)
         logging.info('PySide version %s' % repr(__pyside_version__))
         logging.info('Qt Version %s' % repr(__qt_version__))
