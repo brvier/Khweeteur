@@ -254,10 +254,6 @@ class KhweeteurWin(QMainWindow):
         self.setCentralWidget(self.view)
 
         self.model = KhweetsModel()
-        try:
-            self.model.setLimit(int(settings.value('tweetHistory')))
-        except:
-            self.model.setLimit(60)
         self.view.setModel(self.model)
         self.view.clicked.connect(self.switch_tb_action)
 
