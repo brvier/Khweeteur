@@ -356,7 +356,6 @@ class KhweeteurWin(QMainWindow):
 
         self.show()
 
-        self.model.load('HomeTimeline',limit=5)
         QTimer.singleShot(0,self.post_init_2)
         QTimer.singleShot(0,self.post_init_3)
         QApplication.processEvents()

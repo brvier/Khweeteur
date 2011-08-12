@@ -28,9 +28,16 @@ PROTECTEDROLE = 28
 USERIDROLE = 29
 ISNEWROLE = 30
 
-from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, QSettings
+
+from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, \
+    QSettings, QTimer
 from PySide.QtGui import QPixmap
 import twitter #Not really unused. Avoid pickle to do it each time
+
+# Data that we may cache.  The most important data for caching is the
+# data needed for sizing rows.  See list_view for the required
+# columns.
+DATA_CACHE = (IDROLE, Qt.DisplayRole, REPLYTEXTROLE)
 
 pyqtSignal = Signal
 
@@ -53,7 +60,7 @@ class KhweetsModel(QAbstractListModel):
         self.avatars = {}
         self.now = time.time()
         self.nothing_really_loaded = True
-        self.call = 'HomeTimeLine'
+        self.call = None
         self.max_created_at = None
         self.new_message_horizon = self.now
 
@@ -64,11 +71,15 @@ class KhweetsModel(QAbstractListModel):
         except:
             self.default_avatar = None
 
+        self.data_cache = {}
+
     def __del__(self):
         if not self.nothing_really_loaded:
             settings = QSettings('Khertan Software', 'Khweeteur')
             settings.setValue(
                 self.call + '-new-message-horizon', self.max_created_at)
+
+        self.save_data_cache(lazily=False)
 
     def setLimit(self, limit):
         self.khweets_limit = limit
@@ -92,6 +103,23 @@ class KhweetsModel(QAbstractListModel):
         self.dataChanged.emit(self.createIndex(index, 0),
                               self.createIndex(self.rowCount(), 0))
 
+
+    def save_data_cache(self, lazily=True):
+        filename = self.getCacheFolder() + '-data-cache'
+
+        def closure(data_cache):
+            def doit():
+                with open(filename, 'wb') as fhandle:
+                    pickle.dump(data_cache, fhandle,
+                                pickle.HIGHEST_PROTOCOL)
+            return doit
+
+        func = closure(self.data_cache)
+        if lazily:
+            QTimer.singleShot(0, func)
+        else:
+            func()
+
     def load(self, call, limit=None):
         """
         Load a stream.
@@ -108,6 +136,8 @@ class KhweetsModel(QAbstractListModel):
         just a reload (False).
         """
         self.now = time.time()
+
+        # print "model.load(%s -> %s)" % (self.call, call)
 
         # new_message_horizon is the points in time that separates read
         # messages from new messages.  The messages creation time is
@@ -127,6 +157,9 @@ class KhweetsModel(QAbstractListModel):
                     settings.value(call + '-new-message-horizon', 0))
             except ValueError:
                 self.new_message_horizon = self.now
+                
+            if not self.nothing_really_loaded:
+                self.save_data_cache()
 
             # There might be some useful avatars, but figuring out
             # which they are requires loading all of the status
@@ -159,82 +192,118 @@ class KhweetsModel(QAbstractListModel):
         self.statuses = dict([(k, v) for k, v in self.statuses.items()
                               if k in self.uids])
 
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(self.rowCount(), 0))
+        if ret:
+            try:
+                filename = self.getCacheFolder() + '-data-cache'
+                with open(filename, 'rb') as fhandle:
+                    self.data_cache = pickle.load(fhandle)
+            except IOError, e:
+                print 'pickle.load(%s): %s' % (filename, str(e))
+                self.data_cache = {}
+
+        # Tell all views to reload all data.
+        self.reset()
 
         return ret
+
+    def get_status(self, uid):
+        # Look up the status update.
+        try:
+            return self.statuses[uid]
+        except KeyError:
+            filename = os.path.join(self.getCacheFolder(), str(uid))
+            with open(filename, 'rb') as pkl_file:
+                status = pickle.load(pkl_file)
+                self.statuses[uid] = status
+            # print "Loaded %s: %s" % (uid, status.text[0:30])
+            return status
 
     def data(self, index, role=Qt.DisplayRole):
         if not isinstance(index, int):
             index = index.row()
 
         uid = self.uids[index]
-        try:
-            status = self.statuses[uid]
-        except KeyError:
-            filename = os.path.join(self.getCacheFolder(), str(uid))
-            with open(filename, 'rb') as pkl_file:
-                status = pickle.load(pkl_file)
-                self.statuses[uid] = status
 
+        if role in DATA_CACHE:
+            # Check if the value is in our cache.
+            status = self.data_cache.get(uid, None)
+            if status is not None:
+                if role in status:
+                    return status[role]
+
+        status = None
+        value = None
         if role == Qt.DisplayRole:
+            status = self.get_status(uid)
             try:
                 if status.truncated:
-                    return status.retweeted_status.text
+                    value = status.retweeted_status.text
                 else:
-                    return status.text
+                    value = status.text
             except:
-                return status.text
+                value = status.text
         elif role == SCREENNAMEROLE:
+            status = self.get_status(uid)
             try:
-                return status.user.screen_name
+                value = status.user.screen_name
             except:
-                return status.sender_screen_name
+                value = status.sender_screen_name
         elif role == IDROLE:
-            return status.id
+            status = self.get_status(uid)
+            value = status.id
         elif role == REPLYIDROLE:
+            status = self.get_status(uid)
             try:
-                return status.in_reply_to_status_id
+                value = status.in_reply_to_status_id
             except:
-                return None
+                value = None
         elif role == REPLYTOSCREENNAMEROLE:
+            status = self.get_status(uid)
             try:
-                return status.in_reply_to_screen_name
+                value = status.in_reply_to_screen_name
             except:
-                return None
+                value = None
         elif role == REPLYTEXTROLE:
-            return status.in_reply_to_status_text
+            status = self.get_status(uid)
+            value = status.in_reply_to_status_text
         elif role == ORIGINROLE:
-            return status.base_url
+            status = self.get_status(uid)
+            value = status.base_url
         elif role == RETWEETOFROLE:
+            status = self.get_status(uid)
             try:
-                return status.retweeted_status
+                value = status.retweeted_status
             except:
-                return None
+                value = None
         elif role == ISMEROLE:
+            status = self.get_status(uid)
             try:
-                return status.is_me
+                value = status.is_me
             except:
-                return False
+                value = False
         elif role == TIMESTAMPROLE:
-
-            return status.GetRelativeCreatedAt(self.now)
+            status = self.get_status(uid)
+            value = status.GetRelativeCreatedAt(self.now)
         elif role == ISNEWROLE:
+            status = self.get_status(uid)
             try:
                 created_at = int(status.GetCreatedAtInSeconds())
             except ValueError:
                 created_at = 0
             self.max_created_at = max(self.max_created_at, created_at)
 
-            return created_at > self.new_message_horizon
+            value = created_at > self.new_message_horizon
         elif role == PROTECTEDROLE:
-            return status.user.protected
+            status = self.get_status(uid)
+            value = status.user.protected
         elif role == USERIDROLE:
+            status = self.get_status(uid)
             try:
-                return status.user.id
+                value = status.user.id
             except AttributeError:
-                return status.sender_id
+                value = status.sender_id
         elif role == Qt.DecorationRole:
+            status = self.get_status(uid)
             try:
                 profile_image_url = status.user.profile_image_url
             except AttributeError:
@@ -253,9 +322,18 @@ class KhweetsModel(QAbstractListModel):
                         value = self.default_avatar
                     else:
                         self.avatars[profile_image_url] = value
-            return value
         else:
             return None
+
+        # If the data is cachable, cache it.
+        if role in DATA_CACHE:
+            status = self.data_cache.get(uid, None)
+            if status is None:
+                status = {}
+                self.data_cache[uid] = status
+            status[role] = value
+
+        return value
 
     def wantsUpdate(self):
         self.layoutChanged.emit()
