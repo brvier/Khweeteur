@@ -85,7 +85,11 @@ class KhweetsModel(QAbstractListModel):
                               len(self._items)))
 
     def load(self, call, limit = None):
+        """
 
+        Returns whether the load loaded a new data set (True) or was
+        just a reload (False).
+        """
         self.now = time.time()
 
         # new_message_horizon is the points in time that separates read
@@ -95,6 +99,8 @@ class KhweetsModel(QAbstractListModel):
         if self.call != call:
             # It's not a reload.  Save the setting for the old stream
             # and load the setting for the new one.
+            ret = True
+
             if not self.nothing_really_loaded:
                 settings.setValue(
                     self.call + '-new-message-horizon', self.max_created_at)
@@ -104,6 +110,8 @@ class KhweetsModel(QAbstractListModel):
                     settings.value(call + '-new-message-horizon', 0))
             except ValueError:
                 self.new_message_horizon = self.now
+        else:
+            ret = False
 
         self.nothing_really_loaded = False
 
@@ -157,9 +165,15 @@ class KhweetsModel(QAbstractListModel):
         self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
                               len(self._items[call])))
 
+        return ret
+
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+        if isinstance(index, int):
+            status = self._items[self.call][index]
+        else:
             status = self._items[self.call][index.row()]
+
+        if role == Qt.DisplayRole:
             try:
                 if status.truncated:
                     return status.retweeted_status.text
@@ -202,8 +216,6 @@ class KhweetsModel(QAbstractListModel):
 
             return self._items[self.call][index.row()].GetRelativeCreatedAt(self.now)
         elif role == ISNEWROLE:
-            status = self._items[self.call][index.row()]
-
             try:
                 created_at = int(status.GetCreatedAtInSeconds())
             except ValueError:

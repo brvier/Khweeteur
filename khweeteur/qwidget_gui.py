@@ -38,7 +38,7 @@ from qbadgebutton import QToolBadgeButton
 import os
 import sys
 from list_view import KhweetsView
-from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE
+from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 
 
 try:
@@ -363,7 +363,7 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def post_init_3(self):
-        self.model.load('HomeTimeline')
+        self.do_model_load('HomeTimeline')
         #Check if there is at least one account
         nb_accounts = QSettings().beginReadArray('accounts')
         if not nb_accounts:
@@ -529,6 +529,32 @@ class KhweeteurWin(QMainWindow):
         self.tb_new.triggered.connect(self.switch_tb_edit)
 
 
+    def do_model_load(self, *args, **kwargs):
+        if not self.model.load(*args, **kwargs):
+            # It was a reload.  Don't scroll.
+            return
+
+        def test(i):
+            try:
+                return not self.model.data(i, ISNEWROLE)
+            except IndexError:
+                return False
+
+        def bisect_right(test, x):
+            lo = 0
+            hi = self.model.rowCount()
+            while lo < hi:
+                mid = (lo+hi)//2
+                if x < test(mid): hi = mid
+                else: lo = mid+1 
+            return lo
+
+        # We want to scroll to the last new message (i - 1),
+        # not the first old message (i)
+        first_old = bisect_right(test, False)
+        # print "Scrolling to %d" % (first_old,)
+        self.view.scrollTo(self.model.index(max (0,  first_old - 1), 0))
+
     @Slot()
     def do_tb_fullscreen(self):
         if self.isFullScreen():
@@ -608,7 +634,7 @@ class KhweeteurWin(QMainWindow):
             self.tb_list_button.update()
 
         if self.model.call == msg:
-            self.model.load(msg)
+            self.do_model_load(msg)
 
     @Slot()
     def show_search(self):
@@ -620,8 +646,7 @@ class KhweeteurWin(QMainWindow):
         self.mention_button.setChecked(False)
         self.tb_list_button.setChecked(False)
         self.near_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('Search:' + terms)
+        self.do_model_load('Search:' + terms)
         self.delete_search_action.setVisible(True)
         self.setWindowTitle('Khweeteur : ' + terms)
 
@@ -638,8 +663,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.setChecked(True)
         self.mention_button.setChecked(False)
         self.near_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('List:' + user + ':' + tid)
+        self.do_model_load('List:' + user + ':' + tid)
         self.delete_search_action.setVisible(True)
         self.setWindowTitle('Khweeteur List : ' + name)
 
@@ -652,8 +676,7 @@ class KhweeteurWin(QMainWindow):
         self.near_button.setChecked(False)
         self.tb_list_button.setChecked(False)
         self.mention_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('HomeTimeline')
+        self.do_model_load('HomeTimeline')
         self.setWindowTitle('Khweeteur : Home')
         self.delete_search_action.setVisible(False)
 
@@ -1112,8 +1135,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setChecked(False)
         self.home_button.setChecked(False)
         self.near_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('Mentions')
+        self.do_model_load('Mentions')
         self.setWindowTitle('Khweeteur : Mentions')
         self.delete_search_action.setVisible(False)
 
@@ -1126,8 +1148,7 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.near_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('DMs')
+        self.do_model_load('DMs')
         self.setWindowTitle('Khweeteur : DMs')
         self.delete_search_action.setVisible(False)
 
@@ -1151,9 +1172,8 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
-        self.view.scrollToTop()
-        self.model.load('Nears')
         self.setWindowTitle('Khweeteur : Near Tweets')
+        self.do_model_load('Nears')
         self.delete_search_action.setVisible(False)
 
     @Slot()
