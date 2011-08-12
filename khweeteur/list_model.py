@@ -3,6 +3,7 @@
 
 #
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 '''A simple Twitter client made with pyqt4 : QModel'''
@@ -25,8 +26,9 @@ RETWEETOFROLE = 27
 ISMEROLE = 28
 PROTECTEDROLE = 28
 USERIDROLE = 29
+ISNEWROLE = 30
 
-from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
+from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, QSettings
 from PySide.QtGui import QPixmap
 import twitter #Not really unused. Avoid pickle to do it each time
 
@@ -48,9 +50,18 @@ class KhweetsModel(QAbstractListModel):
 
         self._avatars = {}
         self.now = time.time()
+        self.nothing_really_loaded = True
         self.call = 'HomeTimeLine'
+        self.max_created_at = None
+        self.new_message_horizon = self.now
 
         self._items[self.call] = []
+
+    def __del__(self):
+        if not self.nothing_really_loaded:
+            settings = QSettings('Khertan Software', 'Khweeteur')
+            settings.setValue(
+                self.call + '-new-message-horizon', self.max_created_at)
 
     def setLimit(self, limit):
         self.khweets_limit = limit
@@ -77,10 +88,30 @@ class KhweetsModel(QAbstractListModel):
 
         self.now = time.time()
 
+        # new_message_horizon is the points in time that separates read
+        # messages from new messages.  The messages creation time is
+        # used.
+        settings = QSettings('Khertan Software', 'Khweeteur')
+        if self.call != call:
+            # It's not a reload.  Save the setting for the old stream
+            # and load the setting for the new one.
+            if not self.nothing_really_loaded:
+                settings.setValue(
+                    self.call + '-new-message-horizon', self.max_created_at)
+
+            try:
+                self.new_message_horizon = int(
+                    settings.value(call + '-new-message-horizon', 0))
+            except ValueError:
+                self.new_message_horizon = self.now
+
+        self.nothing_really_loaded = False
+
         self.call = call
         if call not in self._items:
             self._items[call] = []
             self._uids[call] = []
+
         self.avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                        'avatars')
 
@@ -170,6 +201,16 @@ class KhweetsModel(QAbstractListModel):
         elif role == TIMESTAMPROLE:
 
             return self._items[self.call][index.row()].GetRelativeCreatedAt(self.now)
+        elif role == ISNEWROLE:
+            status = self._items[self.call][index.row()]
+
+            try:
+                created_at = int(status.GetCreatedAtInSeconds())
+            except ValueError:
+                created_at = 0
+            self.max_created_at = max(self.max_created_at, created_at)
+
+            return created_at > self.new_message_horizon
         elif role == PROTECTEDROLE:
             return self._items[self.call][index.row()].user.protected
         elif role == USERIDROLE:

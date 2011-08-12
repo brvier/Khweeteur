@@ -3,14 +3,16 @@
 
 #
 # Copyright (c) 2010 Benoît HERVIER
+# Copyright (c) 2011 Neal H. Walfield
 # Licenced under GPLv3
 
 '''A simple Twitter client made with pyqt4 : QListView'''
 
 from list_model import IDROLE, SCREENNAMEROLE, REPLYTEXTROLE, \
-    RETWEETOFROLE, TIMESTAMPROLE, REPLYTOSCREENNAMEROLE
+    RETWEETOFROLE, TIMESTAMPROLE, REPLYTOSCREENNAMEROLE, ISNEWROLE
 
 import os
+import time
 
 from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
     QAbstractItemView, QFontMetrics, QFont, QStyle, QPixmap
@@ -34,6 +36,8 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         self.bg_color = QColor('#000000')
         self.bg_alternate_color = QColor('#333333')
+        self.new_bg_color = QColor('#0044dd')
+        self.new_bg_alternate_color = QColor('#223399')
         self.user_color = QColor('#7AB4F5')
         self.time_color = QColor('#7AB4F5')
         self.replyto_color = QColor('#7AB4F5')
@@ -158,15 +162,24 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         timestamp = index.data(role=TIMESTAMPROLE)
         reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
         reply_text = index.data(role=REPLYTEXTROLE)
+        is_new = index.data(role=ISNEWROLE)
 
         painter.save()
 
         # Draw alternate ?
 
         if index.row() % 2 == 0:
-            painter.fillRect(option.rect, self.bg_color)
+            if is_new:
+                color = self.new_bg_color
+            else:
+                color = self.bg_color
         else:
-            painter.fillRect(option.rect, self.bg_alternate_color)
+            if is_new:
+                color = self.new_bg_alternate_color
+            else:
+                color = self.bg_alternate_color
+
+        painter.fillRect(option.rect, color)
 
         # highlight selected items
 
