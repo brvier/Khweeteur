@@ -45,17 +45,24 @@ class KhweetsModel(QAbstractListModel):
 
         # Cache the passed data list as a class member.
 
-        self._items = {}
-        self._uids = {}
+        # Status is a dict mapping uids to status
+        self.statuses = {}
+        # UIDs is an array of the UIDs in the current data set.
+        self.uids = []
 
-        self._avatars = {}
+        self.avatars = {}
         self.now = time.time()
         self.nothing_really_loaded = True
         self.call = 'HomeTimeLine'
         self.max_created_at = None
         self.new_message_horizon = self.now
 
-        self._items[self.call] = []
+        self.khweets_limit = 10000
+
+        try:
+            self.default_avatar = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
+        except:
+            self.default_avatar = None
 
     def __del__(self):
         if not self.nothing_really_loaded:
@@ -72,20 +79,30 @@ class KhweetsModel(QAbstractListModel):
                             ))).encode('UTF-8'))
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._items[self.call][:self.khweets_limit])
+        return min(len(self.uids), self.khweets_limit)
 
     def refreshTimestamp(self):
         self.now = time.time()
-        self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
-                              len(self._items)))
+        self.dataChanged.emit(self.createIndex(0, 0),
+                              self.createIndex(self.rowCount(), 0))
 
     def destroyStatus(self, index):
-        self._items.pop(index.row())
-        self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
-                              len(self._items)))
+        index = index.row()
+        self.uids.pop(index)
+        self.dataChanged.emit(self.createIndex(index, 0),
+                              self.createIndex(self.rowCount(), 0))
 
-    def load(self, call, limit = None):
+    def load(self, call, limit=None):
         """
+        Load a stream.
+
+        call is the stream to load (see
+        retriever.py:KhweeteurRefreshWorker for a description of the
+        possible values).
+
+        limit is the maximum number of messages to show.  If the
+        number of messages exceeds limit, then selects the newest
+        messages (in terms of creation time, not download time).
 
         Returns whether the load loaded a new data set (True) or was
         just a reload (False).
@@ -110,68 +127,55 @@ class KhweetsModel(QAbstractListModel):
                     settings.value(call + '-new-message-horizon', 0))
             except ValueError:
                 self.new_message_horizon = self.now
+
+            # There might be some useful avatars, but figuring out
+            # which they are requires loading all of the status
+            # updates.
+            self.avatars = {}
         else:
             ret = False
 
         self.nothing_really_loaded = False
 
         self.call = call
-        if call not in self._items:
-            self._items[call] = []
-            self._uids[call] = []
 
         self.avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                        'avatars')
 
+        folder = self.getCacheFolder()
         try:
-            folder = self.getCacheFolder()
-
-            uids = os.listdir(folder)
-            if limit:
-                uids.sort()
-                uids.reverse()
-                uids = uids[:limit]
-            _uids = self._uids[call]
-            _items = self._items[call]
-            for uid in uids:
-                if uid not in _uids:
-                    with open(os.path.join(folder, str(uid)), 'rb') as pkl_file:
-                        status = pickle.load(pkl_file)
-                    _uids.append(uid)
-                    _items.append(status)
-                    if hasattr(status, 'user'):
-                        if status.user.profile_image_url not in self._avatars:
-                            profile_image = os.path.join(self.avatar_path,
-                                os.path.basename(status.user.profile_image_url.replace('/', '_')))
-                            try:
-                                self._avatars[status.user.profile_image_url] = \
-                                QPixmap(os.path.splitext(profile_image)[0] + '.png', 'PNG')
-                            except:
-                                self._avatars[status.user.profile_image_url] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
-                    else:
-                        self._avatars['default'] = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
-
-
-            _items.sort(key=lambda status: status.created_at_in_seconds,
-                             reverse=True)
-            _items = _items[:self.khweets_limit]
-            _uids = _uids[:self.khweets_limit]
-
+            self.uids = os.listdir(folder)
         except Exception, e:
             import traceback
             traceback.print_exc()
-            print 'unSerialize : ', e
+            print 'listdir(%s): %s' % (folder, str(e))
+            self.uids = []
 
-        self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(0,
-                              len(self._items[call])))
+        self.uids.sort(reverse=True)
+        if limit:
+            self.uids = self.uids[:limit]
+
+        # Drop any statuses from the cache that we no longer need.
+        self.statuses = dict([(k, v) for k, v in self.statuses.items()
+                              if k in self.uids])
+
+        self.dataChanged.emit(self.createIndex(0, 0),
+                              self.createIndex(self.rowCount(), 0))
 
         return ret
 
     def data(self, index, role=Qt.DisplayRole):
-        if isinstance(index, int):
-            status = self._items[self.call][index]
-        else:
-            status = self._items[self.call][index.row()]
+        if not isinstance(index, int):
+            index = index.row()
+
+        uid = self.uids[index]
+        try:
+            status = self.statuses[uid]
+        except KeyError:
+            filename = os.path.join(self.getCacheFolder(), str(uid))
+            with open(filename, 'rb') as pkl_file:
+                status = pickle.load(pkl_file)
+                self.statuses[uid] = status
 
         if role == Qt.DisplayRole:
             try:
@@ -183,38 +187,38 @@ class KhweetsModel(QAbstractListModel):
                 return status.text
         elif role == SCREENNAMEROLE:
             try:
-                return self._items[self.call][index.row()].user.screen_name
+                return status.user.screen_name
             except:
-                return self._items[self.call][index.row()].sender_screen_name
+                return status.sender_screen_name
         elif role == IDROLE:
-            return self._items[self.call][index.row()].id
+            return status.id
         elif role == REPLYIDROLE:
             try:
-                return self._items[self.call][index.row()].in_reply_to_status_id
+                return status.in_reply_to_status_id
             except:
                 return None
         elif role == REPLYTOSCREENNAMEROLE:
             try:
-                return self._items[self.call][index.row()].in_reply_to_screen_name
+                return status.in_reply_to_screen_name
             except:
                 return None
         elif role == REPLYTEXTROLE:
-            return self._items[self.call][index.row()].in_reply_to_status_text
+            return status.in_reply_to_status_text
         elif role == ORIGINROLE:
-            return self._items[self.call][index.row()].base_url
+            return status.base_url
         elif role == RETWEETOFROLE:
             try:
-                return self._items[self.call][index.row()].retweeted_status
+                return status.retweeted_status
             except:
                 return None
         elif role == ISMEROLE:
             try:
-                return self._items[self.call][index.row()].is_me
+                return status.is_me
             except:
                 return False
         elif role == TIMESTAMPROLE:
 
-            return self._items[self.call][index.row()].GetRelativeCreatedAt(self.now)
+            return status.GetRelativeCreatedAt(self.now)
         elif role == ISNEWROLE:
             try:
                 created_at = int(status.GetCreatedAtInSeconds())
@@ -224,17 +228,32 @@ class KhweetsModel(QAbstractListModel):
 
             return created_at > self.new_message_horizon
         elif role == PROTECTEDROLE:
-            return self._items[self.call][index.row()].user.protected
+            return status.user.protected
         elif role == USERIDROLE:
             try:
-                return self._items[self.call][index.row()].user.id
+                return status.user.id
             except AttributeError:
-                return self._items[self.call][index.row()].sender_id
+                return status.sender_id
         elif role == Qt.DecorationRole:
             try:
-                return self._avatars[self._items[self.call][index.row()].user.profile_image_url]
-            except:
-                return self._avatars['default']
+                profile_image_url = status.user.profile_image_url
+            except AttributeError:
+                value = self.default_avatar
+            else:
+                try:
+                    value = self.avatars[profile_image_url]
+                except KeyError:
+                    profile_image = os.path.join(
+                        self.avatar_path,
+                        os.path.basename(profile_image_url.replace('/', '_')))
+                    try:
+                        value = QPixmap(
+                            os.path.splitext(profile_image)[0] + '.png', 'PNG')
+                    except:
+                        value = self.default_avatar
+                    else:
+                        self.avatars[profile_image_url] = value
+            return value
         else:
             return None
 
