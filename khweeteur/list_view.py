@@ -75,7 +75,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         try:
             return self.memoized_size[uid]
         except:
-            size = QStyledItemDelegate.sizeHint(self, option, index)
             tweet = index.data(Qt.DisplayRole)
 
             # One time is enought sizeHint need to be fast
@@ -125,7 +124,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
             if height < 70:
                 height = 70
-            self.memoized_size[uid] = QSize(size.width(), height)
+            self.memoized_size[uid] = QSize(option.rect.width(), height)
             return self.memoized_size[uid]
 
     def paint(
