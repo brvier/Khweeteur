@@ -184,7 +184,7 @@ class Khweeteur(QApplication):
             import pickle
             if (( QMessageBox.question(None,
                 "Khweeteur Crash Report",
-                "An error occur on Khweeteur in the previous launch. Report this bug on the bug tracker ?",
+                "An error occured during your last execution of Khweeteur. Send relevant information to the bug tracker?",
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                 url = 'http://khertan.net/report.php' # write ur URL here
                 try:
@@ -207,7 +207,7 @@ class Khweeteur(QApplication):
                     print detail
                     QMessageBox.question(None,
                     "Khweeteur Crash Report",
-                    "An error occur during the report : %s" % detail,
+                    "An error occurred sending the report: %s" % detail,
                     QMessageBox.Close)
                     return False
 
@@ -352,7 +352,7 @@ class KhweeteurWin(QMainWindow):
         self.toolbar.addAction(self.tb_fullscreen)
         self.list_tb_action.append(self.tb_fullscreen)
 
-        self.setWindowTitle('Khweeteur : Home')
+        self.setWindowTitle('Khweeteur: Home')
 
         self.show()
 
@@ -368,7 +368,7 @@ class KhweeteurWin(QMainWindow):
         if not nb_accounts:
             if (( QMessageBox.question(None,
                 "Khweeteur",
-                'None microblogging account found, would you want to add one now in preferences ?',
+                'No microblogging account configured, do you want to add one now?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                     self.showPrefs()
 
@@ -952,12 +952,12 @@ class KhweeteurWin(QMainWindow):
             if self.model.data(index, role=PROTECTEDROLE):
                 screenname = self.model.data(index, role=SCREENNAMEROLE)
                 QMessageBox.warning(self, 'Khweeteur - Retweet',
-                                    "%s protect his tweets you can't retweet them"
+                                    "%s's tweets are protected: you can't retweet them."
                                      % screenname, QMessageBox.Close)
 
         if not (( QMessageBox.question(None,
             "Khweeteur Retweet",
-            "Did you want to retweet '%s'?" % tweet_text,
+            "Do you want to retweet '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             return
 
@@ -992,7 +992,7 @@ class KhweeteurWin(QMainWindow):
 
         if not (( QMessageBox.question(None,
             "Khweeteur Delete",
-            "Did you really want to delete '%s'?" % tweet_text,
+            "Do you really want to delete '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             tweet_id = None
 
@@ -1027,7 +1027,7 @@ class KhweeteurWin(QMainWindow):
 
         if not (( QMessageBox.question(None,
             "Khweeteur Favorite",
-            "Did you really want to favorite '%s'?" % tweet_text,
+            "Do you really want to favorite '%s'?" % tweet_text,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             return
 
@@ -1100,7 +1100,7 @@ class KhweeteurWin(QMainWindow):
 
         if not (( QMessageBox.question(None,
             "Khweeteur Unfollow",
-            "Did you really want to unfollow '%s'?" % screenname,
+            "Do you really want to unfollow '%s'?" % screenname,
             QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
             user_id = None
 
@@ -1157,7 +1157,7 @@ class KhweeteurWin(QMainWindow):
         if settings.value('useGPS') != '2':
             if (( QMessageBox.question(None,
                 "Khweeteur",
-                'This feature require the activation of the GPS, would you want to activate it now ?',
+                'This feature requires the GPS, do you want to activate it now?',
                 QMessageBox.Yes| QMessageBox.Close)) ==  QMessageBox.Yes):
                     settings.setValue('useGPS','2')
                     settings.sync()
@@ -1171,8 +1171,8 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
-        self.setWindowTitle('Khweeteur : Near Tweets')
         self.do_model_load('Nears')
+        self.setWindowTitle('Khweeteur: Nearby Tweets')
         self.delete_search_action.setVisible(False)
 
     @Slot()
@@ -1338,9 +1338,9 @@ if __name__ == '__main__':
     app.exec_()
     settings = QSettings('Khertan Software', 'Khweeteur')
     if settings.contains('useDaemon'):
-        print settings.value('useDaemon')
+        print "useDaemon:", settings.value('useDaemon')
         if settings.value('useDaemon') != '2':
-            print 'Stop daemon'
+            print 'Stopping daemon'
 
             # use system to wait the exec
 
