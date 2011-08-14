@@ -28,6 +28,8 @@ import logging
 import os
 import socket
 import glob
+import time
+import rfc822
 
 class KhweeteurRefreshWorker(QThread):
 
@@ -296,6 +298,27 @@ class KhweeteurRefreshWorker(QThread):
 
         statuses[:] = keep
 
+    def update_last_update(self):
+        status = twitter.Status(
+            text="Last updated: %s" % (time.strftime("%c")),
+            created_at=rfc822.formatdate(),
+            id='%s:last_update' % self.call)
+        status.sender_screen_name = "Khweeteur"
+
+        try:
+            # Open the file exclusively.
+            filename = os.path.join(self.getCacheFolder(), "last_update")
+            with open(filename, 'wb') as fhandle:
+                pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
+            logging.debug("LAST_UPDATE: Wrote %s: %s"
+                          % (filename, status.text))
+                                                         
+        except pickle.PickleError, exception:
+            logging.debug('Serialization of %s failed: %s'
+                          % (filename, str (exception)))
+            # Remove the empty file.
+            os.remove(filename)
+
     def run(self):
         settings = QSettings('Khertan Software', 'Khweeteur')
         statuses = []
@@ -367,7 +390,10 @@ class KhweeteurRefreshWorker(QThread):
             if len(statuses) > 0:
                 settings.setValue(self.api._access_token_key + '_' + self.call,
                                   max(statuses).id)
-                self.new_tweets.emit(len(statuses), self.call)
+
+        self.new_tweets.emit(len(statuses), self.call)
+        self.update_last_update()
+
         settings.sync()
         logging.debug('%s finished' % self.call)
 

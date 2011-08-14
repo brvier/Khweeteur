@@ -226,10 +226,30 @@ class KhweetsModel(QAbstractListModel):
 
         if role in DATA_CACHE:
             # Check if the value is in our cache.
-            status = self.data_cache.get(uid, None)
-            if status is not None:
-                if role in status:
-                    return status[role]
+            cache_entry = self.data_cache.get(uid, None)
+            if cache_entry is not None and role in cache_entry:
+                ok = False
+                # Make sure that the cached entry is reasonably
+                # consistent.
+                if ('validated' in cache_entry
+                    and cache_entry['validated'] >= time.time() - 10):
+                    # We validated the contents recently.
+                    ok = True
+                else:
+                    filename = os.path.join(self.getCacheFolder(), str(uid))
+                    mtime = os.stat(filename).st_mtime
+                    if mtime == cache_entry.get('mtime', None):
+                        ok = True
+                        cache_entry['validated'] = time.time()
+                    else:
+                        # The file changed!
+                        del self.data_cache[uid]
+                        try:
+                            del self.statuses[uid]
+                        except KeyError:
+                            pass
+                if ok:
+                    return cache_entry[role]
 
         status = None
         value = None
@@ -327,11 +347,16 @@ class KhweetsModel(QAbstractListModel):
 
         # If the data is cachable, cache it.
         if role in DATA_CACHE:
-            status = self.data_cache.get(uid, None)
-            if status is None:
-                status = {}
-                self.data_cache[uid] = status
-            status[role] = value
+            cache_entry = self.data_cache.get(uid, None)
+            if cache_entry is None:
+                cache_entry = {}
+                self.data_cache[uid] = cache_entry
+
+                filename = os.path.join(self.getCacheFolder(), str(uid))
+                cache_entry['mtime'] = os.stat(filename).st_mtime
+                cache_entry['validated'] = int(time.time())
+                
+            cache_entry[role] = value
 
         return value
 

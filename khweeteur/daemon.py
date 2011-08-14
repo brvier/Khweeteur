@@ -158,6 +158,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def new_tweets(self, count, ttype):
         logging.debug('New tweet notification ttype : %s (%s); count: %d'
                       % (ttype, str(type(ttype)), count))
+
+        if count == 0:
+            return
+
         settings = settings_db()
         #.value('showNotifications') == '2':                      
 
