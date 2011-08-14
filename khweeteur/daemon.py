@@ -12,6 +12,7 @@ import time
 from PySide.QtCore import QSettings, Slot, QTimer, QCoreApplication
 import atexit
 import os
+import shutil
 from signal import SIGTERM
 import random
 
@@ -768,18 +769,42 @@ class KhweeteurDaemon(QCoreApplication):
 
         now = time.time()
 
-        for folder in os.listdir(self.cache_path):
-            folder = os.path.join(self.cache_path, folder)
+        nb_searches = settings.beginReadArray('searches')
+        searches = []
+        for index in range(nb_searches):
+            settings.setArrayIndex(index)
+            searches.append(settings.value('terms'))
+        settings.endArray()
 
-            if not os.path.isdir(folder):
+        search_directories = ['Search:' + s.replace('/', '_')
+                              for s in searches]
+
+        for folder in os.listdir(self.cache_path):
+            path = os.path.join(self.cache_path, folder)
+
+            if not os.path.isdir(path):
                 continue
 
-            uids = os.listdir(folder)
+            if (folder.startswith('Search:')
+                and folder not in search_directories):
+                logging.debug(
+                    "Search %s removed (not in %s).  Removing cached tweets."
+                    % (folder, str(searches)))
+                try:
+                    shutil.rmtree(path)
+                except OSError, exception:
+                    logging.error("Removing stale directory %s: %s"
+                                  % (path, str(exception)))
+                try:
+                    os.remove(path + '-data-cache')
+                except OSError, exception:
+                    logging.error("Removing %s: %s"
+                                  % (path + '-data-cache', str(exception)))
+                continue
+
+            uids = os.listdir(path)
 
             uid_count = len(uids)
-            logging.debug("%s: %d files (threshold: %d)"
-                          % (folder, uid_count, keep_count))
-
             if uid_count <= keep_count:
                 # The total number of files does not exceed the keep
                 # threshhold.  There is definately nothing to do.
@@ -790,7 +815,7 @@ class KhweeteurDaemon(QCoreApplication):
             kept = 0
             for uid in uids:
                 try:
-                    with open(os.path.join (folder, uid), 'rb') as pkl_file:
+                    with open(os.path.join (path, uid), 'rb') as pkl_file:
                         status = pickle.load(pkl_file)
                 except StandardError, err:
                     logging.debug('Error loading %s: %s' % (uid, str(err)))
@@ -812,27 +837,20 @@ class KhweeteurDaemon(QCoreApplication):
 
             logging.debug(("%s: %d files less than %d days old; %d more; "
                            + "will keep %d of the latter (keep count: %d)")
-                          % (folder, kept, keep_time / (24 * 60 * 60),
+                          % (path, kept, keep_time / (24 * 60 * 60),
                              len(statuses), to_keep, keep_count))
 
             if to_keep > 0:
                 statuses = statuses[to_keep:]
 
-            logging.debug("%s: expunging %d files" % (folder, len(statuses)))
+            logging.debug("%s: expunging %d files" % (path, len(statuses)))
             for status in statuses:
-                filename = os.path.join (folder, filenames[status])
+                filename = os.path.join (path, filenames[status])
                 try:
                     os.remove(filename)
                 except StandardError, err:
                     logging.debug('remove(%s): %s'
                                   % (filename, str(err)))
-
-        nb_searches = settings.beginReadArray('searches')
-        searches = []
-        for index in range(nb_searches):
-            settings.setArrayIndex(index)
-            searches.append(settings.value('terms'))
-        settings.endArray()
 
         nb_lists = settings.beginReadArray('lists')
         lists = []
