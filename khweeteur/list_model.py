@@ -213,7 +213,13 @@ class KhweetsModel(QAbstractListModel):
         except KeyError:
             filename = os.path.join(self.getCacheFolder(), str(uid))
             with open(filename, 'rb') as pkl_file:
-                status = pickle.load(pkl_file)
+                try:
+                    status = pickle.load(pkl_file)
+                except EOFError:
+                    # The file disappeared.  This can happen if the
+                    # daemon cleans old files, but has not yet
+                    # informed us that an update occured.
+                    return None
                 self.statuses[uid] = status
             # print "Loaded %s: %s" % (uid, status.text[0:30])
             return status
@@ -255,6 +261,8 @@ class KhweetsModel(QAbstractListModel):
         value = None
         if role == Qt.DisplayRole:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 if status.truncated:
                     value = status.retweeted_status.text
@@ -264,48 +272,68 @@ class KhweetsModel(QAbstractListModel):
                 value = status.text
         elif role == SCREENNAMEROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.user.screen_name
             except:
                 value = status.sender_screen_name
         elif role == IDROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             value = status.id
         elif role == REPLYIDROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.in_reply_to_status_id
             except:
                 value = None
         elif role == REPLYTOSCREENNAMEROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.in_reply_to_screen_name
             except:
                 value = None
         elif role == REPLYTEXTROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             value = status.in_reply_to_status_text
         elif role == ORIGINROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             value = status.base_url
         elif role == RETWEETOFROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.retweeted_status
             except:
                 value = None
         elif role == ISMEROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.is_me
             except:
                 value = False
         elif role == TIMESTAMPROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             value = status.GetRelativeCreatedAt(self.now)
         elif role == ISNEWROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 created_at = int(status.GetCreatedAtInSeconds())
             except ValueError:
@@ -315,15 +343,21 @@ class KhweetsModel(QAbstractListModel):
             value = created_at > self.new_message_horizon
         elif role == PROTECTEDROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             value = status.user.protected
         elif role == USERIDROLE:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 value = status.user.id
             except AttributeError:
                 value = status.sender_id
         elif role == Qt.DecorationRole:
             status = self.get_status(uid)
+            if status is None:
+                return None
             try:
                 profile_image_url = status.user.profile_image_url
             except AttributeError:
