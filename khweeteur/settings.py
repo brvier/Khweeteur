@@ -11,6 +11,7 @@
 import httplib2
 import os
 import time
+import logging
 
 from PySide.QtGui import QMainWindow, QSizePolicy, QSpinBox, QVBoxLayout, \
     QAbstractItemView, QScrollArea, QListView, QComboBox, QCheckBox, QDialog, \
@@ -85,6 +86,66 @@ def settings_db():
         settings_db_generation += 1
 
     return _settings
+
+class Account(object):
+    def __init__(self, dct):
+        self.update_from_dict(dct)
+
+    def update_from_dict(self, dct):
+        for k, v in dct.items():
+            self.__setattr__(k, v)
+
+    def __getitem__(self, key):
+        # Turn dictionary accesses into attribute look ups.
+        return self.__getattribute__(key)
+
+    def __repr__(self):
+        return dict([(k, v) for k, v in self.__dict__.items()]).__repr__()
+
+# Cached list of accounts.
+_accounts = []
+# The last time the accounts were reread from the setting's DB.
+_accounts_read_at = None
+def accounts():
+    """Returns a list of dictionaries where each dictionary describes
+    an account."""
+    global _accounts
+    global _accounts_read_at
+
+    settings = settings_db()
+
+    if _accounts_read_at == settings_db_generation:
+        # logging.debug("accounts(): Using cached version (%d accounts)."
+        #               % (len(_accounts),))
+        return _accounts
+    logging.debug("accounts(): Reloading accounts from settings file.")
+
+    nb_accounts = settings.beginReadArray('accounts')
+    accounts = []
+    for index in range(nb_accounts):
+        settings.setArrayIndex(index)
+
+        d = dict((key, settings.value(key)) for key in settings.allKeys())
+        for account in _accounts:
+            if (account.base_url == d['base_url']
+                and account.token_key == d['token_key']):
+                account.update_from_dict(d)
+                break
+        else:
+            account = Account(d)
+
+        accounts.append(account)
+
+        logging.debug("accounts(): Account %d: %s"
+                      % (index + 1, repr(account)))
+
+    settings.endArray()
+    logging.debug("accounts(): Loaded %d accounts" % (len(accounts),))
+
+    _accounts = accounts
+    _accounts_read_at = settings_db_generation
+
+    return accounts
 
 def screenname(account):
     """

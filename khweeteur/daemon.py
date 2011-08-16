@@ -19,7 +19,7 @@ import random
 import logging
 
 from retriever import KhweeteurRefreshWorker
-from settings import SUPPORTED_ACCOUNTS, settings_db
+from settings import SUPPORTED_ACCOUNTS, settings_db, accounts
 
 import cPickle as pickle
 import re
@@ -226,10 +226,6 @@ class KhweeteurDaemon(QCoreApplication):
         self.me_users = {}
         self.idtag = None
 
-        # The last time the accounts were reread from the setting's
-        # DB.
-        self._accounts_read_at = None
-
         #On demand geoloc
         self.geoloc_source = None
         self.geoloc_coordinates = None
@@ -378,36 +374,6 @@ class KhweeteurDaemon(QCoreApplication):
 
         return api
 
-    @property
-    def accounts(self):
-        """A list of dictionaries where each dictionary
-        describes an account."""
-        settings = settings_db()
-
-        if self._accounts_read_at == settings_db_generation:
-            logging.debug("accounts(): Using cached version (%d accounts)."
-                          % (len(self._accounts),))
-            return self._accounts
-        logging.debug("accounts(): Reloading accounts from settings file.")
-
-        nb_accounts = settings.beginReadArray('accounts')
-        accounts = []
-        for index in range(nb_accounts):
-            settings.setArrayIndex(index)
-            account = dict((key, settings.value(key))
-                           for key in settings.allKeys())
-            accounts.append(account)
-
-            logging.debug("accounts(): Account %d: %s"
-                          % (index + 1, repr(account)))
-        settings.endArray()
-        logging.debug("accounts(): Loaded %d accounts" % (len(accounts),))
-
-        self._accounts = accounts
-        self._accounts_read_at = settings_db_generation
-
-        return accounts
-
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
         self.geoloc_coordinates = None
@@ -505,7 +471,7 @@ class KhweeteurDaemon(QCoreApplication):
 
             # Loop on accounts
             did_something = False
-            for account in self.accounts:
+            for account in accounts():
                 aid = account['base_url'] + ';' + account['token_key']
 
                 # Reply
@@ -863,7 +829,7 @@ class KhweeteurDaemon(QCoreApplication):
             lists.append((settings.value('id'), settings.value('user')))
         settings.endArray()
 
-        for account in self.accounts:
+        for account in self.accounts():
             self.retrieve(account, 'HomeTimeline')
             self.retrieve(account, 'Mentions')
             self.retrieve(account, 'DMs')
