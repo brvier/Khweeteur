@@ -792,11 +792,6 @@ class KhweeteurDaemon(QCoreApplication):
             if settings.value('ShowInfos') == '2':
                 showInfos = True
 
-        useGPS = False
-        if settings.contains('useGPS'):
-            if settings.value('useGPS') == '2':
-                useGPS = True
-
         if len(self.threads)>0:
             for t, job in self.threads.items():
                 # Check whether the threads are really running.  the
@@ -815,44 +810,19 @@ class KhweeteurDaemon(QCoreApplication):
 
         self.clean(settings)
 
-        nb_searches = settings.beginReadArray('searches')
-        searches = []
-        for index in range(nb_searches):
-            settings.setArrayIndex(index)
-            searches.append(settings.value('terms'))
-        settings.endArray()
+        for account in accounts():
+            for feed in account.feeds():
+                if feed == "Near":
+                    if not self.geoloc_source:
+                        self.geolocStart()
+                    if self.geoloc_coordinates:
+                        feed = ('Near:%s:%s'
+                                % (str(self.geoloc_coordinates[0]),
+                                   str(self.geoloc_coordinates[1])))
+                    else:
+                        continue
 
-        nb_lists = settings.beginReadArray('lists')
-        lists = []
-        for index in range(nb_lists):
-            settings.setArrayIndex(index)
-            lists.append((settings.value('id'), settings.value('user')))
-        settings.endArray()
-
-        for account in self.accounts():
-            self.retrieve(account, 'HomeTimeline')
-            self.retrieve(account, 'Mentions')
-            self.retrieve(account, 'DMs')
-
-            # Start searches thread
-            for terms in searches:
-                self.retrieve(account, 'Search:' + terms)
-
-            # Start retrieving the list
-            self.retrieve(account, 'RetrieveLists')
-
-            # Near retrieving
-            if useGPS:
-                if not self.geoloc_source:
-                    self.geolocStart()
-                if self.geoloc_coordinates:
-                    self.retrieve(account, 'Near:%s:%s'
-                          % (str(self.geoloc_coordinates[0]),
-                             str(self.geoloc_coordinates[1])))
-
-            # Start lists thread
-            for (list_id, user) in lists:
-                self.retrieve(account, 'List:' + user + ':' + list_id)
+                self.retrieve(account, feed)
 
     @Slot()
     def kill_thread(self):

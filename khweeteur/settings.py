@@ -102,6 +102,32 @@ class Account(object):
     def __repr__(self):
         return dict([(k, v) for k, v in self.__dict__.items()]).__repr__()
 
+    def feeds(self):
+        """
+        Return the list of feeds associated with an account as a list of
+        strings.
+        """
+        feeds = ['HomeTimeline', 'Mentions', 'DMs', 'RetrieveLists']
+    
+        settings = settings_db()
+        if settings.value('useGPS') == '2':
+            feeds.append['Near']
+    
+        nb_searches = settings.beginReadArray('searches')
+        for index in range(nb_searches):
+            settings.setArrayIndex(index)
+            feeds.append('Search:' + settings.value('terms'))
+        settings.endArray()
+    
+        nb_lists = settings.beginReadArray('lists')
+        for index in range(nb_lists):
+            settings.setArrayIndex(index)
+            feeds.append(
+                'List:' + settings.value('user') + ':' + settings.value('id'))
+        settings.endArray()
+    
+        return feeds
+
 # Cached list of accounts.
 _accounts = []
 # The last time the accounts were reread from the setting's DB.
