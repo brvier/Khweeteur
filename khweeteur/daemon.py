@@ -9,7 +9,7 @@ from __future__ import with_statement
 
 import sys
 import time
-from PySide.QtCore import QSettings, Slot, QTimer, QCoreApplication
+from PySide.QtCore import Slot, QTimer, QCoreApplication
 import atexit
 import os
 import shutil
@@ -19,7 +19,7 @@ import random
 import logging
 
 from retriever import KhweeteurRefreshWorker
-from settings import SUPPORTED_ACCOUNTS
+from settings import SUPPORTED_ACCOUNTS, settings_db
 
 import cPickle as pickle
 import re
@@ -74,39 +74,6 @@ def install_excepthook(version):
         logging.error(formatted_text)
 
     sys.excepthook = my_excepthook
-
-_settings = None
-_settings_synced = None
-# Each time the DB changes, this is incremented.  Our current
-# implementation just rereads the DB periodically.  A better approach
-# would be to use the last modification time of the underlying file
-# (determined using QSettings.fileName).
-settings_db_generation = 0
-def settings_db():
-    """
-    Return the setting's database, a QSettings instance, ensuring that
-    it is sufficiently up to date.
-    """
-    global _settings
-    global _settings_synced
-    global settings_db_generation
-
-    if _settings is None:
-        # First time through.
-        _settings = QSettings('Khertan Software', 'Khweeteur')
-        _settings_synced = time.time()
-        return _settings
-
-    # Ensure that the in-memory settings database is synchronized
-    # with the values on disk.
-    now = time.time()
-    if now - _settings_synced > 10:
-        # Last synchronized more than 10 seconds ago.
-        _settings.sync()
-        _settings_synced = now
-        settings_db_generation += 1
-
-    return _settings
 
 class KhweeteurDBusHandler(dbus.service.Object):
 
