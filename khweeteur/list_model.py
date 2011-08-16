@@ -27,7 +27,7 @@ ISMEROLE = 28
 PROTECTEDROLE = 28
 USERIDROLE = 29
 ISNEWROLE = 30
-
+TIMESTAMPABSROLE = 31
 
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, \
     QSettings, QTimer
@@ -37,7 +37,7 @@ import twitter #Not really unused. Avoid pickle to do it each time
 # Data that we may cache.  The most important data for caching is the
 # data needed for sizing rows.  See list_view for the required
 # columns.
-DATA_CACHE = (IDROLE, Qt.DisplayRole, REPLYTEXTROLE)
+DATA_CACHE = (IDROLE, Qt.DisplayRole, REPLYTEXTROLE, TIMESTAMPABSROLE)
 
 pyqtSignal = Signal
 
@@ -184,7 +184,10 @@ class KhweetsModel(QAbstractListModel):
             print 'listdir(%s): %s' % (folder, str(e))
             self.uids = []
 
-        self.uids.sort(reverse=True)
+        self.uids.sort(
+            key=lambda uid: [self.data_by_uid(uid, TIMESTAMPABSROLE),
+                             uid],
+            reverse=True)
         if limit:
             self.uids = self.uids[:limit]
 
@@ -230,6 +233,9 @@ class KhweetsModel(QAbstractListModel):
 
         uid = self.uids[index]
 
+        return self.data_by_uid(uid, role)
+
+    def data_by_uid(self, uid, role):
         if role in DATA_CACHE:
             # Check if the value is in our cache.
             cache_entry = self.data_cache.get(uid, None)
@@ -330,6 +336,11 @@ class KhweetsModel(QAbstractListModel):
             if status is None:
                 return None
             value = status.GetRelativeCreatedAt(self.now)
+        elif role == TIMESTAMPABSROLE:
+            status = self.get_status(uid)
+            if status is None:
+                return None
+            value = status.GetCreatedAtInSeconds()
         elif role == ISNEWROLE:
             status = self.get_status(uid)
             if status is None:
