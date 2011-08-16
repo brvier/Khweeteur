@@ -128,6 +128,47 @@ class Account(object):
     
         return feeds
 
+    @property
+    def api(self):
+        """
+        An authenticated twitter.Api object.
+        """
+        try:
+            return self._api
+        except AttributeError:
+            pass
+
+        api = twitter.Api(username=self.consumer_key,
+                          password=self.consumer_secret,
+                          access_token_key=self.token_key,
+                          access_token_secret=self.token_secret,
+                          base_url=self.base_url)
+        api.SetUserAgent('Khweeteur')
+        self._api = api
+
+        try:
+            id = api.VerifyCredentials().id
+        except Exception, err:
+            id = None
+            logging.error(
+                'Failed to verify the credentials for account %s: %s'
+                % (self.name, str(err)))
+
+        self._me_user = id
+
+        return api
+
+    @property
+    def me_user(self):
+        """The user's identifier."""
+        try:
+            return self._me_user
+        except AttributeError:
+            pass
+            
+        self.api()
+        return self._me_user
+
 # Cached list of accounts.
 _accounts = []
 # The last time the accounts were reread from the setting's DB.

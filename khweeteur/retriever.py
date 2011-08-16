@@ -38,13 +38,12 @@ class KhweeteurRefreshWorker(QThread):
 
     def __init__(
         self,
-        api,
+        account,
         call,
         #dbus_handler,
-        me_user_id,
         ):
         """
-        api: An instance of the twitter.Api class.
+        account: An account.
 
         call is one of
 
@@ -58,13 +57,9 @@ class KhweeteurRefreshWorker(QThread):
           'Near:*:*': Fetch tweets near (1km) a the specified
                       location.  The first start is the the first
                       geocode and the second * is the second geocode.
-
-        me_user_id: The user's user id.
         """
         QThread.__init__(self)
-        self.api = api
-
-        self.me_user_id = me_user_id
+        self.account = account
         self.call = call
         #self.dbus_handler = dbus_handler
         socket.setdefaulttimeout(60)
@@ -94,7 +89,7 @@ class KhweeteurRefreshWorker(QThread):
     def statusIdFilename(self, status_id):
         if not hasattr(self, 'filename_prefix'):
             self.filename_prefix = re.sub(
-                '^https?://', '', self.api.base_url).replace('/', '_') + '-'
+                '^https?://', '', self.account.base_url).replace('/', '_') + '-'
 
         return os.path.join(self.getCacheFolder(),
                             self.filename_prefix + str(status_id))
@@ -159,7 +154,7 @@ class KhweeteurRefreshWorker(QThread):
         """
         for status in statuses:
             status.base_url = (
-                self.api.base_url + ';' + self.api._access_token_key)
+                self.account.base_url + ';' + self.account.token_key)
 
     def isMe(self, statuses):
         """
@@ -168,7 +163,7 @@ class KhweeteurRefreshWorker(QThread):
         the status's user id is the user's id.
         """
         for status in statuses:
-            if status.user.id == self.me_user_id:
+            if status.user.id == self.account.me_user:
                 status.is_me = True
             else:
                 status.is_me = False
@@ -232,7 +227,7 @@ class KhweeteurRefreshWorker(QThread):
                         logging.debug("%s:%s: Downloading %s"
                                       % (self.call, status.id, reply_to_id))
                         try:
-                            reply_to = self.api.GetStatus(
+                            reply_to = self.account.api.GetStatus(
                                 status.in_reply_to_status_id)
                         except twitter.TwitterError, exception:
                             logging.debug(
@@ -325,23 +320,23 @@ class KhweeteurRefreshWorker(QThread):
 
         logging.debug("Thread for '%s' running" % self.call)
         try:
-            since = settings.value(self.api._access_token_key + '_' + self.call)
+            since = settings.value(self.account.token_key + '_' + self.call)
 
             logging.debug('%s running' % self.call)
             if self.call == 'HomeTimeline':
-                statuses = self.api.GetHomeTimeline(since_id=since)
+                statuses = self.account.api.GetHomeTimeline(since_id=since)
             elif self.call == 'Mentions':
-                statuses = self.api.GetMentions(since_id=since)
+                statuses = self.account.api.GetMentions(since_id=since)
             elif self.call == 'DMs':
-                statuses = self.api.GetDirectMessages(since_id=since)
+                statuses = self.account.api.GetDirectMessages(since_id=since)
             elif self.call.startswith('Search:'):
-                statuses = self.api.GetSearch(since_id=since,
+                statuses = self.account.api.GetSearch(since_id=since,
                         term=self.call.split(':', 1)[1])
             elif self.call == 'RetrieveLists':
                 # Get the list subscriptions
 
-                lists = \
-                    self.api.GetSubscriptions(user=self.api.VerifyCredentials().id)
+                lists = self.account.api.GetSubscriptions(
+                    user=self.account.me_user)
                 settings.beginWriteArray('lists')
                 for (index, list_instance) in enumerate(lists):
                     settings.setArrayIndex(index)
@@ -355,15 +350,15 @@ class KhweeteurRefreshWorker(QThread):
                 settings.sync()
             elif self.call.startswith('List:'):
                 user, id = self.call.split(':', 2)[1:]
-                statuses = self.api.GetListStatuses(user=user, id=id,
-                                                    since_id=since)
+                statuses = self.account.api.GetListStatuses(
+                    user=user, id=id, since_id=since)
 
             #Near GPS
             elif self.call.startswith('Near:'):
                 geocode = self.call.split(':', 2)[1:] + ['1km']
                 logging.debug('geocode=(%s)', str(geocode))
-                statuses = self.api.GetSearch(since_id=since,
-                        term='', geocode=geocode)
+                statuses = self.account.api.GetSearch(
+                    since_id=since, term='', geocode=geocode)
             else:
                 logging.error('Unknown call: %s' % (self.call, ))
         except Exception, err:
@@ -388,7 +383,7 @@ class KhweeteurRefreshWorker(QThread):
             self.serialize(statuses)
 
             if len(statuses) > 0:
-                settings.setValue(self.api._access_token_key + '_' + self.call,
+                settings.setValue(self.account.token_key + '_' + self.call,
                                   max(statuses).id)
 
         self.new_tweets.emit(len(statuses), self.call)

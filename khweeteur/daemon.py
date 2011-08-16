@@ -218,12 +218,6 @@ class KhweeteurDaemon(QCoreApplication):
         # scope and is gced while the thread is still running, Bad
         # Things Happen.
         self.threads = {}
-        # Hash from an account's token_key to an authenticated twitter.Api.
-        self.apis = {}
-        # Hash from an account's token_key to the user's identifier.
-        # If the value is None, the account was not successfully
-        # authenticated.
-        self.me_users = {}
         self.idtag = None
 
         #On demand geoloc
@@ -347,33 +341,6 @@ class KhweeteurDaemon(QCoreApplication):
 
 #        self.do_posts() #Else we loop when action create a post
 
-    def get_api(self, account):
-        """
-        Return an unauthenticated twitter.Api object cor
-        """
-        token_key = account['token_key']
-        api = self.apis.get(token_key, None)
-        if api is None:
-            api = twitter.Api(username=account['consumer_key'],
-                              password=account['consumer_secret'],
-                              access_token_key=token_key,
-                              access_token_secret=account['token_secret'],
-                              base_url=account['base_url'])
-            api.SetUserAgent('Khweeteur')
-            self.apis[token_key] = api
-
-            try:
-                id = api.VerifyCredentials().id
-            except Exception, err:
-                id = None
-                logging.error(
-                    'Failed to verify the credentials for account %s: %s'
-                    % (account, str(err)))
-
-            self.me_users[token_key] = id
-
-        return api
-
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
         self.geoloc_coordinates = None
@@ -479,7 +446,7 @@ class KhweeteurDaemon(QCoreApplication):
                 acted = True
                 if post['action'] == 'reply':  # Reply tweet
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
                                     in_reply_to_status_id=int(post['tweet_id'
@@ -501,7 +468,7 @@ class KhweeteurDaemon(QCoreApplication):
                     # Retweet
 
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         api.PostRetweet(tweet_id=int(post['tweet_id']))
                         logging.debug('Posted retweet %s'
                                 % (post['tweet_id'], ))
@@ -514,7 +481,7 @@ class KhweeteurDaemon(QCoreApplication):
                     # Else "simple" tweet
 
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
                                     latitude=post['latitude'],
@@ -530,7 +497,7 @@ class KhweeteurDaemon(QCoreApplication):
  + account['name'])
                 elif post['action'] == 'delete':
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         api.DestroyStatus(int(post['tweet_id']))
                         path = os.path.join(os.path.expanduser('~'),
                                 '.khweeteur', 'cache', 'HomeTimeline',
@@ -544,26 +511,26 @@ class KhweeteurDaemon(QCoreApplication):
  + account['name'])
                 elif post['action'] == 'favorite':
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         api.CreateFavorite(int(post['tweet_id']))
                         logging.debug('Favorited %s' % (post['tweet_id'
                                 ], ))
                 elif post['action'] == 'follow':
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         friend = api.CreateFriendship(post['tweet_id'])
                         logging.debug('Follow %s (account: %s) -> %s'
                                       % (repr(post), repr(account), friend))
                 elif post['action'] == 'unfollow':
                     if aid == post['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         friend = api.DestroyFriendship(post['tweet_id'])
                         logging.debug('Unfollow %s (account: %s) -> %s'
                                       % (repr(post), repr(account), friend))
                 elif post['action'] == 'twitpic':
                     if account['base_url'] \
                             == SUPPORTED_ACCOUNTS[0]['base_url']:
-                        api = self.get_api(account)
+                        api = account.api
                         import twitpic
                         twitpic_client = \
                             twitpic.TwitPicOAuthClient(consumer_key=api._username,
@@ -661,15 +628,15 @@ class KhweeteurDaemon(QCoreApplication):
                           exc_value, exc_traceback)))
 
     def retrieve(self, account, thing):
-        api = self.get_api(account)
-        me_user_id = self.me_users[account['token_key']]
+        api = account.api
+        me_user_id = account.me_user
         if not me_user_id:
             logging.debug("Account %s not authenticated. Not fetching '%s'"
                           % (str(account), thing))
             return
 
         try:
-            t = KhweeteurRefreshWorker(api, thing, me_user_id)
+            t = KhweeteurRefreshWorker(account, thing)
             t.error.connect(self.dbus_handler.info)
             t.finished.connect(self.athread_end)
             t.terminated.connect(self.athread_end)
