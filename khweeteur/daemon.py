@@ -720,14 +720,36 @@ class KhweeteurDaemon(QCoreApplication):
     def update(self):
         try:
             self.do_posts()
-            self.retrieve()
+            self.retrieve_all()
         except Exception:
             import traceback
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             logging.error('%s' % repr(traceback.format_exception(exc_type,
                           exc_value, exc_traceback)))
 
-    def retrieve(self, options=None):
+    def retrieve(self, account, thing):
+        api = self.get_api(account)
+        me_user_id = self.me_users[account['token_key']]
+        if not me_user_id:
+            logging.debug("Account %s not authenticated. Not fetching '%s'"
+                          % (str(account), thing))
+            return
+
+        try:
+            t = KhweeteurRefreshWorker(api, thing, me_user_id)
+            t.error.connect(self.dbus_handler.info)
+            t.finished.connect(self.athread_end)
+            t.terminated.connect(self.athread_end)
+            t.new_tweets.connect(self.dbus_handler.new_tweets)
+            t.start()
+            self.threads[t] = (thing + ' on ' + account['base_url']
+                               + ';' + account['token_key'])
+        except Exception, err:
+            logging.error(
+                'Creating worker for account %s, job %s: %s'
+                % (str(account), thing, str(err)))
+
+    def retrieve_all(self):
         logging.debug('Start update')
         settings = settings_db()
 
@@ -860,51 +882,29 @@ class KhweeteurDaemon(QCoreApplication):
         settings.endArray()
 
         for account in self.accounts:
-            api = self.get_api(account)
-            me_user_id = self.me_users[account['token_key']]
+            self.retrieve(account, 'HomeTimeline')
+            self.retrieve(account, 'Mentions')
+            self.retrieve(account, 'DMs')
 
-            # If have an authorized user:
-            if me_user_id:
+            # Start searches thread
+            for terms in searches:
+                self.retrieve(account, 'Search:' + terms)
 
-                def spawn(thing):
-                    # Worker
-                    try:
-                        t = KhweeteurRefreshWorker(api, thing, me_user_id)
-                        t.error.connect(self.dbus_handler.info)
-                        t.finished.connect(self.athread_end)
-                        t.terminated.connect(self.athread_end)
-                        t.new_tweets.connect(self.dbus_handler.new_tweets)
-                        t.start()
-                        self.threads[t] = (thing + ' on ' + account['base_url']
-                                           + ';' + account['token_key'])
-                    except Exception, err:
-                        logging.error(
-                            'Creating worker for account %s, job %s: %s'
-                            % (str(account), thing, str(err)))
+            # Start retrieving the list
+            self.retrieve(account, 'RetrieveLists')
 
-                spawn('HomeTimeline')
-                spawn('Mentions')
-                spawn('DMs')
+            # Near retrieving
+            if useGPS:
+                if not self.geoloc_source:
+                    self.geolocStart()
+                if self.geoloc_coordinates:
+                    self.retrieve(account, 'Near:%s:%s'
+                          % (str(self.geoloc_coordinates[0]),
+                             str(self.geoloc_coordinates[1])))
 
-                # Start searches thread
-                for terms in searches:
-                    spawn('Search:' + terms)
-
-                # Start retrieving the list
-                spawn('RetrieveLists')
-
-                # Near retrieving
-                if useGPS:
-                    if not self.geoloc_source:
-                        self.geolocStart()
-                    if self.geoloc_coordinates:
-                        spawn('Near:%s:%s'
-                              % (str(self.geoloc_coordinates[0]),
-                                 str(self.geoloc_coordinates[1])))
-
-                # Start lists thread
-                for (list_id, user) in lists:
-                    spawn('List:' + user + ':' + list_id)
+            # Start lists thread
+            for (list_id, user) in lists:
+                self.retrieve(account, 'List:' + user + ':' + list_id)
 
     @Slot()
     def kill_thread(self):
