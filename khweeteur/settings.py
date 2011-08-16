@@ -169,6 +169,10 @@ class Account(object):
         self.api()
         return self._me_user
 
+    @property
+    def uuid(self):
+        return self.base_url + ';' + self.token_key
+
 # Cached list of accounts.
 _accounts = []
 # The last time the accounts were reread from the setting's DB.

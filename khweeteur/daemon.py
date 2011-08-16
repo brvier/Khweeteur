@@ -439,13 +439,11 @@ class KhweeteurDaemon(QCoreApplication):
             # Loop on accounts
             did_something = False
             for account in accounts():
-                aid = account['base_url'] + ';' + account['token_key']
-
                 # Reply
 
                 acted = True
                 if post['action'] == 'reply':  # Reply tweet
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
@@ -467,7 +465,7 @@ class KhweeteurDaemon(QCoreApplication):
 
                     # Retweet
 
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         api.PostRetweet(tweet_id=int(post['tweet_id']))
                         logging.debug('Posted retweet %s'
@@ -480,7 +478,7 @@ class KhweeteurDaemon(QCoreApplication):
 
                     # Else "simple" tweet
 
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
@@ -496,7 +494,7 @@ class KhweeteurDaemon(QCoreApplication):
                                 self.dbus_handler.info('Khweeteur: Status posted to '
  + account['name'])
                 elif post['action'] == 'delete':
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         api.DestroyStatus(int(post['tweet_id']))
                         path = os.path.join(os.path.expanduser('~'),
@@ -510,19 +508,19 @@ class KhweeteurDaemon(QCoreApplication):
                                 self.dbus_handler.info('Khweeteur: Status deleted on '
  + account['name'])
                 elif post['action'] == 'favorite':
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         api.CreateFavorite(int(post['tweet_id']))
                         logging.debug('Favorited %s' % (post['tweet_id'
                                 ], ))
                 elif post['action'] == 'follow':
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         friend = api.CreateFriendship(post['tweet_id'])
                         logging.debug('Follow %s (account: %s) -> %s'
                                       % (repr(post), repr(account), friend))
                 elif post['action'] == 'unfollow':
-                    if aid == post['base_url']:
+                    if account.uuid == post['base_url']:
                         api = account.api
                         friend = api.DestroyFriendship(post['tweet_id'])
                         logging.debug('Unfollow %s (account: %s) -> %s'
@@ -642,8 +640,7 @@ class KhweeteurDaemon(QCoreApplication):
             t.terminated.connect(self.athread_end)
             t.new_tweets.connect(self.dbus_handler.new_tweets)
             t.start()
-            self.threads[t] = (thing + ' on ' + account['base_url']
-                               + ';' + account['token_key'])
+            self.threads[t] = (thing + ' on ' + account.uuid)
         except Exception, err:
             logging.error(
                 'Creating worker for account %s, job %s: %s'

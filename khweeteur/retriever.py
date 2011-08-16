@@ -153,8 +153,7 @@ class KhweeteurRefreshWorker(QThread):
         statuses is a list of status updates (twitter.Status objects).
         """
         for status in statuses:
-            status.base_url = (
-                self.account.base_url + ';' + self.account.token_key)
+            status.base_url = self.account.uuid
 
     def isMe(self, statuses):
         """
