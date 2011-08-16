@@ -749,37 +749,12 @@ class KhweeteurDaemon(QCoreApplication):
                 'Creating worker for account %s, job %s: %s'
                 % (str(account), thing, str(err)))
 
-    def retrieve_all(self):
-        logging.debug('Start update')
-        settings = settings_db()
-
-        showInfos = False
-        if settings.contains('ShowInfos'):
-            if settings.value('ShowInfos') == '2':
-                showInfos = True
-
-        useGPS = False
-        if settings.contains('useGPS'):
-            if settings.value('useGPS') == '2':
-                useGPS = True
-
-        if len(self.threads)>0:
-            for t, job in self.threads.items():
-                # Check whether the threads are really running.  the
-                # finished and terminate signals appear rather
-                # unreliable.
-                logging.debug("%s: %s: isRunning: %d; isFinished: %d"
-                              % (str(t), job, t.isRunning(), t.isFinished()))
-                if t.isFinished():
-                    self.thread_exited(t)
-
-            if len(self.threads)>0:
-                # Update in progress.
-                logging.info('Update in progress (%s jobs still running: %s)'
-                             % (len (self.threads), str(self.threads.values())))
-                return            
-
-        # Remove old tweets in cache according to history prefs
+    def clean(self, settings=None):
+        """
+        Remove old tweets in cache according to history prefs.
+        """
+        if settings is None:
+            settings = settings_db()
 
         # By default, flush status updates 3 days after their last
         # modification.
@@ -873,6 +848,46 @@ class KhweeteurDaemon(QCoreApplication):
                 except StandardError, err:
                     logging.debug('remove(%s): %s'
                                   % (filename, str(err)))
+
+
+    def retrieve_all(self):
+        logging.debug('Start update')
+        settings = settings_db()
+
+        showInfos = False
+        if settings.contains('ShowInfos'):
+            if settings.value('ShowInfos') == '2':
+                showInfos = True
+
+        useGPS = False
+        if settings.contains('useGPS'):
+            if settings.value('useGPS') == '2':
+                useGPS = True
+
+        if len(self.threads)>0:
+            for t, job in self.threads.items():
+                # Check whether the threads are really running.  the
+                # finished and terminate signals appear rather
+                # unreliable.
+                logging.debug("%s: %s: isRunning: %d; isFinished: %d"
+                              % (str(t), job, t.isRunning(), t.isFinished()))
+                if t.isFinished():
+                    self.thread_exited(t)
+
+            if len(self.threads)>0:
+                # Update in progress.
+                logging.info('Update in progress (%s jobs still running: %s)'
+                             % (len (self.threads), str(self.threads.values())))
+                return            
+
+        self.clean(settings)
+
+        nb_searches = settings.beginReadArray('searches')
+        searches = []
+        for index in range(nb_searches):
+            settings.setArrayIndex(index)
+            searches.append(settings.value('terms'))
+        settings.endArray()
 
         nb_lists = settings.beginReadArray('lists')
         lists = []
