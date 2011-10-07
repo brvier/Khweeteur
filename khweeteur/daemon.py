@@ -168,8 +168,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
                         },
                     -1,
                     )
-            except:
-                pass
+            except Exception:
+                logging.exception("Displaying new-tweets info banner")
 
 
 class KhweeteurDaemon(QCoreApplication):
@@ -511,39 +511,25 @@ class KhweeteurDaemon(QCoreApplication):
                 if settings.value('ShowInfos') == '2':
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
                              + err.message)
-        except StandardError, err:
-            logging.error('Do_posts : %s' % (str(err), ))
-            if settings.contains('ShowInfos'):
-                if settings.value('ShowInfos') == '2':
-                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                             + str(err))
-            import traceback
-            (exc_type, exc_value, exc_traceback) = sys.exc_info()
-            logging.error('%s' % repr(traceback.format_exception(exc_type,
-                          exc_value, exc_traceback)))
+
         except Exception, err:
 
             # Emitting the error will block the other tweet post
             # raise #can t post, we will keep the file to do it later
 
-            logging.error('Do_posts : %s' % str(err))
+            logging.exception('Do_posts : %s' % str(err))
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
                              + str(err))
-        except:
-            logging.error('Do_posts : Unknown error')
 
     @Slot()
     def update(self):
         try:
             self.do_posts()
             self.retrieve_all()
-        except Exception:
-            import traceback
-            (exc_type, exc_value, exc_traceback) = sys.exc_info()
-            logging.error('%s' % repr(traceback.format_exception(exc_type,
-                          exc_value, exc_traceback)))
+        except Exception, e:
+            logging.exception('update(): %s', (str(e),))
 
     def retrieve(self, account, thing):
         api = account.api
@@ -632,7 +618,7 @@ class KhweeteurDaemon(QCoreApplication):
                     with open(os.path.join (path, uid), 'rb') as pkl_file:
                         status = pickle.load(pkl_file)
                 except StandardError, err:
-                    logging.debug('Error loading %s: %s' % (uid, str(err)))
+                    logging.exception('Error loading %s: %s' % (uid, str(err)))
                     continue
 
                 if status.created_at_in_seconds > now - keep_time:
