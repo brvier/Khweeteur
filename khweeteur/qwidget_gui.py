@@ -39,7 +39,7 @@ import os
 import sys
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
-
+from posttweet import post_tweet
 
 try:
     from QtMobility.Location import QGeoPositionInfoSource
@@ -741,13 +741,13 @@ class KhweeteurWin(QMainWindow):
             filename = filename[0]
 
         if filename:
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # tweet_id =
                 0,
                 1,
                 text,
@@ -889,13 +889,13 @@ class KhweeteurWin(QMainWindow):
             return
 
         for base_url in base_urls:
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url
-                                           # action
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url
+                         # action
                 1,
                 1,
                 self.tb_text.toPlainText(),
@@ -962,14 +962,14 @@ class KhweeteurWin(QMainWindow):
             return
 
         for base_url in self.select_accounts(default_accounts=[tweet_source]):
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # action =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # action =
+                         # tweet_id =
                 0,
                 0,
                 '',
@@ -997,14 +997,14 @@ class KhweeteurWin(QMainWindow):
             tweet_id = None
 
         if tweet_id:
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # action =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # action =
+                         # tweet_id =
                 0,
                 0,
                 '',
@@ -1032,14 +1032,14 @@ class KhweeteurWin(QMainWindow):
             return
 
         for base_url in self.select_accounts(default_accounts=[tweet_source]):
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # action =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # action =
+                         # tweet_id =
                 0,
                 0,
                 '',
@@ -1070,14 +1070,14 @@ class KhweeteurWin(QMainWindow):
             return
 
         for base_url in self.select_accounts(default_accounts=[tweet_source]):
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # action =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # action =
+                         # tweet_id =
                 0,
                 0,
                 '',
@@ -1105,14 +1105,14 @@ class KhweeteurWin(QMainWindow):
             user_id = None
 
         if user_id:
-            self.dbus_handler.post_tweet(  # shorten_url=\
-                                           # serialize=\
-                                           # text=\
-                                           # latitude =
-                                           # longitude =
-                                           # base_url =
-                                           # action =
-                                           # tweet_id =
+            post_tweet(  # shorten_url=\
+                         # serialize=\
+                         # text=\
+                         # latitude =
+                         # longitude =
+                         # base_url =
+                         # action =
+                         # tweet_id =
                 0,
                 0,
                 '',

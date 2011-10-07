@@ -18,6 +18,7 @@ import random
 
 import logging
 
+from posttweet import post_tweet
 from retriever import KhweeteurRefreshWorker
 from settings import SUPPORTED_ACCOUNTS, settings_db, accounts
 
@@ -208,7 +209,7 @@ class KhweeteurDaemon(QCoreApplication):
         self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur'
                                      , dbus_interface='net.khertan.Khweeteur',
                                      signal_name='require_update')
-        self.bus.add_signal_receiver(self.post_tweet,
+        self.bus.add_signal_receiver(post_tweet,
                                      path='/net/khertan/Khweeteur',
                                      dbus_interface='net.khertan.Khweeteur',
                                      signal_name='post_tweet')
@@ -259,87 +260,6 @@ class KhweeteurDaemon(QCoreApplication):
         logging.debug('Timer added')
         self.exec_()
         logging.debug('Daemon stop')
-
-    def post_tweet(
-        self,
-        shorten_url=True,
-        serialize=True,
-        text='',
-        latitude='',
-        longitude='',
-        base_url='',
-        action='',
-        tweet_id='',
-        ):
-        """
-        Queue a status update.
-
-        shorten_url: A boolean indicating whether to shorten any URLs
-            embedded in text.  If true, text is searched for any URLs
-            and they are shortened using the configured URL shortener.
-
-        serialize: A boolean indicating whether to send the tweet as
-            multiple status updates if the length of text exceeds the
-            single tweet limit.
-
-        text: The body of the tweet.
-
-        latitude, longitude: The latitude and longitude of where the
-           status update was made
-
-        base_url: Meaning depends on the value of 'action':
-
-           If 'twitpic': the filename of the picture to tweet.
-
-           If 'tweet': ''.
-
-           If 'reply': the base url of the tweet to which this tweet
-               is a reply.
-
-           If 'retweet', 'delete', 'favorite', 'follow' or 'unfollow':
-               the base url of the account.
-
-        action: 'twitpic', 'tweet', 'reply', 'retweet', 'delete',
-          'favorite', 'follow'
-
-        tweet_id: If action is 'retweet', 'delete' or 'favorite', the
-           tweet id of the tweet in question.
-
-           If action is 'follow' or 'unfollow': the user id or the
-               screen name of the user to follow.
-
-           Otherwise, ''.
-
-        The status update will actually be sent when do_posts is
-        called.
-        """
-
-        post = {'shorten_url':shorten_url,
-                'serialize':serialize,
-                'text': text, 
-                'latitude':latitude,
-                'longitude':longitude,
-                'base_url':base_url,
-                'action':action,
-                'tweet_id':tweet_id,
-                }
-        logging.debug('post_tweet %s' % (repr(post),))
-
-        if not os.path.isdir(self.post_path):
-            try:
-                os.makedirs(self.post_path)
-            except IOError, e:
-                logging.error('post_tweet %s: creating directory %s: %s'
-                              % (repr(post), self.post_path, e))
-
-        filename = os.path.join(self.post_path,
-                                str(time.time()) + '-' + str (random.random()))
-        logging.debug('Saving status update %s to %s'
-                      % (post.__repr__(), filename))
-        with open(filename, 'wb') as fhandle:
-            pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
-
-#        self.do_posts() #Else we loop when action create a post
 
     def geolocStart(self):
         '''Start the GPS with a 50000 refresh_rate'''
@@ -542,7 +462,7 @@ class KhweeteurDaemon(QCoreApplication):
                         response = twitpic_client.create('upload',
                                 params)
                         if 'url' in response:
-                            self.post_tweet(
+                            post_tweet(
                                 post['shorten_url'],
                                 post['serialize'],
                                 unicode(response['url']) + u' : '
