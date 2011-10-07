@@ -12,6 +12,7 @@ import dbus.service
 import os.path
 from subprocess import Popen, PIPE
 from posttweet import post_tweet
+import logging
         
 try:
     from PySide.QtMaemo5 import *
@@ -29,28 +30,51 @@ def isThisRunning( process_name ):
 
 
 class KhweeteurDBusHandler(dbus.service.Object):
-
+    """
+    Class responsible for sending messages to Khweeteur daemon and
+    managing callbacks.
+    """
     def __init__(self, parent):
         dbus.service.Object.__init__(self, dbus.SessionBus(),
                                      '/net/khertan/Khweeteur')
         self.parent = parent
 
         # Post Folder
-
         self.post_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                       'topost')
 
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur')
-    def require_update(self, optional=None):
-        try:
-            self.parent.setAttribute(Qt.WA_Maemo5ShowProgressIndicator, True)
-        except:
-            pass
+    def require_update(self, optional=False):
+        def success_handler(update_started):
+            try:
+                self.parent.setAttribute(
+                    Qt.WA_Maemo5ShowProgressIndicator, update_started)
+            except:
+                pass
+
+        def error_handler(exception):
+            logging.error("Error starting update: %s" % (str(exception)))
+
+            if hasattr(self, 'iface'):
+                del self.iface
+
         if not isThisRunning('daemon.py'):
             Popen(['/usr/bin/python',
                   os.path.join(os.path.dirname(__file__),
                   'daemon.py'),
                   'start'])
+
+        if not hasattr(self, 'iface'):
+            bus = dbus.SessionBus()
+            obj = bus.get_object('net.khertan.khweeteur.daemon',
+                                 '/net/khertan/khweeteur/daemon')
+            self.iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
+
+        # Run ansynchronously to avoid blocking the user interface.
+        self.iface.require_update(
+            optional,
+            reply_handler=success_handler,
+            error_handler=error_handler)
+
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):

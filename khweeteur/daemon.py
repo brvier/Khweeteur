@@ -77,10 +77,23 @@ def install_excepthook(version):
     sys.excepthook = my_excepthook
 
 class KhweeteurDBusHandler(dbus.service.Object):
+    def __init__(self, app):
+        bus_name_str = 'net.khertan.khweeteur.daemon'
+        try:
+            bus_name = dbus.service.BusName(
+                bus_name_str, bus=dbus.SessionBus(),
+                do_not_queue=True)
+        except dbus.exceptions.NameExistsException, e:
+            logging.info("Already running (Unable to claim %s: %s)."
+                         % (bus_name_str, str(e)))
+            sys.exit(1)
 
-    def __init__(self):
-        dbus.service.Object.__init__(self, dbus.SessionBus(),
-                                     '/net/khertan/Khweeteur')
+        dbus.service.Object.__init__(
+            self, bus_name, '/net/khertan/khweeteur/daemon')
+
+
+        self.app = app
+
         self.m_id = 0
 
     def info(self, message):
@@ -114,16 +127,18 @@ class KhweeteurDBusHandler(dbus.service.Object):
                           % repr(traceback.format_exception(exc_type,
                           exc_value, exc_traceback)))
 
-    @dbus.service.method(dbus_interface='net.khertan.Khweeteur',
+    @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
                          in_signature='', out_signature='b')
     def isRunning(self):
         return True
         
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur', signature='')
+    @dbus.service.signal(dbus_interface='net.khertan.khweeteur.daemon',
+                         signature='')
     def refresh_ended(self):
         pass
 
-    @dbus.service.signal(dbus_interface='net.khertan.Khweeteur', signature='us')
+    @dbus.service.signal(dbus_interface='net.khertan.khweeteur.daemon',
+                         signature='us')
     def new_tweets(self, count, ttype):
         logging.debug('New tweet notification ttype : %s (%s); count: %d'
                       % (ttype, str(type(ttype)), count))
@@ -171,6 +186,18 @@ class KhweeteurDBusHandler(dbus.service.Object):
             except Exception:
                 logging.exception("Displaying new-tweets info banner")
 
+    @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
+                         in_signature='b', out_signature='b')
+    def require_update(self, optional):
+        return self.app.update(optional)
+
+    @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon')
+    def post_tweet(shorten_url=1, serialize=1, text='',
+                   latitude='0', longitude='0',
+                   base_url='', action='', tweet_id='0'):
+        return post_tweet(shorten_url, serialize, text,
+                          latitude, longitude,
+                          base_url, action, tweet_id)
 
 class KhweeteurDaemon(QCoreApplication):
     def __init__(self):
@@ -204,15 +231,7 @@ class KhweeteurDaemon(QCoreApplication):
             os.nice(10)
         except:
             pass
-            
-        self.bus = dbus.SessionBus()
-        self.bus.add_signal_receiver(self.update, path='/net/khertan/Khweeteur'
-                                     , dbus_interface='net.khertan.Khweeteur',
-                                     signal_name='require_update')
-        self.bus.add_signal_receiver(post_tweet,
-                                     path='/net/khertan/Khweeteur',
-                                     dbus_interface='net.khertan.Khweeteur',
-                                     signal_name='post_tweet')
+
         # We maintain the list of currently running jobs so that we
         # know when all jbos complete, to improve debugging output,
         # and because we have to: if the QThread object goes out of
@@ -239,7 +258,7 @@ class KhweeteurDaemon(QCoreApplication):
         if not os.path.exists(self.post_path):
             os.makedirs(self.post_path)
 
-        self.dbus_handler = KhweeteurDBusHandler()
+        self.dbus_handler = KhweeteurDBusHandler(self)
                 
         # mainloop = DBusQtMainLoop(set_as_default=True)
 
@@ -524,7 +543,7 @@ class KhweeteurDaemon(QCoreApplication):
                              + str(err))
 
     @Slot()
-    def update(self):
+    def update(self, optional=True):
         try:
             self.do_posts()
             self.retrieve_all()
