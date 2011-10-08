@@ -22,11 +22,15 @@ except ImportError:
 from PySide.QtCore import Qt
 
 def isThisRunning( process_name ):
-  ps = Popen("ps -eaf | grep %s" % process_name, shell=True, stdout=PIPE)
-  output = ps.stdout.read()
+  ps = Popen("ps -eaf", shell=True, stdout=PIPE)
+  output = ""
+  try:
+      output = ps.stdout.read()
+  except Exception, e:
+      logging.exception("read(): %s" % str(e))
   ps.stdout.close()
   ps.wait()
-  return False if process_name not in output else True
+  return process_name in output
 
 
 class KhweeteurDBusHandler(dbus.service.Object):
