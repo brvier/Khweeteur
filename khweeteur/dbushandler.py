@@ -13,13 +13,16 @@ import os.path
 from subprocess import Popen, PIPE
 from posttweet import post_tweet
 import logging
-        
+from functools import wraps
+import sys
+import time
+
 try:
     from PySide.QtMaemo5 import *
 except ImportError:
     pass
     
-from PySide.QtCore import Qt
+from PySide.QtCore import Qt, QTimer
 
 def isThisRunning( process_name ):
   ps = Popen("ps -eaf", shell=True, stdout=PIPE)
@@ -31,7 +34,6 @@ def isThisRunning( process_name ):
   ps.stdout.close()
   ps.wait()
   return process_name in output
-
 
 class KhweeteurDBusHandler(dbus.service.Object):
     """
@@ -48,7 +50,38 @@ class KhweeteurDBusHandler(dbus.service.Object):
         self.post_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
                                       'topost')
 
-    def require_update(self, optional=False):
+    def start_daemon(self):
+        if not isThisRunning('daemon.py'):
+            logging.error("starting daemon")
+            Popen(['/usr/bin/python',
+                  os.path.join(os.path.dirname(__file__),
+                  'daemon.py'),
+                  'start'])
+
+    def retry(self, f, *args, **kwargs):
+        """Start daemon and call the function after a short delay."""
+        self.start_daemon()
+        if hasattr(self, '_iface'):
+            del self._iface
+
+        def cb(self, args, kwargs):
+            def doit():
+                return f(*args, **kwargs)
+            return doit
+        logging.debug("Started daemon.  Retrying call in 5 seconds.")
+        QTimer.singleShot(5 * 1000, cb(self, args, kwargs))
+
+    @property
+    def iface(self):
+        if not hasattr(self, '_iface'):
+            bus = dbus.SessionBus()
+            obj = bus.get_object('net.khertan.khweeteur.daemon',
+                                 '/net/khertan/khweeteur/daemon')
+            self._iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
+
+        return self._iface
+
+    def require_update(self, optional=True, first_try=True):
         def success_handler(update_started):
             try:
                 self.parent.setAttribute(
@@ -57,22 +90,16 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 pass
 
         def error_handler(exception):
-            logging.error("Error starting update: %s" % (str(exception)))
-
-            if hasattr(self, 'iface'):
-                del self.iface
-
-        if not isThisRunning('daemon.py'):
-            Popen(['/usr/bin/python',
-                  os.path.join(os.path.dirname(__file__),
-                  'daemon.py'),
-                  'start'])
-
-        if not hasattr(self, 'iface'):
-            bus = dbus.SessionBus()
-            obj = bus.get_object('net.khertan.khweeteur.daemon',
-                                 '/net/khertan/khweeteur/daemon')
-            self.iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
+            if first_try:
+                logging.error("Error starting update, retrying: %s"
+                              % (str(exception)))
+                self.retry(self.require_update,
+                           optional, first_try=False)
+            else:
+                # We've tried twice.  Give up.
+                logging.error("Error starting update: %s" % (str(exception)))
+                self.parent.setAttribute(
+                    Qt.WA_Maemo5ShowProgressIndicator, False)
 
         # Run ansynchronously to avoid blocking the user interface.
         self.iface.require_update(
@@ -80,10 +107,11 @@ class KhweeteurDBusHandler(dbus.service.Object):
             reply_handler=success_handler,
             error_handler=error_handler)
 
-
     @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):
-        '''Callback called to active the window and reset counter'''
+        '''Callback called to active the window and reset counter.
+
+        See notifications.py.'''
         self.win.activated_by_dbus.emit()
         return True
 
