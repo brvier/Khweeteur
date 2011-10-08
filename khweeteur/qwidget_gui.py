@@ -370,9 +370,13 @@ class KhweeteurWin(QMainWindow):
     @Slot()
     def post_init_2(self):
         self.listen_dbus()
-        self.tb_update.triggered.connect(self.dbus_handler.require_update)
 
         QTimer.singleShot(3 * 1000, self.dbus_handler.require_update)
+
+        # When the user requests an update, mark it as mandatory (=
+        # not optional).
+        self.tb_update.triggered.connect(
+            lambda: self.dbus_handler.require_update(optional=False))
 
         self.geolocDoStart()
 
