@@ -34,7 +34,7 @@ setup(name='khweeteur',
       requires=['imaging','simplejson','conic','PySide','PySide.QtMobility', \
                 'httplib2'],
       url='http://www.khertan.net/khweeteur',
-      packages= ['khweeteur','khweeteur.oauth', 'khweeteur.oauth2'],
+      packages= ['khweeteur','khweeteur.oauth', 'khweeteur.oauth2', 'khweeteur.pydaemon', 'khweeteur.pydaemon.version'],
       package_data = {'khweeteur': ['icons/*.png']},
       data_files=[('/usr/share/dbus-1/services', ['khweeteur.service', 'khweeteur-daemon.service']),
                   ('/usr/share/applications/hildon/', ['khweeteur.desktop']),
