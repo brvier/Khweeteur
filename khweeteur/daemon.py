@@ -47,7 +47,7 @@ except:
 import os.path
 import dbus.service
 
-from pydaemon.runner import DaemonRunner
+from pydaemon.runner import DaemonRunner, DaemonRunnerStopFailureError
 from lockfile import LockTimeout
 
 import mainthread
@@ -1001,6 +1001,9 @@ def main():
             runner.do_action()
         except LockTimeout:
             print "Failed to acquire lock."
+            sys.exit(1)
+        except DaemonRunnerStopFailureError, e:
+            print "Failed to stop daemon: %s" % (str(e),)
             sys.exit(1)
     else:
         logging.error('Unknown command')
