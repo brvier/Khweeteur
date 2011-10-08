@@ -592,11 +592,10 @@ class KhweeteurWin(QMainWindow):
             path='/net/khertan/khweeteur/daemon',
             dbus_interface='net.khertan.khweeteur.daemon',
             signal_name='new_tweets')
-        self.bus.add_signal_receiver(
-            self.stop_spinning,
-            path='/net/khertan/khweeteur/daemon',
-            dbus_interface='net.khertan.khweeteur.daemon',
-            signal_name='refresh_ended')
+        self.bus.add_signal_receiver(self.stop_spinning,
+                                     path='/net/khertan/khweeteur',
+                                     dbus_interface='net.khertan.khweeteur',
+                                     signal_name='refresh_ended')
         self.dbus_handler = KhweeteurDBusHandler(self)
         self.dbus_handler.attach_win(self)
         self.activated_by_dbus.connect(self.activateWindow)

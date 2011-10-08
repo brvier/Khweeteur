@@ -31,6 +31,9 @@ import glob
 import time
 import rfc822
 
+from wc import wc, woodchuck, stream_id_build
+import mainthread
+
 class KhweeteurRefreshWorker(QThread):
 
     new_tweets = Signal(int, str)
@@ -360,11 +363,19 @@ class KhweeteurRefreshWorker(QThread):
                     since_id=since, term='', geocode=geocode)
             else:
                 logging.error('Unknown call: %s' % (self.call, ))
+
+            success = True
         except Exception, err:
+            success = False
             logging.debug('Retriever %s: %s' % (self.call, str(err)))
             if settings.value('ShowInfos') == '2':
                 self.error.emit('Khweeteur Error : %s' % str(err))
                 #self.dbus_handler.info('Khweeteur Error : ' + str(err))
+
+        if not success and statuses:
+            # Something went wrong, but we did get something.  That's
+            # more a success than a failure.
+            success = True
 
         downloaded_statuses = len(statuses)
 
@@ -387,6 +398,90 @@ class KhweeteurRefreshWorker(QThread):
 
         self.new_tweets.emit(len(statuses), self.call)
         self.update_last_update()
+
+        def register_update(account, call, status_id_prefix, success, statuses):
+            # The closure will be run in the main thread
+            # asynchronously and after this thread is destroyed. Do
+            # NOT access the self variable.
+            def register_update_closure():
+                stream_id = stream_id_build(account, call)
+
+                logging.debug("Registering %s (%d updates) for %s"
+                              % ("success" if success else "failure",
+                                 len(statuses), stream_id))
+
+                try:
+                    if success:
+                        wc().stream_updated(
+                            stream_id,
+                            new_objects=len(statuses),
+                            objects_inline=len(statuses))
+                    else:
+                        wc().stream_update_failed(
+                            stream_id,
+                            reason=woodchuck.TransferStatus.FailureGone)
+                except Exception, e:
+                    logging.exception(
+                        "Registering update of %s with Woodchuck: %s"
+                        % (stream_id, str(e)))
+                    return
+
+                for status in statuses:
+                    try:
+                        poster = status.user.screen_name
+                    except Exception:
+                        poster = status.sender_screen_name
+
+                    text = ""
+                    try:
+                        text = status.text
+                        if len(text) > 25:
+                            text = text[:22] + "..."
+                    except Exception:
+                        pass
+
+                    human_readable_name = "%s: %s" % (poster, text)
+
+                    filename = ""
+                    size = None
+                    try:
+                        filename = status_id_prefix + str(status.id)
+                        size = os.path.getsize(filename)
+                    except Exception, e:
+                        logging.exception("Getting size of %s: %s"
+                                          % (filename, str(e)))
+
+                    try:
+                        wc()[stream_id].object_register(
+                            object_identifier=str(status.id),
+                            human_readable_name=human_readable_name,
+                            expected_size=size)
+                        wc()[stream_id][str(status.id)].transferred(
+                            object_size=size)
+                    except Exception, e:
+                        logging.exception(
+                            "Registering transfer of %s (%s) (in %s): %s"
+                            % (human_readable_name, status.id,
+                               stream_id, str(e)))
+
+                    logging.debug("Registered update of %s with Woodchuck"
+                                  % (stream_id,))
+
+                logging.debug("Registered %s (%d updates) for %s"
+                              % ("success" if success else "failure",
+                                 len(statuses), stream_id))
+
+            return register_update_closure
+
+        if wc().available():
+            logging.debug("Wookchuck available: queued update")
+            mainthread.execute(
+                register_update(
+                    self.account, self.call, self.statusIdFilename(""),
+                    success, statuses),
+                async=True)
+        else:
+            logging.debug("Wookchuck NOT available: not registering updates")
 
         settings.sync()
         logging.debug('%s finished' % self.call)

@@ -83,11 +83,12 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
     def require_update(self, optional=True, only_uploads=False, first_try=True):
         def success_handler(update_started):
-            try:
-                self.parent.setAttribute(
-                    Qt.WA_Maemo5ShowProgressIndicator, update_started)
-            except:
-                pass
+            if not update_started:
+                try:
+                    self.parent.setAttribute(
+                        Qt.WA_Maemo5ShowProgressIndicator, update_started)
+                except:
+                    pass
 
         def error_handler(exception):
             if first_try:
@@ -100,6 +101,12 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 logging.error("Error starting update: %s" % (str(exception)))
                 self.parent.setAttribute(
                     Qt.WA_Maemo5ShowProgressIndicator, False)
+
+        try:
+            self.parent.setAttribute(
+                Qt.WA_Maemo5ShowProgressIndicator, True)
+        except:
+            pass
 
         # Run ansynchronously to avoid blocking the user interface.
         self.iface.require_update(

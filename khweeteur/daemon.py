@@ -9,7 +9,8 @@ from __future__ import with_statement
 
 import sys
 import time
-from PySide.QtCore import Slot, QTimer, QCoreApplication
+from PySide.QtCore import Slot, Signal, \
+    QTimer, QCoreApplication, QThread, Qt
 import atexit
 import os
 import shutil
@@ -20,7 +21,8 @@ import logging
 
 from posttweet import post_tweet
 from retriever import KhweeteurRefreshWorker
-from settings import SUPPORTED_ACCOUNTS, settings_db, accounts
+from settings import SUPPORTED_ACCOUNTS, settings_db, \
+    accounts, account_lookup_by_uuid
 
 import cPickle as pickle
 import re
@@ -31,8 +33,8 @@ import dbus
 
 import dbus.mainloop.glib
 
-#from dbus.mainloop.qt import DBusQtMainLoop
-#DBusQtMainLoop(set_as_default=True)
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
 import twitter
 import glob
@@ -48,6 +50,9 @@ import dbus.service
 from pydaemon.runner import DaemonRunner
 from lockfile import LockTimeout
 
+import mainthread
+from wc import wc, stream_id_build
+from wc import woodchuck
 
 # A hook to catch errors
 
@@ -197,11 +202,33 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
 class KhweeteurDaemon(QCoreApplication):
     def __init__(self):
-        pass
+        self.idle_timer_id = None
 
+    # Woodchuck callbacks.
+    def stream_update(self, account, feed):
+        logging.debug("stream update called on %s.%s"
+                     % (account.name, feed))
+        return self.retrieve(account, feed)
+
+    def object_transfer(self, account, feed, post):
+        logging.debug("object transfer called: %s.%s.%s"
+                      % (account.name, feed, post))
+
+        if feed == 'topost':
+            self.do_post(post)
+        else:
+            logging.error("object transfer called on feed %s!"
+                          % (feed,))
+            try:
+                wc()[stream_id_build(account, feed)][post].dont_transfer = True
+            except Exception, e:
+                logging.exception("Marking %s.%s.%s.dont_transfer: %s"
+                                  % (account.name, feed, post, str(e)))
+
+    # This signal will live in the main thread.
+    main_thread_signal = Signal(object)
     def run(self):
         QCoreApplication.__init__(self,sys.argv)
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         try:
             from PySide import __version_info__ as __pyside_version__
         except:
@@ -256,23 +283,43 @@ class KhweeteurDaemon(QCoreApplication):
 
         self.dbus_handler = KhweeteurDBusHandler(self)
                 
-        # mainloop = DBusQtMainLoop(set_as_default=True)
+        # Configure the mainthread module: it needs a function that
+        # runs the passed function in the main thread.  We using a Qt
+        # Signal that lives in the main thread to accomplish this.
 
-        settings = settings_db()
-        if not settings.contains('refresh_interval'):
-            refresh_interval = 600
-        else:
-            refresh_interval = int(settings.value('refresh_interval')) * 60
+        self.main_thread_id = QThread.currentThreadId()
+        def run_in_main_thread(func):
+            assert QThread.currentThreadId() == self.main_thread_id, \
+                ("Running in %s, not %s"
+                 % (str(QThread.currentThreadId()), str(self.main_thread_id)))
+            func()
 
-        self.utimer = QTimer()
-        self.utimer.timeout.connect(self.update)
-        self.utimer.start(refresh_interval * 1000)
+        self.main_thread_signal.connect(
+            run_in_main_thread, Qt.QueuedConnection)
+
+        def queue_to_run_in_main_thread(func):
+            self.main_thread_signal.emit(func)
+
+        mainthread.init(queue_to_run_in_main_thread)
+
+        if not wc(self.stream_update, self.object_transfer).available():
+            # Enable time-based updates if Woodchuck is not available.
+            settings = settings_db()
+            if not settings.contains('refresh_interval'):
+                refresh_interval = 600
+            else:
+                refresh_interval = int(settings.value('refresh_interval')) * 60
+
+            self.utimer = QTimer()
+            self.utimer.timeout.connect(self.update)
+            self.utimer.start(refresh_interval * 1000)
                 
-        QTimer.singleShot(200, self.update)
+            QTimer.singleShot(200, self.update)
 
-        # gobject.timeout_add_seconds(refresh_interval, self.update, priority=gobject.PRIORITY_LOW)
+            logging.debug('Timer added')
 
-        logging.debug('Timer added')
+        self.idle_timer_start()
+
         self.exec_()
         logging.debug('Daemon stop')
 
@@ -336,8 +383,55 @@ class KhweeteurDaemon(QCoreApplication):
         Post a status update.  item is the name of a file containing a
         pickled status update.
         """
+        def note_transfer(error_code=0, deleted=True):
+            """
+            Note that an attempt to transfer a post was made.
+
+            If error_code is 0, note that the transfer was successful.
+
+            If error_code is not 0, it is an error code draws from
+            woodchuck.TransferStatus indicating what went wrong.
+
+            deleted indicates whether the post was deleted.
+            """
+            if not wc().available():
+                return
+
+            object_identifier = os.path.basename(item)
+
+            if not error_code:
+                object_size = None
+                try:
+                    object_size = -1 * os.path.getsize(item)
+                except Exception:
+                    pass
+
+            try:
+                # Mark the item as transferred, then delete it.
+                if not error_code:
+                    wc()['topost'][object_identifier].transferred(
+                        object_size=object_size)
+                else:
+                    wc()['topost'][object_identifier].transfer_failed(
+                        reason=error_code)
+
+                if deleted:
+                    wc()['topost'][object_identifier].files_deleted(
+                        update=woodchuck.DeletionResponse.Deleted)
+
+                    del wc()['topost'][object_identifier]
+            except Exception, e:
+                logging.exception(
+                    "Registering transfer of %s with Woodchuck: %s"
+                    % (item, str(e)))
+
         if settings is None:
             settings = settings_db()
+
+        if not os.path.isabs(item):
+            # item is not an absolute path.  Assume the file exists in
+            # the post path.
+            item = os.path.join(self.post_path, item)
 
         try:
             with open(item, 'rb') as fhandle:
@@ -437,7 +531,28 @@ class KhweeteurDaemon(QCoreApplication):
                         path = os.path.join(os.path.expanduser('~'),
                                 '.khweeteur', 'cache', 'HomeTimeline',
                                 post['tweet_id'])
+                        if wc().available():
+                            try:
+                                post2 = pickle.load(open(path, 'rb'))
+                            except Exception, e:
+                                post2 = None
+                                logging.exception(
+                                    "Loading post %s: %s" % (path, str(e),))
+
+                            if post2 is not None:
+                                try:
+                                    stream = wc()[post2.base_url]
+                                    stream[str(post2.id)].files_deleted(
+                                        update=woodchuck.DeletionResponse.Deleted)
+
+                                    del stream[str(post2.id)]
+                                except Exception, e:
+                                    logging.exception(
+                                        "Deleting post %s.%s from Woodchuck: %s"
+                                        % (post2.base_url, post2.id, str(e),))
+
                         os.remove(path)
+
                         logging.debug('Deleted %s' % (post['tweet_id'],
                                 ))
                         if settings.contains('ShowInfos'):
@@ -508,6 +623,9 @@ class KhweeteurDaemon(QCoreApplication):
                         'Khweeteur: Post %s not handled by any accounts!'
                         % (str(post)))
 
+
+            note_transfer()
+
             logging.debug("post processed, deleting %s" % item)
             try:
                 os.remove(item)
@@ -518,12 +636,18 @@ class KhweeteurDaemon(QCoreApplication):
 
             if err.message == 'Status is a duplicate.':
                 logging.error('Do_posts (remove): %s' % (err.message, ))
+                note_transfer(deleted=True)
                 os.remove(item)
             elif 'ID' in err.message:
                 logging.error('Do_posts (remove): %s' % (err.message, ))
+                note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
+                              deleted=True)
                 os.remove(item)
             else:
                 logging.error('Do_posts : %s' % (err.message, ))
+                note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
+                              deleted=False)
+
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
@@ -540,6 +664,9 @@ class KhweeteurDaemon(QCoreApplication):
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
                              + str(err))
 
+            note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
+                          deleted=False)
+
     @Slot()
     def update(self, optional=True, only_uploads=False):
         logging.debug("update requested: %soptional, %s"
@@ -548,8 +675,11 @@ class KhweeteurDaemon(QCoreApplication):
         try:
             self.do_posts()
             if not only_uploads:
-                self.retrieve_all()
-                return True
+                # If Woodchuck is available and this is an optional
+                # update, let Woodchuck schedule it.
+                if not optional or (optional and not wc().available()):
+                    self.retrieve_all()
+                    return True
 
             # No on going updates.
             self.dbus_handler.refresh_ended()
@@ -564,6 +694,14 @@ class KhweeteurDaemon(QCoreApplication):
             logging.debug("Account %s not authenticated. Not fetching '%s'"
                           % (str(account), thing))
             return
+
+        for t in self.threads:
+            if t.account.uuid == account.uuid and t.call == thing:
+                logging.debug("%s(%s).%s already being updated.  Ignoring."
+                              % (account.name, account.uuid, thing))
+                return
+
+        self.idle_timer_cancel()
 
         try:
             t = KhweeteurRefreshWorker(account, thing)
@@ -626,6 +764,15 @@ class KhweeteurDaemon(QCoreApplication):
                 except OSError, exception:
                     logging.error("Removing %s: %s"
                                   % (path + '-data-cache', str(exception)))
+
+                if wc().available():
+                    for account in accounts():
+                        try:
+                            del wc()[stream_id_build(account, folder)]
+                        except Exception:
+                            logging.exception(
+                                "Removing Woodchuck stream %s"
+                                % (folder))
                 continue
 
             uids = os.listdir(path)
@@ -677,7 +824,30 @@ class KhweeteurDaemon(QCoreApplication):
                 except StandardError, err:
                     logging.debug('remove(%s): %s'
                                   % (filename, str(err)))
+                    continue
 
+                if wc().available():
+                    account = account_lookup_by_uuid(status.base_url)
+                    if account is not None:
+                        try:
+                            stream = wc()[stream_id_build(
+                                    account, os.path.basename (path))]
+                            obj = stream[str(status.id)]
+
+                            obj.files_deleted(
+                                update=woodchuck.DeletionResponse.Deleted)
+                            del obj
+                        except KeyError:
+                            logging.debug("Unregistered object %s"
+                                          % (path,))
+                        except Exception:
+                            logging.exception("Unregistering object %s"
+                                              % (path,))
+                    else:
+                        logging.debug(
+                            ("Status update %s not associated with a "
+                             + "known account (uuid is: %s)")
+                            % (path, status.base_url))
 
     def retrieve_all(self):
         logging.debug('Start update')
@@ -740,8 +910,38 @@ class KhweeteurDaemon(QCoreApplication):
                           % (str(thread), str (exception)))
 
         if len(self.threads) == 0:
+            self.idle_timer_start()
             self.dbus_handler.refresh_ended()
             logging.debug('Finished update')
+
+    @mainthread.mainthread(async=True)
+    def idle_timer_start(self):
+        self.idle_timer_cancel()
+        logging.debug('Arming idle timer')
+
+        self.idle_timer_id = QTimer(self)
+        self.idle_timer_id.timeout.connect(self.idle_quit)
+        self.idle_timer_id.start(3 * 60 * 1000)
+        self.idle_timer_id.setSingleShot(True)
+
+        logging.debug('idle timer: %s', str(self.idle_timer_id))
+
+    def idle_timer_cancel(self):
+        if self.idle_timer_id is not None:
+            logging.debug('Disarming idle timer')
+            self.idle_timer_id.stop()
+            self.idle_timer_id = None
+        else:
+            logging.debug('Disarming idle timer but idle_timer_id is None!')
+
+    @Slot()
+    def idle_quit(self):
+        """Quit if idle for too long."""
+        if self.threads:
+            logging.info("idle_quit called, but updates running!")
+        else:
+            logging.info("Idle: quitting.")
+            self.exit(0)
 
     @Slot()
     def athread_end(self):

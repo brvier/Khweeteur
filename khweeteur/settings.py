@@ -218,6 +218,14 @@ def accounts():
 
     return accounts
 
+def account_lookup_by_uuid(uuid):
+    """Return the account with specified UUID.  If no such account
+    exists, return None."""
+    for account in accounts():
+        if account.uuid == uuid:
+            return account
+    return None
+
 def screenname(account):
     """
     Given a KhweeteurAccount, refresh the name attribute with the
