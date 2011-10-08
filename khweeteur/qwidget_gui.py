@@ -41,11 +41,6 @@ from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 from posttweet import post_tweet
 
-try:
-    from QtMobility.Location import QGeoPositionInfoSource
-except:
-    print 'Pyside QtMobility not installed or broken'
-
 class KhweeteurAbout(QMainWindow):
 
     '''About Window'''
@@ -1301,11 +1296,13 @@ class KhweeteurWin(QMainWindow):
         self.geoloc_coordinates = None
         if self.geoloc_source is None:
             try:
+                from QtMobility.Location import QGeoPositionInfoSource
                 self.geoloc_source = \
                     QGeoPositionInfoSource.createDefaultSource(None)
             except:
                 self.geoloc_source = None
-                print 'PySide QtMobility not installed or package broken'
+                logging.exception(
+                    'PySide QtMobility not installed or package broken')
             if self.geoloc_source is not None:
                 self.geoloc_source.setUpdateInterval(50000)
                 self.geoloc_source.positionUpdated.connect(self.geolocUpdated)

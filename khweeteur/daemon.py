@@ -48,10 +48,6 @@ import dbus.service
 from pydaemon.runner import DaemonRunner
 from lockfile import LockTimeout
 
-try:
-    from QtMobility.Location import QGeoPositionInfoSource
-except:
-    print 'Pyside QtMobility not installed or broken'
 
 # A hook to catch errors
 
@@ -285,12 +281,14 @@ class KhweeteurDaemon(QCoreApplication):
         self.geoloc_coordinates = None
         if self.geoloc_source is None:
             try:
+                from QtMobility.Location import QGeoPositionInfoSource
                 self.geoloc_source = \
                     QGeoPositionInfoSource.createDefaultSource(None)
             except:
                 self.geoloc_source = None
                 self.geoloc_coordinates = (0,0)
-                print 'PySide QtMobility not installed or package broken'
+                logging.exception(
+                    'PySide QtMobility not installed or package broken')
             if self.geoloc_source is not None:
                 self.geoloc_source.setUpdateInterval(50000)
                 self.geoloc_source.positionUpdated.connect(self.geolocUpdated)
