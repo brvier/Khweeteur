@@ -36,7 +36,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
     """
     def __init__(self, parent):
         dbus.service.Object.__init__(self, dbus.SessionBus(),
-                                     '/net/khertan/Khweeteur')
+                                     '/net/khertan/khweeteur')
+
         self.parent = parent
 
         # Post Folder
