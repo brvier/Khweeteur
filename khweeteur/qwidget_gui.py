@@ -760,7 +760,7 @@ class KhweeteurWin(QMainWindow):
                 '',
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_openurl(self):
@@ -908,7 +908,7 @@ class KhweeteurWin(QMainWindow):
                 ('' if is_not_reply else str(self.tb_text_reply_id)),
                 )
         self.switch_tb_default()
-        self.dbus_handler.require_update()
+        self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_reply(self):
@@ -982,7 +982,7 @@ class KhweeteurWin(QMainWindow):
                 str(tweet_id),
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_delete(self):
@@ -1017,7 +1017,7 @@ class KhweeteurWin(QMainWindow):
                 str(tweet_id),
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_favorite(self):
@@ -1052,7 +1052,7 @@ class KhweeteurWin(QMainWindow):
                 str(tweet_id),
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_follow(self):
@@ -1090,7 +1090,7 @@ class KhweeteurWin(QMainWindow):
                 str(user_id),
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def do_tb_unfollow(self):
@@ -1125,7 +1125,7 @@ class KhweeteurWin(QMainWindow):
                 str(user_id),
                 )
             self.switch_tb_default()
-            self.dbus_handler.require_update()
+            self.dbus_handler.require_update(only_uploads=True)
 
     @Slot()
     def show_mentions(self):
@@ -1164,7 +1164,7 @@ class KhweeteurWin(QMainWindow):
                     settings.setValue('useGPS','2')
                     settings.sync()
                     self.geolocDoStart()
-                    self.dbus_handler.require_update()
+                    self.dbus_handler.require_update(only_uploads=True)
 
         self.near_button.setCounter(0)
         self.near_button.setChecked(True)

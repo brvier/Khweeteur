@@ -187,9 +187,9 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 logging.exception("Displaying new-tweets info banner")
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
-                         in_signature='b', out_signature='b')
-    def require_update(self, optional):
-        return self.app.update(optional)
+                         in_signature='bb', out_signature='b')
+    def require_update(self, optional, only_uploads):
+        return self.app.update(optional, only_uploads)
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon')
     def post_tweet(shorten_url=1, serialize=1, text='',
@@ -543,10 +543,19 @@ class KhweeteurDaemon(QCoreApplication):
                              + str(err))
 
     @Slot()
-    def update(self, optional=True):
+    def update(self, optional=True, only_uploads=False):
+        logging.debug("update requested: %soptional, %s"
+                      % ("" if optional else "not ",
+                         "only uploads" if only_uploads else "everything"))
         try:
             self.do_posts()
-            self.retrieve_all()
+            if not only_uploads:
+                self.retrieve_all()
+                return True
+
+            # No on going updates.
+            self.dbus_handler.refresh_ended()
+            return False
         except Exception, e:
             logging.exception('update(): %s', (str(e),))
 

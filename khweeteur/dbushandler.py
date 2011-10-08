@@ -81,7 +81,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
         return self._iface
 
-    def require_update(self, optional=True, first_try=True):
+    def require_update(self, optional=True, only_uploads=False, first_try=True):
         def success_handler(update_started):
             try:
                 self.parent.setAttribute(
@@ -94,7 +94,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
                 logging.error("Error starting update, retrying: %s"
                               % (str(exception)))
                 self.retry(self.require_update,
-                           optional, first_try=False)
+                           optional, only_uploads, first_try=False)
             else:
                 # We've tried twice.  Give up.
                 logging.error("Error starting update: %s" % (str(exception)))
@@ -103,7 +103,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
         # Run ansynchronously to avoid blocking the user interface.
         self.iface.require_update(
-            optional,
+            optional, only_uploads,
             reply_handler=success_handler,
             error_handler=error_handler)
 
