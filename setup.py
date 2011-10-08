@@ -87,7 +87,8 @@ LED-Pattern=PatternCommonNotification
 EOF
     echo "done."
 fi
-su user -c "run-standalone.sh /usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py stop"
+# Don't die gratuitously: the daemon may not be running.
+su user -c "run-standalone.sh /usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py stop" || true
 su user -c "run-standalone.sh /usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs"
 """,
       'prere':"""#!/bin/sh
