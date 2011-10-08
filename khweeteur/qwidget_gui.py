@@ -1331,19 +1331,5 @@ class KhweeteurWin(QMainWindow):
 
 
 if __name__ == '__main__':
-    from subprocess import Popen
-    Popen(['/usr/bin/python', os.path.join(os.path.dirname(__file__),
-          'daemon.py'), 'start'])
     app = Khweeteur()
     app.exec_()
-    settings = QSettings('Khertan Software', 'Khweeteur')
-    if settings.contains('useDaemon'):
-        print "useDaemon:", settings.value('useDaemon')
-        if settings.value('useDaemon') != '2':
-            print 'Stopping daemon'
-
-            # use system to wait the exec
-
-            os.system('/usr/bin/python '
-                      + os.path.join(os.path.dirname(__file__), 'daemon.py')
-                      + ' stop')

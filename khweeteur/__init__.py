@@ -42,22 +42,7 @@ def takeScreenShot(app):
     QPixmap.grabWidget(app.win).save(pvr, 'png') # tell it to grab only your self.centralwidget screen, which is just window screen without the menu status bar on top.
 
 if __name__ == '__main__':
-    from subprocess import Popen
-    import os.path
-    Popen(['/usr/bin/python',
-           os.path.join(os.path.dirname(__file__),
-           'daemon.py'),
-           'start'])
     install_excepthook()
     app = Khweeteur()
     app.exec_()
     takeScreenShot(app)
-    from PySide.QtCore import QSettings
-    settings = QSettings("Khertan Software", "Khweeteur")
-    if settings.contains('useDaemon'):
-        print settings.value('useDaemon')
-        if settings.value('useDaemon') != '2':
-            print 'Stop daemon'
-            #use system to wait the exec
-            os.system('/usr/bin/python ' + \
-                os.path.join(os.path.dirname(__file__), 'daemon.py') + ' stop')

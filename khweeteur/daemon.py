@@ -752,20 +752,27 @@ class KhweeteurDaemon(QCoreApplication):
 
         return self.thread_exited(self.sender())
 
-if __name__ == '__main__':
+def main():
     install_excepthook(__version__)
 
     def usage(exit_status=2):
-        print ('usage: %s start|stop|restart|startfromprefs|debug'
+        print ('usage: %s start|stop|restart|startfromprefs|debug [--no-fork]'
                % sys.argv[0])
         sys.exit(2)
+
+    detach_process = None
+    redirect_output = True
+
+    if sys.argv[-1] == '--no-fork':
+        del sys.argv[-1]
+        detach_process = False
 
     if len(sys.argv) != 2:
         usage()
 
-    detach_process = None
     if sys.argv[1] == 'debug':
         detach_process = False
+        redirect_output = False
         sys.argv[1] = 'start' 
 
     if 'startfromprefs' == sys.argv[1]:
@@ -777,7 +784,7 @@ if __name__ == '__main__':
     if sys.argv[1] in ['start', 'stop', 'restart']:
         khweeteurdaemon = KhweeteurDaemon()
 
-        if detach_process is None:
+        if redirect_output:
             khweeteurdaemon.stdin_path = "/dev/null"
             khweeteurdaemon.stdout_path = os.path.expanduser(
                 '~/.khweeteur.log.out')
@@ -799,3 +806,6 @@ if __name__ == '__main__':
         logging.error('Unknown command')
         print "Unknown command: '%s'" % (sys.argv[1],)
         usage(2)
+
+if __name__ == '__main__':
+    main()
