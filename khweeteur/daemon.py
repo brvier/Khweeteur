@@ -150,10 +150,12 @@ class KhweeteurDBusHandler(dbus.service.Object):
         settings = settings_db()
         #.value('showNotifications') == '2':                      
 
-        if ((ttype == 'Mentions') and
-            (settings.value('showDMNotifications') == '2')) \
+        if (((ttype == 'Mentions') and
+             (settings.value('showMentionNotifications') == '2'))
             or ((ttype == 'DMs') and
-                (settings.value('showDMNotifications') == '2')):
+                (settings.value('showDMNotifications') == '2'))
+            or ((ttype == 'HomeTimeline') and
+                (settings.value('showHomeTimelineNotifications') == '2'))):
             m_bus = dbus.SystemBus()
             m_notify = m_bus.get_object('org.freedesktop.Notifications',
                                         '/org/freedesktop/Notifications')

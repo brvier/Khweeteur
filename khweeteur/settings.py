@@ -500,6 +500,11 @@ class KhweeteurPref(QMainWindow):
         else:
             self.showMentionNotifications_value.setCheckState(Qt.CheckState(2))
 
+        if self.settings.contains('showHomeTimelineNotifications'):
+            self.showHomeTimelineNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showHomeTimelineNotifications'))))
+        else:
+            self.showHomeTimelineNotifications_value.setCheckState(Qt.CheckState(2))
+
         if have_update:
             self.savePrefs()
 
@@ -542,6 +547,7 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
         self.settings.setValue('showDMNotifications', self.showDMNotifications_value.checkState())
         self.settings.setValue('showMentionNotifications', self.showMentionNotifications_value.checkState())
+        self.settings.setValue('showHomeTimelineNotifications', self.showHomeTimelineNotifications_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
         self.save.emit()
@@ -738,11 +744,14 @@ class KhweeteurPref(QMainWindow):
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 16, 1)
 
-        self.showDMNotifications_value = QCheckBox(self.tr('Use DMs notifications'))
+        self.showDMNotifications_value = QCheckBox(self.tr('DM Notifications'))
         self._umain_layout.addWidget(self.showDMNotifications_value, 17, 1)
 
-        self.showMentionNotifications_value = QCheckBox(self.tr('Use Mentions notifications'))
+        self.showMentionNotifications_value = QCheckBox(self.tr('Mention Notifications'))
         self._umain_layout.addWidget(self.showMentionNotifications_value, 18, 1)
+
+        self.showHomeTimelineNotifications_value = QCheckBox(self.tr('Timeline Notifications'))
+        self._umain_layout.addWidget(self.showHomeTimelineNotifications_value, 19, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 
