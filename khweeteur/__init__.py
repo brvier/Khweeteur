@@ -8,6 +8,8 @@
 
 from qwidget_gui import Khweeteur
 import sys
+import logging
+import os
 
 #Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 #happen my_excepthook will be called.
@@ -42,6 +44,12 @@ def takeScreenShot(app):
     QPixmap.grabWidget(app.win).save(pvr, 'png') # tell it to grab only your self.centralwidget screen, which is just window screen without the menu status bar on top.
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format=(str(os.getpid()) + ' '
+                + '%(asctime)s %(levelname)-8s %(message)s'),
+        datefmt='%a, %d %b %Y %H:%M:%S')
+
     install_excepthook()
     app = Khweeteur()
     app.exec_()
