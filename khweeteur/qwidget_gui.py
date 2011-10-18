@@ -40,6 +40,7 @@ import sys
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 from posttweet import post_tweet
+from settings import settings_db, accounts
 
 class KhweeteurAbout(QMainWindow):
 
@@ -359,8 +360,7 @@ class KhweeteurWin(QMainWindow):
     def post_init_3(self):
         self.do_model_load('HomeTimeline')
         #Check if there is at least one account
-        nb_accounts = QSettings().beginReadArray('accounts')
-        if not nb_accounts:
+        if not accounts():
             if (( QMessageBox.question(None,
                 "Khweeteur",
                 'No microblogging account configured, do you want to add one now?',
@@ -793,35 +793,23 @@ class KhweeteurWin(QMainWindow):
               % (str (default_accounts), str(service)))
 
         def make_default():
-            settings.beginWriteArray('accounts')
-            for (index, account) in enumerate(accounts):
-                if account['box'].checkState():
-                    account['use_for_tweet'] = 'true'
+            for account_widget in account_widgets:
+                checkbox = account_widget['box']
+                account = account_widget['account']
+
+                if checkbox.checkState() == Qt.Checked:
+                    account.use_for_tweet = 'true'
                 else:
-                    account['use_for_tweet'] = 'false'
+                    account.use_for_tweet = 'false'
 
-                settings.setArrayIndex(index)
-                settings.setValue('name', account['name'])
-                settings.setValue('consumer_key', account['consumer_key'])
-                settings.setValue('consumer_secret', account['consumer_secret'])
-                settings.setValue('token_key', account['token_key'])
-                settings.setValue('token_secret', account['token_secret'])
-                settings.setValue('use_for_tweet', account['use_for_tweet'])
-                settings.setValue('base_url', account['base_url'])
-            settings.endArray()
+            accounts(True)
 
-        settings = QSettings('Khertan Software', 'Khweeteur')
-        nb_accounts = settings.beginReadArray('accounts')
-        accounts = []
-        for index in range(nb_accounts):
-            settings.setArrayIndex(index)
-            account = dict((key, settings.value(key))
-                           for key in settings.allKeys())
+        accounts_to_consider = []
+        for account in accounts():
             if service is None or service == account['base_url']:
-                accounts.append(account)
-        settings.endArray()
+                accounts_to_consider.append(account)
 
-        if nb_accounts == 1:
+        if len(accounts_to_consider) == 1:
             # We have exactly one account that is marked as
             # appropriate for sending tweets.  Use it.
             pass
@@ -830,21 +818,23 @@ class KhweeteurWin(QMainWindow):
             d.setWindowTitle(message)
 
             layout = QVBoxLayout()
-            for a in accounts:
-                a['box'] = QCheckBox(a['name'])
+            account_widgets = []
+            for account in accounts_to_consider:
+                checkbox = QCheckBox(account['name'])
+                account_widget = {'box': checkbox, 'account': account}
+                account_widgets.append(account_widget)
 
                 checked = False
                 if default_accounts is not None:
-                    aid = a['base_url'] + ';' + a['token_key']
-                    if aid in default_accounts:
+                    if account.uuid in default_accounts:
                         checked = True
                 else:
-                    if a['use_for_tweet'] == 'true':
+                    if account.use_for_tweet == 'true':
                         checked = True
 
-                a['box'].setCheckState(Qt.Checked if checked else Qt.Unchecked)
+                checkbox.setCheckState(Qt.Checked if checked else Qt.Unchecked)
 
-                layout.addWidget(a['box'])
+                layout.addWidget(checkbox)
 
             buttonbox = QDialogButtonBox(
                 QDialogButtonBox.Ok|QDialogButtonBox.Cancel,
@@ -862,13 +852,15 @@ class KhweeteurWin(QMainWindow):
 
             d.setLayout(layout)
             if d.exec_() == QDialog.Accepted:
-                accounts = [a for a in accounts
-                            if a['box'].checkState()]
+                target_accounts \
+                    = [account_widget['account']
+                       for account_widget in account_widgets
+                       if account_widget['box'].checkState() == Qt.Checked]
             else:
-                accounts = []
+                target_accounts = []
 
-        base_urls = [a['base_url'] + ';' + a['token_key']
-                     for a in accounts]
+        base_urls = [account['base_url'] + ';' + account['token_key']
+                     for account in target_accounts]
 
         return base_urls
 

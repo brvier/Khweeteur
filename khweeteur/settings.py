@@ -88,19 +88,58 @@ def settings_db():
     return _settings
 
 class Account(object):
-    def __init__(self, dct):
+    def __init__(self, **dct):
+        # Defaults
+        self.name='Unknown'
+        self.consumer_key=''
+        self.consumer_secret=''
+        self.token_key=''
+        self.token_secret=''
+        self.use_for_tweet=True
+        self.base_url=''
+
+        self.deleted = False
+
         self.update_from_dict(dct)
 
     def update_from_dict(self, dct):
         for k, v in dct.items():
             self.__setattr__(k, v)
+        self.dirty = False
 
     def __getitem__(self, key):
         # Turn dictionary accesses into attribute look ups.
         return self.__getattribute__(key)
 
+    # Attributes to not track or save.
+    meta_attributes = ('dirty', '_api', '_me_user', 'deleted')
+
+    def __setattr__(self, name, value):
+        """Track changes."""
+        if name not in self.meta_attributes:
+            try:
+                old_value = getattr(self, name)
+                have_old_value = True
+            except AttributeError:
+                old_value = None
+                have_old_value = False
+
+            if not have_old_value or old_value != value:
+                # try:
+                #     logging.debug("DIRTY %s(%s) %s: %s->%s",
+                #                   self.name, self.uuid, name, old_value, value)
+                # except AttributeError:
+                #     pass
+                self.dirty = True
+
+        return super(Account, self).__setattr__(name, value)
+
+    def items(self):
+        return dict([(k, v) for k, v in self.__dict__.items()
+                     if k not in self.meta_attributes]).items()
+
     def __repr__(self):
-        return dict([(k, v) for k, v in self.__dict__.items()]).__repr__()
+        return dict(self.items()).__repr__()
 
     def feeds(self):
         """
@@ -171,13 +210,37 @@ class Account(object):
 
     @property
     def uuid(self):
-        return self.base_url + ';' + self.token_key
+        try:
+            return self.base_url + ';' + self.token_key
+        except AttributeError:
+            return 'unconfigured'
+
+    def screenname(self):
+        """
+        Given a Account, refresh the name attribute with the screen
+        name.
+
+        Returns True if self.name was updated.
+        """
+        try:
+            creds = self.api.VerifyCredentials()
+            account_type = [a['name'] for a in SUPPORTED_ACCOUNTS
+                            if a['base_url'] == self.base_url][0]
+            name = account_type + ': ' + creds.name
+            if name == self.name:
+                return False
+            self.name = name
+            return True
+        except Exception:
+            logging.exception("Unable to look up account's screen name (%s)",
+                              str(self))
+            return False
 
 # Cached list of accounts.
 _accounts = []
 # The last time the accounts were reread from the setting's DB.
 _accounts_read_at = None
-def accounts():
+def accounts(force_sync=False):
     """Returns a list of dictionaries where each dictionary describes
     an account."""
     global _accounts
@@ -185,38 +248,106 @@ def accounts():
 
     settings = settings_db()
 
-    if _accounts_read_at == settings_db_generation:
+    if not force_sync and _accounts_read_at == settings_db_generation:
         # logging.debug("accounts(): Using cached version (%d accounts)."
         #               % (len(_accounts),))
         return _accounts
-    logging.debug("accounts(): Reloading accounts from settings file.")
+    logging.debug("accounts(force_sync=%s): Reloading accounts.",
+                  str(force_sync))
 
-    nb_accounts = settings.beginReadArray('accounts')
-    accounts = []
+    accounts_dirty = 0
+
+    try:
+        nb_accounts = settings.beginReadArray('accounts')
+    except Exception:
+        logging.exception("Loading accounts")
+        nb_accounts = 0
+
+    # The accounts that are in memory, but not on disk.
+    not_on_disk_accounts = _accounts
+    # The accounts that are in memory and on disk.  We assume that all
+    # are only in memory and then check what is on disk.  If an
+    # account is on disk, we move it to this list.
+    _accounts = []
+
     for index in range(nb_accounts):
         settings.setArrayIndex(index)
-
         d = dict((key, settings.value(key)) for key in settings.allKeys())
-        for account in _accounts:
+
+        for account in not_on_disk_accounts:
             if (account.base_url == d['base_url']
                 and account.token_key == d['token_key']):
-                account.update_from_dict(d)
+                # ACCOUNT is already on disk.
+
+                not_on_disk_accounts.remove(account)
+
+                if account.deleted:
+                    # Don't update deleted accounts.
+                    accounts_dirty += 1
+                    break
+
+                _accounts.append(account)
+
+                if account.dirty:
+                    # The account has been changed.  Don't update from
+                    # disk.
+                    logging.debug("Account %s(%s) is dirty, not reloading",
+                                  account.name, account.uuid)
+                    accounts_dirty += 1
+                else:
+                    # logging.debug("Refreshing account: %s", str(account))
+                    account.update_from_dict(d)
+
                 break
         else:
-            account = Account(d)
+            logging.debug("Loading account from disk: %s", d)
 
-        accounts.append(account)
-
-        logging.debug("accounts(): Account %d: %s"
-                      % (index + 1, repr(account)))
+            try:
+                account = Account(**dict([(str(k), v) for k, v in d.items()]))
+                _accounts.append(account)
+            except Exception:
+                account = "Error"
+                logging.exception("Creating new account: %s", d)
 
     settings.endArray()
-    logging.debug("accounts(): Loaded %d accounts" % (len(accounts),))
 
-    _accounts = accounts
+    # Conceivably, an account could be created and then deleted before
+    # it is written to disk.
+    not_on_disk_accounts = [account for account in not_on_disk_accounts
+                            if not account.deleted]
+
+    _accounts += not_on_disk_accounts
+
     _accounts_read_at = settings_db_generation
 
-    return accounts
+    if accounts_dirty or not_on_disk_accounts:
+        # Save the current account configuration.
+        logging.debug("Saving account configuration to backing store.")
+
+        settings.remove('accounts')
+        settings.beginWriteArray('accounts')
+        for index, account in enumerate(_accounts):
+            logging.debug("%d: %s", index, str(account))
+
+            settings.setArrayIndex(index)
+            for k, v in account.items():
+                settings.setValue(k, v)
+
+            account.dirty = False
+        settings.endArray()
+
+    return _accounts
+
+def account_add(account):
+    """Add a new account."""
+    a = accounts(True)
+    a.append(account)
+    return accounts(True)
+
+def account_remove(account):
+    """Remove an account."""
+    account.deleted = True
+    return accounts(True)
 
 def account_lookup_by_uuid(uuid):
     """Return the account with specified UUID.  If no such account
@@ -225,27 +356,6 @@ def account_lookup_by_uuid(uuid):
         if account.uuid == uuid:
             return account
     return None
-
-def screenname(account):
-    """
-    Given a KhweeteurAccount, refresh the name attribute with the
-    screen name.
-
-    Returns True if account.name was updated.
-    """
-    api = twitter.Api(username=account.consumer_key,
-                      password=account.consumer_secret,
-                      access_token_key=account.token_key,
-                      access_token_secret=account.token_secret,
-                      base_url=account.base_url)
-    creds = api.VerifyCredentials()
-    account_type = [a['name'] for a in SUPPORTED_ACCOUNTS
-                    if a['base_url'] == account.base_url][0]
-    name = account_type + ': ' + creds.name
-    if name == account.name:
-        return False
-    account.name = name
-    return True
 
 class OAuthView(QWebView):
 
@@ -362,27 +472,6 @@ class AccountsView(QListView):
         self.setEditTriggers(QAbstractItemView.SelectedClicked)
 
 
-class KhweeteurAccount:
-
-    def __init__(
-        self,
-        name='Unknow',
-        consumer_key='',
-        consumer_secret='',
-        token_key='',
-        token_secret='',
-        use_for_tweet=True,
-        base_url='',
-        ):
-        self.consumer_key = consumer_key
-        self.consumer_secret = consumer_secret
-        self.token_key = token_key
-        self.token_secret = token_secret
-        self.use_for_tweet = use_for_tweet
-        self.base_url = base_url
-        self.name = name
-
-
 class KhweeteurPref(QMainWindow):
 
     save = Signal()
@@ -396,8 +485,6 @@ class KhweeteurPref(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.parent = parent
 
-        self.settings = QSettings()
-
         try:
             self.setAttribute(Qt.WA_Maemo5AutoOrientation, True)
             self.setAttribute(Qt.WA_Maemo5StackedWindow, True)
@@ -409,30 +496,16 @@ class KhweeteurPref(QMainWindow):
         self._setupGUI()
         self.loadPrefs()
 
+    @property
+    def settings(self):
+        return settings_db()
+
     def loadPrefs(self):
         ''' Load and init default prefs to GUI'''
 
         # load account
 
-        self.accounts = []
-        nb_accounts = self.settings.beginReadArray('accounts')
-        have_update = False
-        for index in range(nb_accounts):
-            self.settings.setArrayIndex(index)
-            account = KhweeteurAccount(
-                name=self.settings.value('name'),
-                consumer_key=self.settings.value('consumer_key'),
-                consumer_secret=self.settings.value('consumer_secret'),
-                token_key=self.settings.value('token_key'),
-                token_secret=self.settings.value('token_secret'),
-                use_for_tweet=self.settings.value('use_for_tweet'),
-                base_url=self.settings.value('base_url'),
-                )
-            if screenname(account):
-                have_update = True
-            self.accounts.append(account)
-        self.settings.endArray()
-        self.accounts_model.set(self.accounts)
+        self.accounts_model.set(accounts())
 
         # load other prefs
 
@@ -505,9 +578,6 @@ class KhweeteurPref(QMainWindow):
         else:
             self.showHomeTimelineNotifications_value.setCheckState(Qt.CheckState(2))
 
-        if have_update:
-            self.savePrefs()
-
     def checkRefreshRate(self):
         if self.refresh_value.value() < 10:
             self.refresh_warning.show()
@@ -522,18 +592,6 @@ class KhweeteurPref(QMainWindow):
 
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
-
-        self.settings.beginWriteArray('accounts')
-        for (index, account) in enumerate(self.accounts):
-            self.settings.setArrayIndex(index)
-            self.settings.setValue('name', account.name)
-            self.settings.setValue('consumer_key', account.consumer_key)
-            self.settings.setValue('consumer_secret', account.consumer_secret)
-            self.settings.setValue('token_key', account.token_key)
-            self.settings.setValue('token_secret', account.token_secret)
-            self.settings.setValue('use_for_tweet', account.use_for_tweet)
-            self.settings.setValue('base_url', account.base_url)
-        self.settings.endArray()
 
         self.settings.setValue('refresh_interval', self.refresh_value.value())
         self.settings.setValue('useDaemon',
@@ -582,7 +640,7 @@ class KhweeteurPref(QMainWindow):
             if resp['status'] == '200':
 
                 # Create the account
-                account = KhweeteurAccount(
+                account = Account(
                     name=self.oauth_webview.account_type['name'],
                     base_url=self.oauth_webview.account_type['base_url'],
                     consumer_key=self.oauth_webview.account_type['consumer_key'
@@ -593,10 +651,8 @@ class KhweeteurPref(QMainWindow):
                     token_secret=access_token['oauth_token_secret'][0],
                     use_for_tweet=self.oauth_webview.use_for_tweet,
                     )
-                screenname(account)
-                self.accounts.append(account)
-                self.accounts_model.set(self.accounts)
-                self.savePrefs()
+                account.screenname()
+                self.accounts_model.set(account_add(account))
             else:
                 KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting access token: %s'
                         ) % (self.oauth_webview.account_type['name'],
@@ -629,7 +685,7 @@ class KhweeteurPref(QMainWindow):
                                      body=body)
 
             if resp['status'] != '200':
-                KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting temp token: %s'
+                KhweeteurNotification().warn(self.tr('Unable to add account: Unexpected HTTP response from %s requesting oauth token: %s'
                         ) % (account_type['name'], resp['status']))
                 return
             else:
@@ -658,13 +714,14 @@ class KhweeteurPref(QMainWindow):
                     % unicode(err))
 
     def delete_account(self, index):
-        if QMessageBox.question(self, 'Delete account',
+        account = account_lookup_by_uuid(
+            self.accounts_model._items[index.row()].uuid)
+
+        if QMessageBox.question(self, 'Delete %s' % (account.name or 'account'),
                                 'Are you sure you want to delete this account ?'
                                 , QMessageBox.Yes | QMessageBox.Close) \
             == QMessageBox.Yes:
-            for index in self.accounts_view.selectedIndexes():
-                del self.accounts[index.row()]
-            self.accounts_model.set(self.accounts)
+            self.accounts_model.set(account_remove(account))
 
     def closeEvent(self, widget, *args):
         ''' close event called when closing window'''
@@ -769,6 +826,16 @@ class KhweeteurPref(QMainWindow):
 
 
 if __name__ == '__main__':
+    print "Accounts:"
+    for i, account in enumerate(accounts()):
+        print "  %d: %s" % (i, str(account))
+
+    print
+    print"Settings:"
+    settings = settings_db()
+    for k in sorted(settings.allKeys()):
+        print "  %s: %s" % (k, settings.value(k))
+
     import sys
     app = QApplication(sys.argv)
     app.setOrganizationName('Khertan Software')
