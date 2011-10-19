@@ -595,7 +595,14 @@ class KhweeteurWin(QMainWindow):
                                      path='/net/khertan/khweeteur',
                                      dbus_interface='net.khertan.khweeteur',
                                      signal_name='refresh_ended')
-        self.activated_by_dbus.connect(self.activateWindow)
+        self.activated_by_dbus.connect(self.bring_to_front)
+
+    def bring_to_front(self):
+        try:
+            self.activateWindow()
+            self.raise_()
+        except Exception:
+            logging.exception("bring to front")
 
     def stop_spinning(self):
         try:
