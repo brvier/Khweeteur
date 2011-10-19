@@ -37,10 +37,16 @@ from qbadgebutton import QToolBadgeButton
 
 import os
 import sys
+import logging
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 from posttweet import post_tweet
 from settings import settings_db, accounts
+
+import dbus
+import dbus.mainloop.glib
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+from dbushandler import KhweeteurDBusHandler
 
 class KhweeteurAbout(QMainWindow):
 
@@ -167,10 +173,6 @@ class Khweeteur(QApplication):
         self.setOrganizationDomain('khertan.net')
         self.setApplicationName('Khweeteur')
 
-        try:
-            self.osso_c = osso.Context('net.khertan.khweeteur', "0.0.1", False)
-        except:
-            pass
         self.run()
 
     def check_crash_report(self):
@@ -234,6 +236,11 @@ class KhweeteurWin(QMainWindow):
     activated_by_dbus = Signal()
 
     def __init__(self, parent=None):
+        # Ensure that we are able to get our DBus name before we
+        # create the window.
+        self.dbus_handler = KhweeteurDBusHandler(self)
+        self.dbus_handler.attach_win(self)
+
         QMainWindow.__init__(self, parent)
 
         try:
@@ -575,14 +582,6 @@ class KhweeteurWin(QMainWindow):
         self.model.refreshTimestamp()
 
     def listen_dbus(self):
-        import dbus
-        import dbus.service
-        from dbushandler import KhweeteurDBusHandler
-        import dbus.mainloop.glib
-        #from dbus.mainloop.qt import DBusQtMainLoop
-        #self.dbus_loop = DBusQtMainLoop()
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        #dbus.set_default_main_loop(self.dbus_loop)
         self.bus = dbus.SessionBus()
 
         # Connect the new tweet signal
@@ -596,8 +595,6 @@ class KhweeteurWin(QMainWindow):
                                      path='/net/khertan/khweeteur',
                                      dbus_interface='net.khertan.khweeteur',
                                      signal_name='refresh_ended')
-        self.dbus_handler = KhweeteurDBusHandler(self)
-        self.dbus_handler.attach_win(self)
         self.activated_by_dbus.connect(self.activateWindow)
 
     def stop_spinning(self):

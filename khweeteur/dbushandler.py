@@ -41,8 +41,29 @@ class KhweeteurDBusHandler(dbus.service.Object):
     managing callbacks.
     """
     def __init__(self, parent):
-        dbus.service.Object.__init__(self, dbus.SessionBus(),
-                                     '/net/khertan/khweeteur')
+        bus_name_str = 'net.khertan.khweeteur'
+        obj_str = '/net/khertan/khweeteur'
+
+        try:
+            bus_name = dbus.service.BusName(bus_name_str,
+                                            bus=dbus.SessionBus(),
+                                            do_not_queue=True)
+        except dbus.exceptions.NameExistsException, e:
+            logging.info("Already running (Unable to claim %s: %s)."
+                         % (bus_name_str, str(e)))
+
+            try:
+                bus = dbus.SessionBus()
+                obj = bus.get_object(bus_name_str, obj_str)
+                iface = dbus.Interface(obj, bus_name_str)
+                iface.show_now()
+            except Exception:
+                logging.exception("Causing running instance to move to front")
+                sys.exit(1)
+
+            sys.exit(0)
+
+        dbus.service.Object.__init__(self, bus_name, obj_str)
 
         self.parent = parent
 
@@ -119,7 +140,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
         '''Callback called to active the window and reset counter.
 
         See notifications.py.'''
-        self.win.activated_by_dbus.emit()
+        try:
+            self.win.activated_by_dbus.emit()
+        except Exception:
+            logging.exception("activated_by_dbus.emit()")
         return True
 
     def attach_win(self, win):
