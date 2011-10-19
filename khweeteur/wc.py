@@ -21,6 +21,7 @@ import traceback
 import logging
 from mainthread import mainthread
 from settings import accounts, settings_db
+from coroutine import coroutine
 
 # Don't fail if the Woodchuck modules are not available.  Just disable
 # Woodchuck's functionality.
@@ -76,21 +77,6 @@ def stream_id_split(id):
         return (None, None)
 
     return (account, feed)
-
-def coroutine(func):
-    def wrapper(*args, **kwargs):
-        def doit(generator):
-            def execute():
-                try:
-                    generator.next()
-                    QTimer.singleShot(0, execute)
-                except StopIteration:
-                    return
-            execute()
-
-        generator = func(*args, **kwargs)
-        doit(generator)
-    return wrapper
 
 class mywoodchuck(PyWoodchuck):
     """
