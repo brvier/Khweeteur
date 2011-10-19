@@ -50,6 +50,7 @@ import dbus.service
 from pydaemon.runner import DaemonRunner, DaemonRunnerStopFailureError
 from lockfile import LockTimeout
 
+from coroutine import coroutine
 import mainthread
 from wc import wc, stream_id_build
 from wc import woodchuck
@@ -205,6 +206,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
 class KhweeteurDaemon(QCoreApplication):
     def __init__(self):
         self.idle_timer_id = None
+        self.am_cleaning = False
 
     # Woodchuck callbacks.
     def stream_update(self, account, feed):
@@ -319,6 +321,8 @@ class KhweeteurDaemon(QCoreApplication):
             QTimer.singleShot(200, self.update)
 
             logging.debug('Timer added')
+
+        QTimer.singleShot(20 * 1000, self.clean)
 
         self.idle_timer_start()
 
@@ -718,10 +722,18 @@ class KhweeteurDaemon(QCoreApplication):
                 'Creating worker for account %s, job %s: %s'
                 % (str(account), thing, str(err)))
 
+    @coroutine
     def clean(self, settings=None):
         """
         Remove old tweets in cache according to history prefs.
         """
+        if self.am_cleaning:
+            logging.debug("clean already running.")
+            return
+        self.am_cleaning = True
+
+        start = time.time()
+
         if settings is None:
             settings = settings_db()
 
@@ -746,6 +758,8 @@ class KhweeteurDaemon(QCoreApplication):
                               for s in searches]
 
         for folder in os.listdir(self.cache_path):
+            yield
+
             path = os.path.join(self.cache_path, folder)
 
             if not os.path.isdir(path):
@@ -789,6 +803,8 @@ class KhweeteurDaemon(QCoreApplication):
             filenames = {}
             kept = 0
             for uid in uids:
+                yield
+
                 try:
                     with open(os.path.join (path, uid), 'rb') as pkl_file:
                         status = pickle.load(pkl_file)
@@ -820,6 +836,8 @@ class KhweeteurDaemon(QCoreApplication):
 
             logging.debug("%s: expunging %d files" % (path, len(statuses)))
             for status in statuses:
+                yield
+
                 filename = os.path.join (path, filenames[status])
                 try:
                     os.remove(filename)
@@ -850,6 +868,9 @@ class KhweeteurDaemon(QCoreApplication):
                             ("Status update %s not associated with a "
                              + "known account (uuid is: %s)")
                             % (path, status.base_url))
+
+        logging.debug("Cleaning took %d seconds", time.time() - start)
+        self.am_cleaning = False
 
     def retrieve_all(self):
         logging.debug('Start update')
