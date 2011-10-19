@@ -14,6 +14,9 @@ import time
 import cPickle as pickle
 #import glob
 import os
+import logging
+import weakref
+import atexit
 
 SCREENNAMEROLE = 20
 REPLYTOSCREENNAMEROLE = 21
@@ -47,7 +50,18 @@ class KhweetsModel(QAbstractListModel):
 
     dataChanged = pyqtSignal(QModelIndex, QModelIndex)
 
+    _model_instances = None
+
     def __init__(self):
+        if self._model_instances is None:
+            # This is the first time an instance of this class is
+            # being instantiated.  Register the atexit handler to
+            # ensure the state get saved on exit.
+            self.__class__._model_instances = []
+            atexit.register(KhweetsModel.save_all_config, lazily=False)
+
+        self._model_instances.append(weakref.ref(self))
+
         QAbstractListModel.__init__(self)
 
         # Cache the passed data list as a class member.
@@ -74,12 +88,41 @@ class KhweetsModel(QAbstractListModel):
         self.data_cache = {}
 
     def __del__(self):
+        self.save_config(lazily=False)
+
+        # Remove our weak reference from self._model_instance (and any
+        # others that might be dead...).
+        model_instances = []
+        for ref in self._model_instances:
+            instance = ref()
+            if instance == self or instance is None:
+                pass
+            else:
+                model_instances.append(ref)
+
+        # Don't create a new object: _model_instances should remain a
+        # class attribute; it should not become an instance attribute.
+        self._model_instances[:] = model_instances
+
+    @classmethod
+    def save_all_config(cls, lazily=True):
+        logging.debug("%s.save_all_config(lazily=%s) called",
+                      cls.__name__, str(lazily))
+        for ref in cls._model_instances:
+            instance = ref()
+            if instance is not None:
+                instance.save_config(lazily)
+
+    def save_config(self, lazily=True):
+        logging.debug("%s.save_config(%s) (nothing really loaded: %s)",
+                      self.call, lazily, self.nothing_really_loaded)
+
         if not self.nothing_really_loaded:
             settings = QSettings('Khertan Software', 'Khweeteur')
             settings.setValue(
                 self.call + '-new-message-horizon', self.max_created_at)
 
-        self.save_data_cache(lazily=False)
+            self.save_data_cache(lazily)
 
     def setLimit(self, limit):
         self.khweets_limit = limit
@@ -148,9 +191,7 @@ class KhweetsModel(QAbstractListModel):
             # and load the setting for the new one.
             ret = True
 
-            if not self.nothing_really_loaded:
-                settings.setValue(
-                    self.call + '-new-message-horizon', self.max_created_at)
+            self.save_config()
 
             try:
                 self.new_message_horizon = int(
@@ -158,9 +199,6 @@ class KhweetsModel(QAbstractListModel):
             except ValueError:
                 self.new_message_horizon = self.now
                 
-            if not self.nothing_really_loaded:
-                self.save_data_cache()
-
             # There might be some useful avatars, but figuring out
             # which they are requires loading all of the status
             # updates.
