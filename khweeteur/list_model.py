@@ -124,6 +124,11 @@ class KhweetsModel(QAbstractListModel):
 
             self.save_data_cache(lazily)
 
+    def reset_new_message_horizon(self):
+        self.new_message_horizon = time.time()
+        # Tell all views to reload data.
+        self.reset()
+
     def setLimit(self, limit):
         self.khweets_limit = limit
 
@@ -182,8 +187,8 @@ class KhweetsModel(QAbstractListModel):
 
         # print "model.load(%s -> %s)" % (self.call, call)
 
-        # new_message_horizon is the points in time that separates read
-        # messages from new messages.  The messages creation time is
+        # new_message_horizon is the point in time that separates read
+        # messages from new messages.  The messages' creation time is
         # used.
         settings = QSettings('Khertan Software', 'Khweeteur')
         if self.call != call:

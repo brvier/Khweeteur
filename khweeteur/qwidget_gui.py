@@ -669,6 +669,14 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def show_hometimeline(self):
+        # The user just clicked on the home button.  If the home
+        # timeline is already active, the button was checked and now
+        # it is unchecked.  Otherwise, another view was active and now
+        # the home button is checked.
+        if not self.home_button.isChecked():
+            # Already showing this.  Reset the new messages.
+            self.model.reset_new_message_horizon()
+
         self.home_button.setCounter(0)
         self.home_button.setChecked(True)
         self.msg_button.setChecked(False)
@@ -1120,6 +1128,10 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def show_mentions(self):
+        if not self.mention_button.isChecked():
+            # Already showing this.  Reset the new messages.
+            self.model.reset_new_message_horizon()
+
         self.mention_button.setCounter(0)
         self.mention_button.setChecked(True)
         self.msg_button.setChecked(False)
@@ -1133,6 +1145,10 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def show_dms(self):
+        if not self.msg_button.isChecked():
+            # Already showing this.  Reset the new messages.
+            self.model.reset_new_message_horizon()
+
         self.msg_button.setCounter(0)
         self.msg_button.setChecked(True)
         self.tb_list_button.setChecked(False)
@@ -1156,6 +1172,10 @@ class KhweeteurWin(QMainWindow):
                     settings.sync()
                     self.geolocDoStart()
                     self.dbus_handler.require_update(only_uploads=True)
+
+        if not self.near_button.isChecked():
+            # Already showing this.  Reset the new messages.
+            self.model.reset_new_message_horizon()
 
         self.near_button.setCounter(0)
         self.near_button.setChecked(True)
