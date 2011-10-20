@@ -319,6 +319,12 @@ class KhweetsModel(QAbstractListModel):
                     value = status.text
             except:
                 value = status.text
+
+            # Make sure that the text is either None or some sort of
+            # string.
+            if value is not None and not isinstance(value, basestring):
+                value = unicode(value, errors='replace')
+
         elif role == SCREENNAMEROLE:
             status = self.get_status(uid)
             if status is None:
