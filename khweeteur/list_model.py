@@ -196,7 +196,7 @@ class KhweetsModel(QAbstractListModel):
             try:
                 self.new_message_horizon = int(
                     settings.value(call + '-new-message-horizon', 0))
-            except ValueError:
+            except (ValueError, TypeError) :
                 self.new_message_horizon = self.now
                 
             # There might be some useful avatars, but figuring out
