@@ -292,7 +292,18 @@ class KhweetsModel(QAbstractListModel):
                     ok = True
                 else:
                     filename = os.path.join(self.getCacheFolder(), str(uid))
-                    mtime = os.stat(filename).st_mtime
+                    try:
+                        mtime = os.stat(filename).st_mtime
+                    except OSError:
+                        # The file likely doesn't exist any more.
+                        # Note that we don't use None because:
+                        #
+                        #   None == None => True
+                        #
+                        # If the cache entry doesn't have an mtime
+                        # attribute, we would return this.
+                        mtime = -1
+
                     if mtime == cache_entry.get('mtime', None):
                         ok = True
                         cache_entry['validated'] = time.time()
