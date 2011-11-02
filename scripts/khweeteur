@@ -1,5 +1,12 @@
-#!/bin/sh
-case $1 in
-	-d | -D ) /usr/bin/python /usr/lib/python2.5/site-packages/khweeteur/daemon.py startfromprefs;;
-	* )       exec python /usr/lib/python2.5/site-packages/khweeteur/__init__.py;;
-esac
+#! /usr/bin/env python
+
+# Load Khweeteur.  It is important that we don't exec as our WM_CLASS
+# is set according to the binary.  This needs to be correct so that,
+# e.g., org.freedesktop.Notifications.Notify overlays the notification
+# window.
+
+import sys
+sys.path = ['/usr/lib/python2.5/site-packages/khweeteur'] + sys.path
+from qwidget_gui import main
+
+main()
