@@ -38,6 +38,7 @@ from qbadgebutton import QToolBadgeButton
 import os
 import sys
 import logging
+import logging_config
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 from posttweet import post_tweet
@@ -1378,6 +1379,8 @@ def takeScreenShot(app):
     QPixmap.grabWidget(app.win).save(pvr, 'png') # tell it to grab only your self.centralwidget screen, which is just window screen without the menu status bar on top.
 
 def main():
+    logging_config.init(".khweeteur", debug=True, max_logfiles=5,
+                        program_name='khweeteur')
     install_excepthook()
 
     app = Khweeteur()
