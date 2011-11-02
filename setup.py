@@ -13,14 +13,14 @@ except ImportError:
     print 'sdist_maemo command not available'
 
 from distutils.core import setup
-import khweeteur
+import khweeteur.qwidget_gui
 
 #Remove pyc and pyo file
 import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Change default value of use for post when creating new account * Fix notification preferences checking'
+changes = '* Add Woodchuck support. * Lots of bug fixes.'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -29,8 +29,8 @@ setup(name='khweeteur',
       long_description="Khweeteur is a small twitter client for Maemo and MeeGo. It showing DMs, mentions, searchs, lists, and the follower timeline in one window. Maemo's notification system is supported and can notify for dmsse or mentions even when the ui is not launched, as is auto-update and themeing.",
       author='Benoît HERVIER',
       author_email='khertan@khertan.net',
-      maintainer=u'Benoît HERVIER',
-      maintainer_email='khertan@khertan.net',
+      maintainer=u'Neal H. Walfield',
+      maintainer_email='neal@walfield.org',
       requires=['imaging','simplejson','conic','PySide','PySide.QtMobility', \
                 'httplib2'],
       url='http://www.khertan.net/khweeteur',
