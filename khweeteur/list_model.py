@@ -194,7 +194,7 @@ class KhweetsModel(QAbstractListModel):
         if self.call != call:
             # It's not a reload.  Save the setting for the old stream
             # and load the setting for the new one.
-            ret = True
+            reloading = True
 
             self.save_config()
 
@@ -209,7 +209,7 @@ class KhweetsModel(QAbstractListModel):
             # updates.
             self.avatars = {}
         else:
-            ret = False
+            reloading = False
 
         self.nothing_really_loaded = False
 
@@ -231,7 +231,7 @@ class KhweetsModel(QAbstractListModel):
         self.statuses = dict([(k, v) for k, v in self.statuses.items()
                               if k in self.uids])
 
-        if ret:
+        if reloading:
             try:
                 filename = self.getCacheFolder() + '-data-cache'
                 with open(filename, 'rb') as fhandle:
@@ -253,7 +253,7 @@ class KhweetsModel(QAbstractListModel):
         # Tell all views to reload all data.
         self.reset()
 
-        return ret
+        return reloading
 
     def get_status(self, uid):
         # Look up the status update.
