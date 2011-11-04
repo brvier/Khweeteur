@@ -237,6 +237,6 @@ def wc(stream_update=None, object_transfer=None):
     logging.info("Woodchuck appears to be available.")
 
     if stream_update is not None:
-        QTimer.singleShot(0, _w.synchronize_config)
+        QTimer.singleShot(10 * 1000, _w.synchronize_config)
 
     return _w
