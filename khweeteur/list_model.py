@@ -227,13 +227,6 @@ class KhweetsModel(QAbstractListModel):
             print 'listdir(%s): %s' % (folder, str(e))
             self.uids = []
 
-        self.uids.sort(
-            key=lambda uid: [self.data_by_uid(uid, TIMESTAMPABSROLE),
-                             uid],
-            reverse=True)
-        if limit:
-            self.uids = self.uids[:limit]
-
         # Drop any statuses from the cache that we no longer need.
         self.statuses = dict([(k, v) for k, v in self.statuses.items()
                               if k in self.uids])
@@ -246,6 +239,16 @@ class KhweetsModel(QAbstractListModel):
             except IOError, e:
                 print 'pickle.load(%s): %s' % (filename, str(e))
                 self.data_cache = {}
+
+
+        # Sort AFTER we load the cache (otherwise, what's the point of
+        # the cache).
+        self.uids.sort(
+            key=lambda uid: [self.data_by_uid(uid, TIMESTAMPABSROLE),
+                             uid],
+            reverse=True)
+        if limit:
+            self.uids = self.uids[:limit]
 
         # Tell all views to reload all data.
         self.reset()
