@@ -13,6 +13,7 @@ from list_model import IDROLE, SCREENNAMEROLE, REPLYTEXTROLE, \
 
 import os
 import time
+import logging
 
 from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
     QAbstractItemView, QFontMetrics, QFont, QStyle, QPixmap
@@ -21,7 +22,25 @@ from PySide.QtCore import Qt, QSize, QSettings
 from theme import DEFAULTTHEME, WHITETHEME, \
                      COOLWHITETHEME, COOLGRAYTHEME, \
                      MINITHEME
-              
+
+def to_str(s):
+    """
+    Given a string, do our best to turn it into a unicode compatible
+    object.
+    """
+    if s is None:
+        return ''
+
+    if issubclass(s.__class__, unicode):
+        # It's already unicode, no problem.
+        return s
+
+    # It's not unicode.  Convert it to a unicode string.
+    try:
+        return unicode(s)
+    except UnicodeEncodeError:
+        logging.exception("Failed to convert '%s' to unicode" % s)
+        return unicode(s, errors='replace')
 
 class DefaultCustomDelegate(QStyledItemDelegate):
 
@@ -75,7 +94,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         try:
             return self.memoized_size[uid]
         except:
-            tweet = index.data(Qt.DisplayRole)
+            tweet = to_str(index.data(Qt.DisplayRole))
 
             # One time is enought sizeHint need to be fast
 
@@ -100,7 +119,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 tweet,
                 ).height()
 
-            reply_text = index.data(role=REPLYTEXTROLE)
+            reply_text = to_str(index.data(role=REPLYTEXTROLE))
             if reply_text:
                 height += self.minifm.boundingRect(
                     0,
@@ -155,12 +174,12 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         # Query data
 
-        tweet = index.data(Qt.DisplayRole)
-        screenname = index.data(SCREENNAMEROLE)
+        tweet = to_str(index.data(Qt.DisplayRole))
+        screenname = to_str(index.data(SCREENNAMEROLE))
         retweet_of = index.data(RETWEETOFROLE)
-        timestamp = index.data(role=TIMESTAMPROLE)
-        reply_name = index.data(role=REPLYTOSCREENNAMEROLE)
-        reply_text = index.data(role=REPLYTEXTROLE)
+        timestamp = to_str(index.data(role=TIMESTAMPROLE))
+        reply_name = to_str(index.data(role=REPLYTOSCREENNAMEROLE))
+        reply_text = to_str(index.data(role=REPLYTEXTROLE))
         is_new = index.data(role=ISNEWROLE)
 
         painter.save()
