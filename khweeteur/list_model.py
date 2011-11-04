@@ -258,7 +258,14 @@ class KhweetsModel(QAbstractListModel):
             return self.statuses[uid]
         except KeyError:
             filename = os.path.join(self.getCacheFolder(), str(uid))
-            with open(filename, 'rb') as pkl_file:
+            try:
+                pkl_file = open(filename, 'rb')
+            except OSError, IOError:
+                # Error accessing the file.  Likely, the back end
+                # purged the file.  Just return None.
+                # self.data_by_uid does the right thing.
+                return None
+            with pkl_file:
                 try:
                     status = pickle.load(pkl_file)
                 except EOFError:
