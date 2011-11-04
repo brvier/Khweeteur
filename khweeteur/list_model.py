@@ -224,7 +224,7 @@ class KhweetsModel(QAbstractListModel):
         except Exception, e:
             import traceback
             traceback.print_exc()
-            print 'listdir(%s): %s' % (folder, str(e))
+            logging.exception('listdir(%s): %s' % (folder, str(e)))
             self.uids = []
 
         # Drop any statuses from the cache that we no longer need.
@@ -237,7 +237,7 @@ class KhweetsModel(QAbstractListModel):
                 with open(filename, 'rb') as fhandle:
                     self.data_cache = pickle.load(fhandle)
             except IOError, e:
-                print 'pickle.load(%s): %s' % (filename, str(e))
+                logging.exception('pickle.load(%s): %s' % (filename, str(e)))
                 self.data_cache = {}
 
 
