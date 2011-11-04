@@ -296,9 +296,13 @@ class KhweetsModel(QAbstractListModel):
                 ok = False
                 # Make sure that the cached entry is reasonably
                 # consistent.
-                if ('validated' in cache_entry
-                    and cache_entry['validated'] >= time.time() - 10):
-                    # We validated the contents recently.
+                if (# Status entries that can change: last_update.
+                    # Everything else, once created, is static.
+                    not uid.endswith('last_update')
+                    or ('validated' in cache_entry
+                        and cache_entry['validated'] >= time.time() - 10)):
+                    # The file is immutable or we validated the
+                    # contents recently.
                     ok = True
                 else:
                     filename = os.path.join(self.getCacheFolder(), str(uid))
