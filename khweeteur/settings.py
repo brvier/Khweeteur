@@ -139,7 +139,10 @@ class Account(object):
                      if k not in self.meta_attributes]).items()
 
     def __repr__(self):
-        return dict(self.items()).__repr__()
+        return dict([(k,
+                      v if k not in ('token_key', 'token_secret')
+                      else '*' * len(v))
+                     for k, v in self.items()]).__repr__()
 
     def feeds(self):
         """
