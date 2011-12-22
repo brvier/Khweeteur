@@ -825,7 +825,7 @@ class KhweeteurWin(QMainWindow):
         if len(accounts_to_consider) == 1:
             # We have exactly one account that is marked as
             # appropriate for sending tweets.  Use it.
-            pass
+            target_accounts = [account,]
         else:
             d = QDialog()
             d.setWindowTitle(message)
