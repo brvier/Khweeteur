@@ -157,12 +157,10 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         (x1, y1, x2, y2) = option.rect.getCoords()
 
         # Ugly hack ?
-
         if y1 < 0 and y2 < 0:
             return
 
         # Init Font : One time is enough
-
         if not self.fm:
             self.normFont = QFont(option.font)
             self.normFont.setPointSizeF(option.font.pointSizeF() * self.fsize)
@@ -173,7 +171,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                                         * 0.8 * self.fsize)
 
         # Query data
-
         tweet = to_str(index.data(Qt.DisplayRole))
         screenname = to_str(index.data(SCREENNAMEROLE))
         retweet_of = index.data(RETWEETOFROLE)
@@ -185,33 +182,23 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter.save()
 
         # Draw alternate ?
-
         if index.row() % 2 == 0:
-            if is_new:
-                color = self.new_bg_color
-            else:
                 color = self.bg_color
         else:
-            if is_new:
-                color = self.new_bg_alternate_color
-            else:
                 color = self.bg_alternate_color
 
         painter.fillRect(option.rect, color)
 
         # highlight selected items
-
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
 
         # Draw icon
-
         icon = index.data(Qt.DecorationRole)
         if icon != None:
             painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
 
         # Draw screenname
-
         painter.setFont(self.miniFont)
         painter.setPen(self.user_color)
         nrect = painter.drawText(option.rect.adjusted(70, 5, -4, -9),
@@ -219,7 +206,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                                  screenname)
 
         # Reply icon
-
         if reply_name:
             painter.drawPixmap(x1 + 74 + nrect.width(), y1, 26, 26,
                                self.reply_icon)
@@ -230,7 +216,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                              reply_name)
 
         # Retweet icon
-
         if retweet_of:
             painter.drawPixmap(x1 + 74 + nrect.width(), y1, 32, 32,
                                self.retweet_icon)
@@ -241,7 +226,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                              retweet_of.user.screen_name)
 
         # Draw tweet
-
         painter.setFont(self.normFont)
         painter.setPen(self.text_color)
         new_rect = painter.drawText(option.rect.adjusted(70, nrect.height()
@@ -250,14 +234,12 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                                     tweet)
 
         # Draw Timeline
-
         painter.setFont(self.miniFont)
         painter.setPen(self.time_color)
         painter.drawText(option.rect.adjusted(70, 5, -4, -9), int(Qt.AlignTop)
                          | int(Qt.AlignRight), timestamp)
 
         # Draw reply
-
         if reply_text:
             painter.setFont(self.miniFont)
             painter.setPen(self.replyto_color)
@@ -267,12 +249,14 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                              reply_text)
 
         # Draw line separator
-
         painter.setPen(self.separator_color)
         painter.drawLine(x1, y2, x2, y2)
 
-        # restore painter
+        #Use a little tips to say that's a new tweet
+        if is_new:
+            painter.fillRect(x1,y1,5,y2, self.new_bg_alternate_color)
 
+        # restore painter
         painter.restore()
 
 
