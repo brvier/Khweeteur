@@ -24,11 +24,6 @@ try:
 except:
     pass
 
-try:
-    import osso
-except:
-    pass
-
 from qbadgebutton import QToolBadgeButton
 
 import os
@@ -38,7 +33,7 @@ import logging_config
 from list_view import KhweetsView
 from list_model import KhweetsModel, ISMEROLE, IDROLE, ORIGINROLE, SCREENNAMEROLE, PROTECTEDROLE, USERIDROLE, ISNEWROLE
 from posttweet import post_tweet
-from settings import settings_db, accounts
+from settings import accounts
 
 import dbus
 import dbus.mainloop.glib
