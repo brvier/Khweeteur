@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Bug fixes for #976, #967, Replying to a tweet with only one account, #974. Improve the display of new tweets, and add XMasTheme.'
+changes = '* Bug fixes for #976, #967, Replying to a tweet with only one account, #974. Improve the display of new tweets, and add XMasTheme. And always some code cleaning.'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
