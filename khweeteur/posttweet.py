@@ -11,6 +11,7 @@ import time
 import random
 import pickle
 from wc import wc
+import logging
 
 post_path = None
 
