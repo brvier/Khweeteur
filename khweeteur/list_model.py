@@ -223,7 +223,7 @@ class KhweetsModel(QAbstractListModel):
             self.uids = os.listdir(folder)
         except (OSError, IOError), e: #Trap only OSError
             if e.errno != errno.ENOENT:
-	            logging.exception('listdir(%s): %s' % (folder, str(e)))
+                logging.exception('listdir(%s): %s' % (folder, str(e)))
             self.uids = []
 
         # Drop any statuses from the cache that we no longer need.
