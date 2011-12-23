@@ -243,8 +243,6 @@ class KhweeteurWin(QMainWindow):
 
         self.setWindowTitle('Khweeteur')
 
-        settings = QSettings()
-
         self.view = KhweetsView()
         self.setCentralWidget(self.view)
 
@@ -253,7 +251,6 @@ class KhweeteurWin(QMainWindow):
         self.view.clicked.connect(self.switch_tb_action)
 
         self.toolbar = QToolBar('Toolbar')
-#        self.toolbar.setMovable(False)
         self.addToolBar(Qt.BottomToolBarArea, self.toolbar)
 
         self.toolbar_mode = 0  # 0 - Default , 1 - Edit, 2 - Action
