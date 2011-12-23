@@ -221,9 +221,7 @@ class KhweetsModel(QAbstractListModel):
         folder = self.getCacheFolder()
         try:
             self.uids = os.listdir(folder)
-        except Exception, e:
-            import traceback
-            traceback.print_exc()
+        except OSError, e: #Trap only OSError
             logging.exception('listdir(%s): %s' % (folder, str(e)))
             self.uids = []
 
@@ -263,7 +261,7 @@ class KhweetsModel(QAbstractListModel):
             filename = os.path.join(self.getCacheFolder(), str(uid))
             try:
                 pkl_file = open(filename, 'rb')
-            except OSError, IOError:
+            except (OSError, IOError) : #Python syntax error a list of type of error are a tuple ;) else it s name the exception. #Fix Bug #976
                 # Error accessing the file.  Likely, the back end
                 # purged the file.  Just return None.
                 # self.data_by_uid does the right thing.
@@ -377,7 +375,7 @@ class KhweetsModel(QAbstractListModel):
                 return None
             try:
                 value = status.in_reply_to_screen_name
-            except:
+            except AttributeError:
                 value = None
         elif role == REPLYTEXTROLE:
             status = self.get_status(uid)
@@ -388,14 +386,17 @@ class KhweetsModel(QAbstractListModel):
             status = self.get_status(uid)
             if status is None:
                 return None
-            value = status.base_url
+            try:
+                value = status.base_url
+            except AttributeError: #Fix for #973
+                value = None
         elif role == RETWEETOFROLE:
             status = self.get_status(uid)
             if status is None:
                 return None
             try:
                 value = status.retweeted_status
-            except:
+            except AttributeError:
                 value = None
         elif role == ISMEROLE:
             status = self.get_status(uid)
@@ -403,7 +404,7 @@ class KhweetsModel(QAbstractListModel):
                 return None
             try:
                 value = status.is_me
-            except:
+            except AttributeError:
                 value = False
         elif role == TIMESTAMPROLE:
             status = self.get_status(uid)
@@ -438,7 +439,10 @@ class KhweetsModel(QAbstractListModel):
             try:
                 value = status.user.id
             except AttributeError:
-                value = status.sender_id
+                try: #Fix Bug #970
+                    value = status.sender_id
+                except AttributeError:
+                    value = None
         elif role == Qt.DecorationRole:
             status = self.get_status(uid)
             if status is None:

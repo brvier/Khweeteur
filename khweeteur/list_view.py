@@ -20,7 +20,7 @@ from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
 from PySide.QtCore import Qt, QSize, QSettings
 
 from theme import DEFAULTTHEME, WHITETHEME, \
-                     COOLWHITETHEME, COOLGRAYTHEME, \
+                     COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
                      MINITHEME
 
 def to_str(s):
@@ -90,7 +90,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
 
-        uid = str(index.data(role=IDROLE)) + 'x' + str(option.rect.width())
+        uid = to_str(index.data(role=IDROLE)) + 'x' + str(option.rect.width()) #Fix Bug #967 (sometime uid have some strange unicode chars ... ?)
         try:
             return self.memoized_size[uid]
         except:
@@ -254,7 +254,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         #Use a little tips to say that's a new tweet
         if is_new:
-            painter.fillRect(x1,y1,5,y2, self.new_bg_alternate_color)
+            painter.fillRect(x1,y1,8,y2, self.new_bg_alternate_color)
 
         # restore painter
         painter.restore()
@@ -308,6 +308,23 @@ class CoolWhiteCustomDelegate(DefaultCustomDelegate):
         self.text_color = QColor('#444444')
         self.separator_color = QColor('#c8cdcf')
 
+class CoolXmasCustomDelegate(DefaultCustomDelegate):
+
+    '''Delegate to do custom draw of the items'''
+
+    def __init__(self, parent):
+        '''Initialization'''
+
+        DefaultCustomDelegate.__init__(self, parent)
+
+        self.user_color = QColor('#3399cc')
+        self.replyto_color = QColor('#3399cc')
+        self.time_color = QColor('#3399cc')
+        self.bg_color = QColor('#7C2835')
+        self.bg_alternate_color = QColor('#0D452D')
+        self.text_color = QColor('#fff')
+        self.separator_color = QColor('#CB0313')
+        
 
 class CoolGrayCustomDelegate(DefaultCustomDelegate):
 
@@ -373,6 +390,8 @@ class KhweetsView(QListView):
             self.custom_delegate = CoolWhiteCustomDelegate(self)
         elif theme == COOLGRAYTHEME:
             self.custom_delegate = CoolGrayCustomDelegate(self)
+        elif theme == XMASTHEME:
+            self.custom_delegate = CoolXmasCustomDelegate(self)
         elif theme == MINITHEME:
             self.custom_delegate = MiniDefaultCustomDelegate(self)
         else:

@@ -20,7 +20,7 @@ import glob,os
 for fpath in glob.glob('*/*.py[c|o]'):
     os.remove(fpath)
 
-changes = '* Add Woodchuck support. * Lots of bug fixes.'
+changes = '* Bug fixes for #976, #967, Replying to a tweet with only one account, #974. Improve the display of new tweets, and add XMasTheme.'
 
 setup(name='khweeteur',
       version=khweeteur.qwidget_gui.__version__,
@@ -29,8 +29,8 @@ setup(name='khweeteur',
       long_description="Khweeteur is a small twitter client for Maemo and MeeGo. It showing DMs, mentions, searchs, lists, and the follower timeline in one window. Maemo's notification system is supported and can notify for dmsse or mentions even when the ui is not launched, as is auto-update and themeing.",
       author='Benoît HERVIER',
       author_email='khertan@khertan.net',
-      maintainer=u'Neal H. Walfield',
-      maintainer_email='neal@walfield.org',
+      maintainer=u'Benoit HERVIER',
+      maintainer_email='khertan@khertan.net',
       requires=['imaging','simplejson','conic','PySide','PySide.QtMobility', \
                 'httplib2'],
       url='http://www.khertan.net/khweeteur',

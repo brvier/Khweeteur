@@ -21,7 +21,7 @@ from PySide.QtCore import Qt, QUrl, QAbstractListModel, QSettings, QModelIndex, 
     Signal
 
 from theme import DEFAULTTHEME, WHITETHEME, \
-                     COOLWHITETHEME, COOLGRAYTHEME, \
+                     COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
                      MINITHEME
 
 SUPPORTED_ACCOUNTS = [{
@@ -480,7 +480,7 @@ class KhweeteurPref(QMainWindow):
     save = Signal()
 
     THEMES = [DEFAULTTHEME, WHITETHEME, COOLWHITETHEME, COOLGRAYTHEME,
-              MINITHEME]
+              XMASTHEME, MINITHEME]
 
     def __init__(self, parent=None):
         ''' Init the GUI Win'''
