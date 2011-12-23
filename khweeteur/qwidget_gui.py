@@ -810,10 +810,12 @@ class KhweeteurWin(QMainWindow):
             if service is None or service == account['base_url']:
                 accounts_to_consider.append(account)
 
+        target_accounts = accounts_to_consider
+        
         if len(accounts_to_consider) == 1:
             # We have exactly one account that is marked as
             # appropriate for sending tweets.  Use it.
-            target_accounts = [account,]
+            pass
         else:
             d = QDialog()
             d.setWindowTitle(message)

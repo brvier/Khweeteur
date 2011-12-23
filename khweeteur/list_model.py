@@ -221,8 +221,9 @@ class KhweetsModel(QAbstractListModel):
         folder = self.getCacheFolder()
         try:
             self.uids = os.listdir(folder)
-        except OSError, e: #Trap only OSError
-            logging.exception('listdir(%s): %s' % (folder, str(e)))
+        except (OSError, IOError), e: #Trap only OSError
+            if e.errno != errno.ENOENT:
+	            logging.exception('listdir(%s): %s' % (folder, str(e)))
             self.uids = []
 
         # Drop any statuses from the cache that we no longer need.
@@ -235,7 +236,8 @@ class KhweetsModel(QAbstractListModel):
                 with open(filename, 'rb') as fhandle:
                     self.data_cache = pickle.load(fhandle)
             except IOError, e:
-                logging.exception('pickle.load(%s): %s' % (filename, str(e)))
+                if e.errno != errno.ENOENT:
+                    logging.exception('pickle.load(%s): %s' % (filename, str(e)))
                 self.data_cache = {}
 
 

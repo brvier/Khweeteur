@@ -196,8 +196,11 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         # Draw icon
         icon = index.data(Qt.DecorationRole)
         if icon != None:
-            painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
-
+            try:
+		        painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
+		    except Exception:
+		        logging.exception("Drawing icon")
+		
         # Draw screenname
         painter.setFont(self.miniFont)
         painter.setPen(self.user_color)
