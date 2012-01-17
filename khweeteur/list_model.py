@@ -236,7 +236,7 @@ class KhweetsModel(QAbstractListModel):
                 filename = self.getCacheFolder() + '-data-cache'
                 with open(filename, 'rb') as fhandle:
                     self.data_cache = pickle.load(fhandle)
-            except IOError, e:
+            except (IOError, EOFError) e:
                 if e.errno != errno.ENOENT:
                     logging.exception('pickle.load(%s): %s' % (filename, str(e)))
                 self.data_cache = {}
