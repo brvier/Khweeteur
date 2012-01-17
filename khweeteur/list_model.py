@@ -17,6 +17,7 @@ import os
 import logging
 import weakref
 import atexit
+import errno
 
 SCREENNAMEROLE = 20
 REPLYTOSCREENNAMEROLE = 21
