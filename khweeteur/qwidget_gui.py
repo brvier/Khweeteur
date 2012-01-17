@@ -692,6 +692,7 @@ class KhweeteurWin(QMainWindow):
 
     @Slot()
     def switch_tb_action(self):
+        isme = None
         if self.toolbar_mode != 2:
             self.toolbar_mode = 2
             self.switch_tb()
