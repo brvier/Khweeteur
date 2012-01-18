@@ -222,7 +222,7 @@ class KhweetsModel(QAbstractListModel):
         folder = self.getCacheFolder()
         try:
             self.uids = os.listdir(folder)
-        except (OSError, IOError), e: #Trap only OSError
+        except (IOError, EOFError, OSError), e:
             if e.errno != errno.ENOENT:
                 logging.exception('listdir(%s): %s' % (folder, str(e)))
             self.uids = []
@@ -236,7 +236,7 @@ class KhweetsModel(QAbstractListModel):
                 filename = self.getCacheFolder() + '-data-cache'
                 with open(filename, 'rb') as fhandle:
                     self.data_cache = pickle.load(fhandle)
-            except (IOError, EOFError) e:
+            except (IOError, EOFError, OSError) e:
                 if e.errno != errno.ENOENT:
                     logging.exception('pickle.load(%s): %s' % (filename, str(e)))
                 self.data_cache = {}
@@ -264,7 +264,7 @@ class KhweetsModel(QAbstractListModel):
             filename = os.path.join(self.getCacheFolder(), str(uid))
             try:
                 pkl_file = open(filename, 'rb')
-            except (OSError, IOError) : #Python syntax error a list of type of error are a tuple ;) else it s name the exception. #Fix Bug #976
+            except (IOError, EOFError, OSError) : #Python syntax error a list of type of error are a tuple ;) else it s name the exception. #Fix Bug #976
                 # Error accessing the file.  Likely, the back end
                 # purged the file.  Just return None.
                 # self.data_by_uid does the right thing.
