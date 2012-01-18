@@ -96,10 +96,14 @@ class KhweeteurDBusHandler(dbus.service.Object):
     def iface(self):
         if not hasattr(self, '_iface'):
             bus = dbus.SessionBus()
-            obj = bus.get_object('net.khertan.khweeteur.daemon',
-                                 '/net/khertan/khweeteur/daemon')
-            self._iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
-
+            try:
+                obj = bus.get_object('net.khertan.khweeteur.daemon',
+                                     '/net/khertan/khweeteur/daemon')
+                self._iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
+            except DBusException:
+                del self._iface #DBusException are frequent
+                return None
+                
         return self._iface
 
     def require_update(self, optional=True, only_uploads=False, first_try=True):
