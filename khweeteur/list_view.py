@@ -195,7 +195,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
         # Draw icon
         icon = index.data(Qt.DecorationRole)
-        if icon != None:
+        if type(icon) == QPixmap:
             try:
                 painter.drawPixmap(x1 + 10, y1 + 10, 50, 50, icon)
             except Exception:
