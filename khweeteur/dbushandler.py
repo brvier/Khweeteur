@@ -134,7 +134,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
             pass
 
         # Run ansynchronously to avoid blocking the user interface.
-        self.iface.require_update(
+        if (self.iface): #Test if we have an iface
+            self.iface.require_update(
             optional, only_uploads,
             reply_handler=success_handler,
             error_handler=error_handler)
