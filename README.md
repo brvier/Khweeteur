@@ -27,7 +27,7 @@ Features
 ![Theme CoolGrey Vertical][5]
 ![Theme CoolGrey ][6]
 
-[1]:http://gitorious.org/khweeteur
+[1]:http://github.com/khertan/Khweeteur
 [2]:http://maemo.org/packages/view/khweeteur/
 [3]:https://github.com/khertan/Khweeteur/issues
 [4]:http://khertan.net/softwares/Khweeteur/khweeteur_0.5.x_1.png
