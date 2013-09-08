@@ -121,9 +121,7 @@ class KhweeteurRefreshWorker(QThread):
                     with open(filename, "wbx") as fhandle:
                         pass
                 except IOError, exception:
-                    if 'File exists' in exception:
-                        continue
-                    raise
+                    continue
 
                 try:
                     urlretrieve(status.user.profile_image_url, filename)
@@ -280,11 +278,7 @@ class KhweeteurRefreshWorker(QThread):
                 with open(filename, 'wbx') as fhandle:
                     pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             except IOError, exception:
-                if 'File exists' in str(exception):
-                    # Another thread downloaded this status update.
-                    pass
-                else:
-                    raise
+                pass
             except pickle.PickleError, exception:
                 logging.debug('Serialization of %s failed: %s'
                               % (status.id, str (exception)))
@@ -328,7 +322,10 @@ class KhweeteurRefreshWorker(QThread):
             if self.call == 'HomeTimeline':
                 statuses = self.account.api.GetHomeTimeline(since_id=since)
             elif self.call == 'Mentions':
+                print 'GetMentions'
                 statuses = self.account.api.GetMentions(since_id=since)
+                print 'Mentions'
+                print statuses
             elif self.call == 'DMs':
                 statuses = self.account.api.GetDirectMessages(since_id=since)
             elif self.call.startswith('Search:'):

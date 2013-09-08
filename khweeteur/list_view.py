@@ -89,7 +89,6 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
-
         uid = to_str(index.data(role=IDROLE)) + 'x' + str(option.rect.width()) #Fix Bug #967 (sometime uid have some strange unicode chars ... ?)
         try:
             return self.memoized_size[uid]

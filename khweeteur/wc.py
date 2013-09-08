@@ -232,7 +232,7 @@ def wc(stream_update=None, object_transfer=None):
         logging.info(
             "Woodchuck support disabled: unable to contact Woodchuck server.")
         print "Woodchuck support disabled: unable to contact Woodchuck server."
-        return
+        return _w
 
     logging.info("Woodchuck appears to be available.")
 

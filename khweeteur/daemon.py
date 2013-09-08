@@ -158,37 +158,40 @@ class KhweeteurDBusHandler(dbus.service.Object):
             or ((ttype == 'HomeTimeline') and
                 (settings.value('showHomeTimelineNotifications') == '2'))):
             m_bus = dbus.SystemBus()
-            m_notify = m_bus.get_object('org.freedesktop.Notifications',
-                                        '/org/freedesktop/Notifications')
-            iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
-
-            if ttype == 'DMs' :
-                msg = 'New DMs'
-            elif ttype == 'Mentions':
-                msg = 'New mentions'
-            else:
-                msg = 'New tweets'
             try:
-                self.m_id = iface.Notify(
-                    'Khweeteur',
-                    self.m_id,
-                    'khweeteur',
-                    msg,
-                    msg,
-                    ['default', 'call'],
-                    {
-                        'category': 'khweeteur-new-tweets',
-                        'desktop-entry': 'khweeteur',
-                        'dbus-callback-default'
-                            : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
-                            ,
-                        'count': count,
-                        'amount': count,
-                        },
-                    -1,
-                    )
-            except Exception:
-                logging.exception("Displaying new-tweets info banner")
+                m_notify = m_bus.get_object('org.freedesktop.Notifications',
+                                            '/org/freedesktop/Notifications')
+                iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+
+                if ttype == 'DMs' :
+                    msg = 'New DMs'
+                elif ttype == 'Mentions':
+                    msg = 'New mentions'
+                else:
+                    msg = 'New tweets'
+                try:
+                    self.m_id = iface.Notify(
+                        'Khweeteur',
+                        self.m_id,
+                        'khweeteur',
+                        msg,
+                        msg,
+                        ['default', 'call'],
+                        {
+                            'category': 'khweeteur-new-tweets',
+                            'desktop-entry': 'khweeteur',
+                            'dbus-callback-default'
+                                : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
+                                ,
+                            'count': count,
+                            'amount': count,
+                            },
+                        -1,
+                        )
+                except Exception:
+                    logging.exception("Displaying new-tweets info banner")
+            except:
+                pass
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
                          in_signature='bb', out_signature='b')

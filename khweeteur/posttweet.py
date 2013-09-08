@@ -95,17 +95,19 @@ def post_tweet(
         pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
 
     # Register the post with Woodchuck.
-    if wc().available():
-        try:
-            if len(text) > 25:
-                human_readable_name = text[:23] + "..."
-            else:
-                human_readable_name = text
+    _wc = wc()
+    if _wc is not None:
+        if _wc.available():
+            try:
+                if len(text) > 25:
+                    human_readable_name = text[:23] + "..."
+                else:
+                    human_readable_name = text
 
-            wc()['topost'].object_register(
-                object_identifier=os.path.basename(filename),
-                human_readable_name=human_readable_name,
-                expected_size=-1 * os.path.getsize(filename))
-        except Exception:
-            logging.exception("Registering post %s with Woodchuck"
-                              % (filename,))
+                wc()['topost'].object_register(
+                    object_identifier=os.path.basename(filename),
+                    human_readable_name=human_readable_name,
+                    expected_size=-1 * os.path.getsize(filename))
+            except Exception:
+                logging.exception("Registering post %s with Woodchuck"
+                                  % (filename,))

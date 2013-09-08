@@ -1985,7 +1985,7 @@ class Api(object):
         self._InitializeDefaultParameters()
 
         if base_url is None:
-            self.base_url = 'https://api.twitter.com/1'
+            self.base_url = 'https://api.twitter.com/1.1'
         else:
             self.base_url = base_url
 
@@ -2162,11 +2162,11 @@ class Api(object):
     # Make and send requests
 
         if 'twitter' in self.base_url:
-            url = 'http://search.twitter.com/search.json'
+            url = 'https://api.twitter.com/1.1/search/tweets.json'
         else:
             url = '%s/search.json' % self.base_url
 
-        json = self._FetchUrl(url, post_data=parameters)
+        json = self._FetchUrl(url, parameters=parameters)
         data = self._ParseAndCheckForTwitterError(json)
 
         results = []
@@ -3276,7 +3276,7 @@ class Api(object):
       see: http://apiwiki.twitter.com/REST-API-Documentation#statuses/mentions
     '''
 
-        url = '%s/statuses/mentions.json' % self.base_url
+        url = '%s/statuses/mentions_timeline.json' % self.base_url
 
         if not self._oauth_consumer:
             raise TwitterError('The twitter.Api instance must be authenticated.'
@@ -3871,7 +3871,7 @@ class Api(object):
                 url_data = self._cache.Get(key)
 
     # Always return the latest version
-
+        print url, ':', url_data
         return url_data
 
 

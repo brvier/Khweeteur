@@ -28,7 +28,7 @@ SUPPORTED_ACCOUNTS = [{
     'name': 'Twitter',
     'consumer_key': 'uhgjkoA2lggG4Rh0ggUeQ',
     'consumer_secret': 'lbKAvvBiyTlFsJfb755t3y1LVwB0RaoMoDwLD14VvU',
-    'base_url': 'https://api.twitter.com/1',
+    'base_url': 'https://api.twitter.com/1.1',
     'request_token_url': 'https://api.twitter.com/oauth/request_token',
     'access_token_url': 'https://api.twitter.com/oauth/access_token',
     'authorization_url': 'https://api.twitter.com/oauth/authorize',
@@ -153,7 +153,7 @@ class Account(object):
     
         settings = settings_db()
         if settings.value('useGPS') == '2':
-            feeds.append['Near']
+            feeds.append('Near')
     
         nb_searches = settings.beginReadArray('searches')
         for index in range(nb_searches):

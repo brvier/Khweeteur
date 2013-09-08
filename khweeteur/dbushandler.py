@@ -9,6 +9,7 @@
 '''A simple Twitter client made with pyqt4 : QModel'''
 
 import dbus.service
+from dbus import DBusException
 import os.path
 from subprocess import Popen, PIPE
 from posttweet import post_tweet
@@ -101,7 +102,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
                                      '/net/khertan/khweeteur/daemon')
                 self._iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
             except DBusException:
-                del self._iface #DBusException are frequent
+                if hasattr(self, "_iface"):
+                    del self._iface #DBusException are frequent
                 return None
                 
         return self._iface
