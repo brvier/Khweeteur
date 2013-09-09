@@ -27,12 +27,14 @@ import glob
 logger = None
 original_excepthook = None
 
+
 def my_excepthook(exctype, value, tb):
     """Log uncaught exceptions."""
     logger.error(
         "Uncaught exception: %s"
         % (''.join(traceback.format_exception(exctype, value, tb)),))
     original_excepthook(exctype, value, tb)
+
 
 def init(dot_directory, debug=True, max_logfiles=1, program_name=None):
     if not os.path.isabs(dot_directory):
@@ -55,7 +57,7 @@ def init(dot_directory, debug=True, max_logfiles=1, program_name=None):
                                       program_name + '-*.log'))
     if len(logfiles) >= max_logfiles:
         logfiles.sort()
-        for f in logfiles[:-(max_logfiles+1)]:
+        for f in logfiles[:-(max_logfiles + 1)]:
             print "Purging old log file %s" % (f,)
             try:
                 os.remove(f)
@@ -68,7 +70,7 @@ def init(dot_directory, debug=True, max_logfiles=1, program_name=None):
     print "Sending output to %s" % logfile
 
     global logger
-    logger = logging.getLogger(__name__) 
+    logger = logging.getLogger(__name__)
 
     if debug:
         level = logging.DEBUG
@@ -107,7 +109,6 @@ def init(dot_directory, debug=True, max_logfiles=1, program_name=None):
 
         print "Redirecting std%s to %s" % (thing, filename)
         return open(filename, "w", 0)
-            
+
     sys.stderr = redirect('err')
     sys.stdout = redirect('out')
-

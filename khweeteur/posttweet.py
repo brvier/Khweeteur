@@ -15,6 +15,7 @@ import logging
 
 post_path = None
 
+
 def post_tweet(
     shorten_url=1,
     serialize=1,
@@ -23,7 +24,7 @@ def post_tweet(
     longitude='0',
     base_url='',
     action='',
-    tweet_id='0'):
+        tweet_id='0'):
     """
     Queue a status update.
 
@@ -80,7 +81,7 @@ def post_tweet(
                               % (post_path, e))
 
     filename = os.path.join(
-        post_path, str(time.time()) + '-' + str (random.random()))
+        post_path, str(time.time()) + '-' + str(random.random()))
     with open(filename, 'wb') as fhandle:
         post = {
             'shorten_url': shorten_url,
@@ -91,7 +92,7 @@ def post_tweet(
             'base_url': base_url,
             'action': action,
             'tweet_id': tweet_id,
-            }
+        }
         pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
 
     # Register the post with Woodchuck.

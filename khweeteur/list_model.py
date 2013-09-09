@@ -36,7 +36,7 @@ TIMESTAMPABSROLE = 31
 from PySide.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, \
     QSettings, QTimer
 from PySide.QtGui import QPixmap
-import twitter #Not really unused. Avoid pickle to do it each time
+import twitter  # Not really unused. Avoid pickle to do it each time
 
 # Data that we may cache.  The most important data for caching is the
 # data needed for sizing rows.  See list_view for the required
@@ -44,6 +44,7 @@ import twitter #Not really unused. Avoid pickle to do it each time
 DATA_CACHE = (IDROLE, Qt.DisplayRole, REPLYTEXTROLE, TIMESTAMPABSROLE)
 
 pyqtSignal = Signal
+
 
 class KhweetsModel(QAbstractListModel):
 
@@ -82,7 +83,8 @@ class KhweetsModel(QAbstractListModel):
         self.khweets_limit = 10000
 
         try:
-            self.default_avatar = QPixmap('/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
+            self.default_avatar = QPixmap(
+                '/opt/usr/share/icons/hicolor/48x48/hildon/general_default_avatar.png')
         except:
             self.default_avatar = None
 
@@ -136,7 +138,7 @@ class KhweetsModel(QAbstractListModel):
     def getCacheFolder(self):
         return os.path.join(os.path.expanduser('~'), '.khweeteur', 'cache',
                             os.path.normcase(unicode(self.call.replace('/', '_'
-                            ))).encode('UTF-8'))
+                                                                       ))).encode('UTF-8'))
 
     def rowCount(self, parent=QModelIndex()):
         return min(len(self.uids), self.khweets_limit)
@@ -151,7 +153,6 @@ class KhweetsModel(QAbstractListModel):
         self.uids.pop(index)
         self.dataChanged.emit(self.createIndex(index, 0),
                               self.createIndex(self.rowCount(), 0))
-
 
     def save_data_cache(self, lazily=True):
         filename = self.getCacheFolder() + '-data-cache'
@@ -202,9 +203,9 @@ class KhweetsModel(QAbstractListModel):
             try:
                 self.new_message_horizon = int(
                     settings.value(call + '-new-message-horizon', 0))
-            except (ValueError, TypeError) :
+            except (ValueError, TypeError):
                 self.new_message_horizon = self.now
-                
+
             # There might be some useful avatars, but figuring out
             # which they are requires loading all of the status
             # updates.
@@ -217,7 +218,7 @@ class KhweetsModel(QAbstractListModel):
         self.call = call
 
         self.avatar_path = os.path.join(os.path.expanduser('~'), '.khweeteur',
-                                       'avatars')
+                                        'avatars')
 
         folder = self.getCacheFolder()
         try:
@@ -238,9 +239,9 @@ class KhweetsModel(QAbstractListModel):
                     self.data_cache = pickle.load(fhandle)
             except (IOError, EOFError, OSError), e:
                 if e.errno != errno.ENOENT:
-                    logging.exception('pickle.load(%s): %s' % (filename, str(e)))
+                    logging.exception(
+                        'pickle.load(%s): %s' % (filename, str(e)))
                 self.data_cache = {}
-
 
         # Sort AFTER we load the cache (otherwise, what's the point of
         # the cache).
@@ -264,7 +265,9 @@ class KhweetsModel(QAbstractListModel):
             filename = os.path.join(self.getCacheFolder(), str(uid))
             try:
                 pkl_file = open(filename, 'rb')
-            except (IOError, EOFError, OSError) : #Python syntax error a list of type of error are a tuple ;) else it s name the exception. #Fix Bug #976
+            # Python syntax error a list of type of error are a tuple ;) else
+            # it s name the exception. #Fix Bug #976
+            except (IOError, EOFError, OSError):
                 # Error accessing the file.  Likely, the back end
                 # purged the file.  Just return None.
                 # self.data_by_uid does the right thing.
@@ -297,7 +300,7 @@ class KhweetsModel(QAbstractListModel):
                 ok = False
                 # Make sure that the cached entry is reasonably
                 # consistent.
-                if (# Status entries that can change: last_update.
+                if (  # Status entries that can change: last_update.
                     # Everything else, once created, is static.
                     not uid.endswith('last_update')
                     or ('validated' in cache_entry
@@ -391,7 +394,7 @@ class KhweetsModel(QAbstractListModel):
                 return None
             try:
                 value = status.base_url
-            except AttributeError: #Fix for #973
+            except AttributeError:  # Fix for #973
                 value = None
         elif role == RETWEETOFROLE:
             status = self.get_status(uid)
@@ -442,7 +445,7 @@ class KhweetsModel(QAbstractListModel):
             try:
                 value = status.user.id
             except AttributeError:
-                try: #Fix Bug #970
+                try:  # Fix Bug #970
                     value = status.sender_id
                 except AttributeError:
                     value = None
@@ -481,12 +484,10 @@ class KhweetsModel(QAbstractListModel):
                 filename = os.path.join(self.getCacheFolder(), str(uid))
                 cache_entry['mtime'] = os.stat(filename).st_mtime
                 cache_entry['validated'] = int(time.time())
-                
+
             cache_entry[role] = value
 
         return value
 
     def wantsUpdate(self):
         self.layoutChanged.emit()
-
-

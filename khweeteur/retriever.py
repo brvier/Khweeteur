@@ -20,7 +20,7 @@ try:
 except ImportError:
     import Image
 
-from PySide.QtCore import QSettings,QThread, Signal
+from PySide.QtCore import QSettings, QThread, Signal
 
 #from threading import Thread
 
@@ -34,6 +34,7 @@ import rfc822
 from wc import wc, woodchuck, stream_id_build
 import mainthread
 
+
 class KhweeteurRefreshWorker(QThread):
 
     new_tweets = Signal(int, str)
@@ -43,8 +44,8 @@ class KhweeteurRefreshWorker(QThread):
         self,
         account,
         call,
-        #dbus_handler,
-        ):
+        # dbus_handler,
+    ):
         """
         account: An account.
 
@@ -69,7 +70,7 @@ class KhweeteurRefreshWorker(QThread):
 
 #    def send_notification(self, msg, count):
 #        try:
-#            #self.dbus_handler.new_tweets(count, msg)
+# self.dbus_handler.new_tweets(count, msg)
 #            self.new_tweets.emit(count, msg)
 #        except Exception, err:
 #            logging.debug('Retriever : %s' % str(err))
@@ -77,9 +78,9 @@ class KhweeteurRefreshWorker(QThread):
     def getCacheFolder(self):
         if not hasattr(self, 'folder_path'):
             self.folder_path = os.path.join(os.path.expanduser('~'),
-                    '.khweeteur', 'cache',
-                    os.path.normcase(unicode(self.call.replace('/', '_'
-                    ))).encode('UTF-8'))
+                                            '.khweeteur', 'cache',
+                                            os.path.normcase(unicode(self.call.replace('/', '_'
+                                                                                       ))).encode('UTF-8'))
 
             if not os.path.isdir(self.folder_path):
                 try:
@@ -211,10 +212,10 @@ class KhweeteurRefreshWorker(QThread):
                 else:
                     # Nope.  See if it is in the message cache.
                     reply_tos = glob.glob(os.path.join(
-                            os.path.expanduser('~'),
-                            '.khweeteur', 'cache', '*',
-                            self.statusIdFilename(
-                                status.in_reply_to_status_id)))
+                        os.path.expanduser('~'),
+                        '.khweeteur', 'cache', '*',
+                        self.statusIdFilename(
+                            status.in_reply_to_status_id)))
                     if reply_tos:
                         # It is.
                         with open(reply_tos[0], 'rb') as fhandle:
@@ -252,7 +253,7 @@ class KhweeteurRefreshWorker(QThread):
                 logging.debug('%s: getRepliesContent(%s): %s: %s'
                               % (self.call, str(status), str(err),
                                  repr(traceback.format_exception(
-                                          exc_type, exc_value, exc_traceback))))
+                                     exc_type, exc_value, exc_traceback))))
 
         statuses += new_statuses
 
@@ -281,7 +282,7 @@ class KhweeteurRefreshWorker(QThread):
                 pass
             except pickle.PickleError, exception:
                 logging.debug('Serialization of %s failed: %s'
-                              % (status.id, str (exception)))
+                              % (status.id, str(exception)))
                 # Remove the empty file.
                 os.remove(filename)
             else:
@@ -303,10 +304,10 @@ class KhweeteurRefreshWorker(QThread):
                 pickle.dump(status, fhandle, pickle.HIGHEST_PROTOCOL)
             logging.debug("LAST_UPDATE: Wrote %s: %s"
                           % (filename, status.text))
-                                                         
+
         except pickle.PickleError, exception:
             logging.debug('Serialization of %s failed: %s'
-                          % (filename, str (exception)))
+                          % (filename, str(exception)))
             # Remove the empty file.
             os.remove(filename)
 
@@ -322,15 +323,12 @@ class KhweeteurRefreshWorker(QThread):
             if self.call == 'HomeTimeline':
                 statuses = self.account.api.GetHomeTimeline(since_id=since)
             elif self.call == 'Mentions':
-                print 'GetMentions'
                 statuses = self.account.api.GetMentions(since_id=since)
-                print 'Mentions'
-                print statuses
             elif self.call == 'DMs':
                 statuses = self.account.api.GetDirectMessages(since_id=since)
             elif self.call.startswith('Search:'):
                 statuses = self.account.api.GetSearch(since_id=since,
-                        term=self.call.split(':', 1)[1])
+                                                      term=self.call.split(':', 1)[1])
             elif self.call == 'RetrieveLists':
                 # Get the list subscriptions
 
@@ -352,7 +350,7 @@ class KhweeteurRefreshWorker(QThread):
                 statuses = self.account.api.GetListStatuses(
                     user=user, id=id, since_id=since)
 
-            #Near GPS
+            # Near GPS
             elif self.call.startswith('Near:'):
                 geocode = self.call.split(':', 2)[1:] + ['1km']
                 logging.debug('geocode=(%s)', str(geocode))
@@ -394,7 +392,7 @@ class KhweeteurRefreshWorker(QThread):
                                   max(statuses).id)
 
         self.new_tweets.emit(len(statuses), self.call)
-        self.update_last_update()
+        # self.update_last_update()
 
         def register_update(account, call, status_id_prefix, success, statuses):
             # The closure will be run in the main thread
@@ -482,5 +480,3 @@ class KhweeteurRefreshWorker(QThread):
 
         settings.sync()
         logging.debug('%s finished' % self.call)
-
-

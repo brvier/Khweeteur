@@ -68,7 +68,7 @@ SIGNIN_URL = 'https://api.twitter.com/oauth/authenticate'
 import re
 import htmlentitydefs
 
-##
+#
 # Removes HTML or XML character references and entities from a text string.
 #
 # @param text The HTML (or XML) source text.
@@ -152,7 +152,7 @@ class Status(object):
         now=None,
         origin=None,
         retweeted_status=None,
-        ):
+    ):
         '''An object to hold a Twitter status message.
 
     This class is normally instantiated by the twitter.Api class and
@@ -222,10 +222,12 @@ class Status(object):
     '''
         try:
             if not self._created_at_in_seconds:
-                self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
-            return self._created_at_in_seconds                
-        except:            
-            self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+                self._created_at_in_seconds = calendar.timegm(
+                    rfc822.parsedate(self.created_at))
+            return self._created_at_in_seconds
+        except:
+            self._created_at_in_seconds = calendar.timegm(
+                rfc822.parsedate(self.created_at))
         return self._created_at_in_seconds
 
     created_at_in_seconds = property(GetCreatedAtInSeconds,
@@ -555,7 +557,7 @@ class Status(object):
             source=data.get('source', None),
             user=user,
             retweeted_status=retweeted_status,
-            )
+        )
 
 
 class List(object):
@@ -589,7 +591,7 @@ class List(object):
         subscriber_count=None,
         following=None,
         user=None,
-        ):
+    ):
 
         self.id = id
         self.name = name
@@ -938,7 +940,7 @@ class List(object):
             subscriber_count=data.get('subscriber_count', None),
             following=data.get('following', None),
             user=user,
-            )
+        )
 
 
 class User(object):
@@ -993,7 +995,7 @@ class User(object):
         favourites_count=None,
         url=None,
         status=None,
-        ):
+    ):
 
         self.id = id
         self.name = name
@@ -1191,8 +1193,8 @@ class User(object):
         self._profile_background_image_url = profile_background_image_url
 
     profile_background_image_url = property(GetProfileBackgroundImageUrl,
-            SetProfileBackgroundImageUrl,
-            doc='The url of the profile background of this user.')
+                                            SetProfileBackgroundImageUrl,
+                                            doc='The url of the profile background of this user.')
 
     def GetProfileSidebarFillColor(self):
         return self._profile_sidebar_fill_color
@@ -1201,7 +1203,7 @@ class User(object):
         self._profile_sidebar_fill_color = profile_sidebar_fill_color
 
     profile_sidebar_fill_color = property(GetProfileSidebarFillColor,
-            SetProfileSidebarFillColor)
+                                          SetProfileSidebarFillColor)
 
     def GetProfileBackgroundColor(self):
         return self._profile_background_color
@@ -1497,12 +1499,12 @@ class User(object):
             friends_count=data.get('friends_count', None),
             profile_image_url=data.get('profile_image_url', None),
             profile_background_tile=data.get('profile_background_tile', None),
-            profile_background_image_url=data.get('profile_background_image_url'
-                    , None),
+            profile_background_image_url=data.get(
+                'profile_background_image_url', None),
             profile_sidebar_fill_color=data.get('profile_sidebar_fill_color',
-                    None),
+                                                None),
             profile_background_color=data.get('profile_background_color',
-                    None),
+                                              None),
             profile_link_color=data.get('profile_link_color', None),
             profile_text_color=data.get('profile_text_color', None),
             protected=data.get('protected', None),
@@ -1510,7 +1512,7 @@ class User(object):
             time_zone=data.get('time_zone', None),
             url=data.get('url', None),
             status=status,
-            )
+        )
 
 
 class DirectMessage(object):
@@ -1538,7 +1540,7 @@ class DirectMessage(object):
         recipient_id=None,
         recipient_screen_name=None,
         text=None,
-        ):
+    ):
         '''An object to hold a Twitter direct message.
 
     This class is normally instantiated by the twitter.Api class and
@@ -1614,10 +1616,12 @@ class DirectMessage(object):
     '''
         try:
             if not self._created_at_in_seconds:
-                self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
-            return self._created_at_in_seconds                
-        except:            
-            self._created_at_in_seconds = calendar.timegm(rfc822.parsedate(self.created_at))
+                self._created_at_in_seconds = calendar.timegm(
+                    rfc822.parsedate(self.created_at))
+            return self._created_at_in_seconds
+        except:
+            self._created_at_in_seconds = calendar.timegm(
+                rfc822.parsedate(self.created_at))
         return self._created_at_in_seconds
 
     created_at_in_seconds = property(GetCreatedAtInSeconds,
@@ -1841,7 +1845,7 @@ class DirectMessage(object):
     '''
 
         if not type(data) == dict:
-            print type(data),data
+            print type(data), data
 
         return DirectMessage(
             created_at=data.get('created_at', None),
@@ -1851,7 +1855,7 @@ class DirectMessage(object):
             sender_screen_name=data.get('sender_screen_name', None),
             id=data.get('id', None),
             recipient_screen_name=data.get('recipient_screen_name', None),
-            )
+        )
 
 
 class Api(object):
@@ -1934,7 +1938,7 @@ class Api(object):
         shortner=None,
         base_url=None,
         use_gzip_compression=False,
-        ):
+    ):
         '''Instantiate a new twitter.Api object.
 
     Args:
@@ -2010,7 +2014,7 @@ class Api(object):
         password,
         access_token_key=None,
         access_token_secret=None,
-        ):
+    ):
         '''Set the username and password for this instance
 
     Args:
@@ -2033,13 +2037,16 @@ class Api(object):
         self._oauth_consumer = None
 
         if username is not None and password is not None and access_token_key \
-            is not None and access_token_secret is not None:
-            self._signature_method_plaintext = oauth.SignatureMethod_PLAINTEXT()
-            self._signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1()
+                is not None and access_token_secret is not None:
+            self._signature_method_plaintext = oauth.SignatureMethod_PLAINTEXT(
+            )
+            self._signature_method_hmac_sha1 = oauth.SignatureMethod_HMAC_SHA1(
+            )
 
             self._oauth_token = oauth.Token(key=access_token_key,
-                    secret=access_token_secret)
-            self._oauth_consumer = oauth.Consumer(key=username, secret=password)
+                                            secret=access_token_secret)
+            self._oauth_consumer = oauth.Consumer(
+                key=username, secret=password)
 
     def ClearCredentials(self):
         '''Clear the any credentials for this instance
@@ -2109,7 +2116,7 @@ class Api(object):
         lang=None,
         show_user='true',
         query_users=False,
-        ):
+    ):
         '''Return twitter search results for a given term.
 
     Args:
@@ -2158,7 +2165,7 @@ class Api(object):
 
         if geocode is not None:
             parameters['geocode'] = ','.join(map(str, geocode))
-            
+
     # Make and send requests
 
         if 'twitter' in self.base_url:
@@ -2196,7 +2203,7 @@ class Api(object):
         since=None,
         since_id=None,
         retweets=False,
-        ):
+    ):
         '''Fetch the sequence of twitter.Status messages for a user's friends
 
     The twitter.Api instance must be authenticated if the user is private.
@@ -2261,7 +2268,7 @@ class Api(object):
         page=None,
         include_rts=None,
         include_entities=None,
-        ):
+    ):
         '''Fetch the sequence of public Status messages for a single user.
 
     The twitter.Api instance must be authenticated if the user is private.
@@ -2312,7 +2319,7 @@ class Api(object):
             url = '%s/statuses/user_timeline/%s.json' % (self.base_url, id)
         elif user_id:
             url = '%s/statuses/user_timeline.json?user_id=%d' % (self.base_url,
-                    user_id)
+                                                                 user_id)
         elif screen_name:
             url = '%s/statuses/user_timeline.json?screen_name=%s' \
                 % (self.base_url, screen_name)
@@ -2363,7 +2370,7 @@ class Api(object):
         count=None,
         page=None,
         include_entities=None,
-        ):
+    ):
         '''Fetch the sequence of home Status messages for authenticated user.
 
     The twitter.Api instance must be authenticated if the user is private.
@@ -2508,7 +2515,7 @@ class Api(object):
         in_reply_to_status_id=None,
         latitude=None,
         longitude=None,
-        ):
+    ):
         '''Post a twitter status message from the authenticated user.
 
     The twitter.Api instance must be authenticated.
@@ -2537,7 +2544,7 @@ class Api(object):
 
         if len(status) > CHARACTER_LIMIT:
             raise TwitterError('Text must be less than or equal to %d characters. Consider using PostUpdates.'
-                                % CHARACTER_LIMIT)
+                               % CHARACTER_LIMIT)
 
         data = {'status': status.encode('utf-8')}
         if in_reply_to_status_id:
@@ -2563,7 +2570,7 @@ class Api(object):
         latitude=None,
         longitude=None,
         **kwargs
-        ):
+    ):
         '''Post one or more twitter status messages from the authenticated user.
 
     Unlike api.PostUpdate, this method will post multiple status updates
@@ -2616,7 +2623,7 @@ class Api(object):
         status,
         continuation=None,
         **kwargs
-        ):
+    ):
         '''Post one or more twitter status messages from the authenticated user.
 
     Unlike api.PostUpdate, this method will post multiple status updates
@@ -2675,7 +2682,10 @@ class Api(object):
 #    url = 'http://api.twitter.com/1/statuses/retweet/%s.json' % tweet_id
 
         json = self._FetchUrl(url, post_data=data)
-        data = self._ParseAndCheckForTwitterError(json)
+        try:
+            data = self._ParseAndCheckForTwitterError(json)
+        except TwitterError:
+            raise TwitterError('sharing is not permissible for this status (Share validations failed)')
         return Status.NewFromJsonDict(data)
 
     def GetReplies(
@@ -2683,7 +2693,7 @@ class Api(object):
         since=None,
         since_id=None,
         page=None,
-        ):
+    ):
         '''Get a sequence of status messages representing the 20 most recent
     replies (status updates prefixed with @username) to the authenticating
     user.
@@ -2778,7 +2788,7 @@ class Api(object):
         name,
         mode=None,
         description=None,
-        ):
+    ):
         '''Creates a new list with the give name
 
     The twitter.Api instance must be authenticated.
@@ -2832,7 +2842,7 @@ class Api(object):
         user='',
         id='',
         since_id=None,
-        ):
+    ):
         '''Get the status from the given list
 
     The twitter.Api instance must be authenticated.
@@ -2894,8 +2904,8 @@ class Api(object):
     '''
 
         url = '%s/%s/%s/subscribers.json' % (self.base_url, owner, list)
-        json = self._FetchUrl(url, post_data={'_method': 'DELETE', 'list_id'
-                              : list})
+        json = self._FetchUrl(
+            url, post_data={'_method': 'DELETE', 'list_id': list})
         data = self._ParseAndCheckForTwitterError(json)
         return List.NewFromJsonDict(data)
 
@@ -3011,7 +3021,7 @@ class Api(object):
         user_id=None,
         screen_name=None,
         users=None,
-        ):
+    ):
         '''Fetch extended information for the specified users.
 
     Users may be specified either as lists of either user_ids,
@@ -3078,7 +3088,7 @@ class Api(object):
         since=None,
         since_id=None,
         page=None,
-        ):
+    ):
         '''Returns a list of the direct messages sent to the authenticating user.
 
     The twitter.Api instance must be authenticated.
@@ -3255,7 +3265,7 @@ class Api(object):
         max_id=None,
         page=None,
         include_rts=None,
-        ):
+    ):
         '''Returns the 20 most recent mentions (status containing @username)
     for the authenticating user.
 
@@ -3304,7 +3314,7 @@ class Api(object):
         since_id=None,
         max_id=None,
         page=None,
-        ):
+    ):
         '''Returns the 20 most recent retweet made by user (status containing @username)
     for the authenticating user.
 
@@ -3350,7 +3360,7 @@ class Api(object):
         since_id=None,
         max_id=None,
         page=None,
-        ):
+    ):
         '''Returns the 20 most recent retweet of tweet made by the user (status containing @username)
     for the authenticating user.
 
@@ -3397,7 +3407,7 @@ class Api(object):
         since_id=None,
         max_id=None,
         page=None,
-        ):
+    ):
         '''Returns the 20 most recent retweet to the user (status containing @username)
     for the authenticating user.
 
@@ -3518,7 +3528,7 @@ class Api(object):
         client,
         url,
         version,
-        ):
+    ):
         '''Set the X-Twitter HTTP headers that will be sent to the server.
 
     Args:
@@ -3608,7 +3618,7 @@ class Api(object):
         url,
         path_elements=None,
         extra_params=None,
-        ):
+    ):
 
     # Break url into consituent parts
 
@@ -3619,7 +3629,7 @@ class Api(object):
             params,
             query,
             fragment,
-            ) = urlparse.urlparse(url)
+        ) = urlparse.urlparse(url)
 
     # Add any additional path elements to the path
 
@@ -3653,7 +3663,7 @@ class Api(object):
             params,
             query,
             fragment,
-            ))
+        ))
 
     def _InitializeRequestHeaders(self, request_headers):
         if request_headers:
@@ -3671,7 +3681,8 @@ class Api(object):
     def _DecompressGzippedResponse(self, response):
         raw_data = response.read()
         if response.headers.get('content-encoding', None) == 'gzip':
-            url_data = gzip.GzipFile(fileobj=StringIO.StringIO(raw_data)).read()
+            url_data = gzip.GzipFile(
+                fileobj=StringIO.StringIO(raw_data)).read()
         else:
             url_data = raw_data
         return url_data
@@ -3760,7 +3771,7 @@ class Api(object):
         parameters=None,
         no_cache=None,
         use_gzip_compression=None,
-        ):
+    ):
         '''Fetch a URL, optionally caching for a specified time.
 
     Args:
@@ -3819,8 +3830,8 @@ class Api(object):
                 parameters = post_data.copy()
 
             req = oauth.Request.from_consumer_and_token(self._oauth_consumer,
-                    token=self._oauth_token, http_method=http_method,
-                    http_url=url, parameters=parameters)
+                                                        token=self._oauth_token, http_method=http_method,
+                                                        http_url=url, parameters=parameters)
 
             req.sign_request(self._signature_method_hmac_sha1,
                              self._oauth_consumer, self._oauth_token)
@@ -3839,7 +3850,7 @@ class Api(object):
     # Open and return the URL immediately if we're not going to cache
 
         if encoded_post_data or no_cache or not self._cache \
-            or not self._cache_timeout:
+                or not self._cache_timeout:
             response = opener.open(url, encoded_post_data)
             url_data = self._DecompressGzippedResponse(response)
             opener.close()
@@ -3859,7 +3870,7 @@ class Api(object):
       # If the cached version is outdated then fetch another and store it
 
             if not last_cached or time.time() >= last_cached \
-                + self._cache_timeout:
+                    + self._cache_timeout:
                 try:
                     response = opener.open(url, encoded_post_data)
                     url_data = self._DecompressGzippedResponse(response)
@@ -3871,7 +3882,6 @@ class Api(object):
                 url_data = self._cache.Get(key)
 
     # Always return the latest version
-        print url, ':', url_data
         return url_data
 
 

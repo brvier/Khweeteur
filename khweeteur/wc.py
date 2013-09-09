@@ -47,11 +47,13 @@ except ImportError, e:
     woodchuck = None
 
     class PyWoodchuck(object):
+
         def __init__(self, *args, **kwargs):
             pass
 
         def available(self):
             return False
+
 
 def refresh_interval():
     """Return the refresh interval (in seconds)."""
@@ -61,12 +63,14 @@ def refresh_interval():
     else:
         return int(settings.value('refresh_interval')) * 60
 
+
 def stream_id_build(account, feed):
     return account.uuid + '::' + feed
 
+
 def stream_id_split(id):
     try:
-        (account_id, feed) = (id.split('::', 1) + [None,])[:2]
+        (account_id, feed) = (id.split('::', 1) + [None, ])[:2]
     except (TypeError, ValueError):
         return (None, None)
 
@@ -78,7 +82,9 @@ def stream_id_split(id):
 
     return (account, feed)
 
+
 class mywoodchuck(PyWoodchuck):
+
     """
     stream_update is a function that is called when a stream should be
     updated.  It is passed two arguments: the account (a
@@ -91,6 +97,7 @@ class mywoodchuck(PyWoodchuck):
 
     If stream_update is None, then no callbacks will be requested.
     """
+
     def __init__(self, stream_update, object_transfer):
         if stream_update is None:
             # Disable upcalls.
@@ -119,7 +126,7 @@ class mywoodchuck(PyWoodchuck):
     # Woodchuck upcalls.
     def stream_update_cb(self, stream, *args, **kwargs):
         logging.debug("stream update called on %s (%s)"
-                    % (stream.human_readable_name, stream.identifier,))
+                      % (stream.human_readable_name, stream.identifier,))
 
         account, feed = stream_id_split(stream.identifier)
         if account is None:
@@ -131,8 +138,8 @@ class mywoodchuck(PyWoodchuck):
     def object_transfer_cb(self, stream, object,
                            version, filename, quality, *args, **kwargs):
         logging.debug("object transfer called on %s (%s) in stream %s (%s)"
-                    % (object.human_readable_name, object.identifier,
-                       stream.human_readable_name, stream.identifier))
+                      % (object.human_readable_name, object.identifier,
+                         stream.human_readable_name, stream.identifier))
 
         if stream.identifier == 'topost':
             account = None
@@ -162,13 +169,13 @@ class mywoodchuck(PyWoodchuck):
     def synchronize_config(self):
         # Called to synchronize Woodchuck's configuration with our
         # configuration.
-    
+
         # The list of known streams.
         streams = self.streams_list()
         stream_ids = [s.identifier for s in streams]
-    
+
         freshness = refresh_interval()
-    
+
         # Register any unknown streams.  Remove known streams from
         # STREAMS_IDS.
         def check(stream_id, name, freshness):
@@ -189,7 +196,7 @@ class mywoodchuck(PyWoodchuck):
                 stream_ids.remove(stream_id)
                 self[stream_id].human_readable_name = name
                 self[stream_id].freshness = freshness
-    
+
         for account in accounts():
             for feed in account.feeds():
                 check(stream_id_build(account, feed),
@@ -199,7 +206,7 @@ class mywoodchuck(PyWoodchuck):
 
         # The outbox.
         check('topost', 'outbox', woodchuck.never_updated)
-    
+
         # Unregister any streams that are no longer subscribed to.
         for stream_id in stream_ids:
             logging.debug("%s no longer registered." % (stream_id,))
@@ -207,6 +214,7 @@ class mywoodchuck(PyWoodchuck):
             yield
 
 _w = None
+
 
 def wc(stream_update=None, object_transfer=None):
     """

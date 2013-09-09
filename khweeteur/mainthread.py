@@ -21,6 +21,7 @@ from functools import wraps
 _run_in_main_thread = None
 _main_thread = None
 
+
 def init(run_in_main_thread=None):
     """
     run_in_main_thread is a function that takes a single argument, a
@@ -39,7 +40,8 @@ def init(run_in_main_thread=None):
     _run_in_main_thread = run_in_main_thread
 
     global _main_thread
-    _main_thread = threading.currentThread ()
+    _main_thread = threading.currentThread()
+
 
 def execute(func, *args, **kwargs):
     """
@@ -61,13 +63,13 @@ def execute(func, *args, **kwargs):
     if threading.currentThread() == _main_thread:
         if async:
             try:
-                func (*args, **kwargs)
+                func(*args, **kwargs)
             except:
                 logging.debug("mainthread.execute: Executing %s: %s"
-                              % (func, traceback.format_exc ()))
+                              % (func, traceback.format_exc()))
             return
         else:
-            return func (*args, **kwargs)
+            return func(*args, **kwargs)
 
     assert _run_in_main_thread is not None, \
         "You can't call this function from a non-main thread until you've called init()"
@@ -86,26 +88,25 @@ def execute(func, *args, **kwargs):
                 ("function executed in %s, not %s"
                  % (threading.currentThread(), _main_thread))
 
-
             try:
                 result['result'] = func(*args, **kwargs)
             except:
                 logging.debug("mainthread.execute: Executing %s: %s"
-                              % (func, traceback.format_exc ()))
+                              % (func, traceback.format_exc()))
 
             if not async:
-                cond.acquire ()
+                cond.acquire()
             result['done'] = True
             if not async:
-                cond.notify ()
-                cond.release ()
+                cond.notify()
+                cond.release()
 
             return False
         return it
 
     if not async:
-        cond.acquire ()
-    _run_in_main_thread (doit())
+        cond.acquire()
+    _run_in_main_thread(doit())
 
     if async:
         # Don't wait for the method to complete execution.
@@ -113,9 +114,10 @@ def execute(func, *args, **kwargs):
 
     # Wait for the result to become available.
     while not result['done']:
-        cond.wait ()
+        cond.wait()
 
-    return result.get ('result', None)
+    return result.get('result', None)
+
 
 def mainthread(async=None):
     """
@@ -127,7 +129,7 @@ def mainthread(async=None):
         def wrapper(*args, **kwargs):
             if async is not None:
                 kwargs['async'] = async
-            return execute (f, *args, **kwargs)
+            return execute(f, *args, **kwargs)
         return wrapper
     return real_decorator
 
@@ -145,26 +147,27 @@ if __name__ == "__main__":
     mainloop = gobject.MainLoop()
     gobject.threads_init()
 
-    assert execute (in_main_thread, 1) == 1
-    assert (execute (in_main_thread, 2, async=False) == 2)
-    execute (in_main_thread, 3, async=True)
+    assert execute(in_main_thread, 1) == 1
+    assert (execute(in_main_thread, 2, async=False) == 2)
+    execute(in_main_thread, 3, async=True)
 
     class T(threading.Thread):
+
         def __init__(self):
             threading.Thread.__init__(self)
 
         def run(self):
             assert threading.currentThread() != _main_thread
 
-            assert execute (in_main_thread, 4) == 4
-            assert (execute (in_main_thread, 5, async=False) == 5)
-            execute (in_main_thread, 6, async=True)
-            execute (mainloop.quit, async=False)
+            assert execute(in_main_thread, 4) == 4
+            assert (execute(in_main_thread, 5, async=False) == 5)
+            execute(in_main_thread, 6, async=True)
+            execute(mainloop.quit, async=False)
 
     def start_thread():
         t = T()
         t.start()
         return False
 
-    gobject.idle_add (start_thread)
+    gobject.idle_add(start_thread)
     mainloop.run()

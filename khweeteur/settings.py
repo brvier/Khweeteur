@@ -21,8 +21,8 @@ from PySide.QtCore import Qt, QUrl, QAbstractListModel, QSettings, QModelIndex, 
     Signal
 
 from theme import DEFAULTTHEME, WHITETHEME, \
-                     COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
-                     MINITHEME
+    COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
+    MINITHEME
 
 SUPPORTED_ACCOUNTS = [{
     'name': 'Twitter',
@@ -32,7 +32,7 @@ SUPPORTED_ACCOUNTS = [{
     'request_token_url': 'https://api.twitter.com/oauth/request_token',
     'access_token_url': 'https://api.twitter.com/oauth/access_token',
     'authorization_url': 'https://api.twitter.com/oauth/authorize',
-    }, {
+}, {
     'name': 'Identi.ca',
     'consumer_key': 'c7e86efd4cb951871200440ad1774413',
     'consumer_secret': '236fa46bf3f65fabdb1fd34d63c26d28',
@@ -40,7 +40,7 @@ SUPPORTED_ACCOUNTS = [{
     'request_token_url': 'http://identi.ca/api/oauth/request_token',
     'access_token_url': 'http://identi.ca/api/oauth/access_token',
     'authorization_url': 'http://identi.ca/api/oauth/authorize',
-    }]
+}]
 
 import oauth2 as oauth
 from notifications import KhweeteurNotification
@@ -61,6 +61,8 @@ _settings_synced = None
 # would be to use the last modification time of the underlying file
 # (determined using QSettings.fileName).
 settings_db_generation = 0
+
+
 def settings_db():
     """
     Return the setting's database, a QSettings instance, ensuring that
@@ -87,16 +89,18 @@ def settings_db():
 
     return _settings
 
+
 class Account(object):
+
     def __init__(self, **dct):
         # Defaults
-        self.name='Unknown'
-        self.consumer_key=''
-        self.consumer_secret=''
-        self.token_key=''
-        self.token_secret=''
-        self.use_for_tweet=True
-        self.base_url=''
+        self.name = 'Unknown'
+        self.consumer_key = ''
+        self.consumer_secret = ''
+        self.token_key = ''
+        self.token_secret = ''
+        self.use_for_tweet = True
+        self.base_url = ''
 
         self.deleted = False
 
@@ -150,24 +154,24 @@ class Account(object):
         strings.
         """
         feeds = ['HomeTimeline', 'Mentions', 'DMs', 'RetrieveLists']
-    
+
         settings = settings_db()
         if settings.value('useGPS') == '2':
             feeds.append('Near')
-    
+
         nb_searches = settings.beginReadArray('searches')
         for index in range(nb_searches):
             settings.setArrayIndex(index)
             feeds.append('Search:' + settings.value('terms'))
         settings.endArray()
-    
+
         nb_lists = settings.beginReadArray('lists')
         for index in range(nb_lists):
             settings.setArrayIndex(index)
             feeds.append(
                 'List:' + settings.value('user') + ':' + settings.value('id'))
         settings.endArray()
-    
+
         return feeds
 
     @property
@@ -207,7 +211,7 @@ class Account(object):
             return self._me_user
         except AttributeError:
             pass
-            
+
         self.api()
         return self._me_user
 
@@ -243,6 +247,8 @@ class Account(object):
 _accounts = []
 # The last time the accounts were reread from the setting's DB.
 _accounts_read_at = None
+
+
 def accounts(force_sync=False):
     """Returns a list of dictionaries where each dictionary describes
     an account."""
@@ -279,7 +285,7 @@ def accounts(force_sync=False):
 
         for account in not_on_disk_accounts:
             if (account.base_url == d['base_url']
-                and account.token_key == d['token_key']):
+                    and account.token_key == d['token_key']):
                 # ACCOUNT is already on disk.
 
                 not_on_disk_accounts.remove(account)
@@ -341,16 +347,19 @@ def accounts(force_sync=False):
 
     return _accounts
 
+
 def account_add(account):
     """Add a new account."""
     a = accounts(True)
     a.append(account)
     return accounts(True)
 
+
 def account_remove(account):
     """Remove an account."""
     account.deleted = True
     return accounts(True)
+
 
 def account_lookup_by_uuid(uuid):
     """Return the account with specified UUID.  If no such account
@@ -360,16 +369,17 @@ def account_lookup_by_uuid(uuid):
             return account
     return None
 
+
 class OAuthView(QWebView):
 
-    gotpin = Signal(unicode,tuple)
+    gotpin = Signal(unicode, tuple)
 
     def __init__(
         self,
         parent=None,
         account_type={},
         use_for_tweet=False,
-        ):
+    ):
         QWebView.__init__(self, parent)
         self.loggedIn = False
         self.account_type = account_type
@@ -407,7 +417,7 @@ class OAuthView(QWebView):
 
         if self.loggedIn:
             self.loadFinished.disconnect(self._loadFinished)
-            self.gotpin.emit(self.pin,self.request_token)
+            self.gotpin.emit(self.pin, self.request_token)
 
 
 class AccountDlg(QDialog):
@@ -514,24 +524,26 @@ class KhweeteurPref(QMainWindow):
 
         self.refresh_value.valueChanged.connect(self.checkRefreshRate)
         if self.settings.contains('refresh_interval'):
-            self.refresh_value.setValue(int(self.settings.value('refresh_interval')))
+            self.refresh_value.setValue(
+                int(self.settings.value('refresh_interval')))
         else:
             self.refresh_value.setValue(10)
 
         if self.settings.contains('useDaemon'):
-            self.useNotification_value.setCheckState(Qt.CheckState(int(self.settings.value('useDaemon'))))
+            self.useNotification_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('useDaemon'))))
         else:
             self.useNotification_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('useSerialization'):
             self.useSerialization_value.setCheckState(Qt.CheckState(int(self.settings.value('useSerialization'
-                    ))))
+                                                                                            ))))
         else:
             self.useSerialization_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('useBitly'):
             self.useBitly_value.setCheckState(Qt.CheckState(int(self.settings.value('useBitly'
-                    ))))
+                                                                                    ))))
         else:
             self.useBitly_value.setCheckState(Qt.CheckState(2))
 
@@ -542,44 +554,51 @@ class KhweeteurPref(QMainWindow):
             self.settings.setValue('theme', DEFAULTTHEME)
 
         self.theme_value.setCurrentIndex(self.THEMES.index(self.settings.value('theme'
-                )))
+                                                                               )))
 
         if self.settings.contains('tweetHistory'):
             self.history_value.setValue(int(self.settings.value('tweetHistory'
-                                        )))
+                                                                )))
         else:
             self.history_value.setValue(60)
 
         self.useGPS_value.stateChanged.connect(self.checkGPS)
         if self.settings.contains('useGPS'):
-            self.useGPS_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPS'))))
+            self.useGPS_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('useGPS'))))
         else:
             self.useGPS_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('useGPSOnDemand'):
-            self.useGPSOnDemand_value.setCheckState(Qt.CheckState(int(self.settings.value('useGPSOnDemand'))))
+            self.useGPSOnDemand_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('useGPSOnDemand'))))
         else:
             self.useGPSOnDemand_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('showInfos'):
-            self.showInfos_value.setCheckState(Qt.CheckState(int(self.settings.value('showInfos'))))
+            self.showInfos_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('showInfos'))))
         else:
             self.showInfos_value.setCheckState(Qt.CheckState(0))
 
         if self.settings.contains('showDMNotifications'):
-            self.showDMNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showDMNotifications'))))
+            self.showDMNotifications_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('showDMNotifications'))))
         else:
             self.showDMNotifications_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('showMentionNotifications'):
-            self.showMentionNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showMentionNotifications'))))
+            self.showMentionNotifications_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('showMentionNotifications'))))
         else:
             self.showMentionNotifications_value.setCheckState(Qt.CheckState(2))
 
         if self.settings.contains('showHomeTimelineNotifications'):
-            self.showHomeTimelineNotifications_value.setCheckState(Qt.CheckState(int(self.settings.value('showHomeTimelineNotifications'))))
+            self.showHomeTimelineNotifications_value.setCheckState(
+                Qt.CheckState(int(self.settings.value('showHomeTimelineNotifications'))))
         else:
-            self.showHomeTimelineNotifications_value.setCheckState(Qt.CheckState(2))
+            self.showHomeTimelineNotifications_value.setCheckState(
+                Qt.CheckState(2))
 
     def checkRefreshRate(self):
         if self.refresh_value.value() < 10:
@@ -604,11 +623,15 @@ class KhweeteurPref(QMainWindow):
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
         self.settings.setValue('useGPS', self.useGPS_value.checkState())
-        self.settings.setValue('useGPSOnDemand', self.useGPSOnDemand_value.checkState())
+        self.settings.setValue(
+            'useGPSOnDemand', self.useGPSOnDemand_value.checkState())
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
-        self.settings.setValue('showDMNotifications', self.showDMNotifications_value.checkState())
-        self.settings.setValue('showMentionNotifications', self.showMentionNotifications_value.checkState())
-        self.settings.setValue('showHomeTimelineNotifications', self.showHomeTimelineNotifications_value.checkState())
+        self.settings.setValue(
+            'showDMNotifications', self.showDMNotifications_value.checkState())
+        self.settings.setValue(
+            'showMentionNotifications', self.showMentionNotifications_value.checkState())
+        self.settings.setValue('showHomeTimelineNotifications',
+                               self.showHomeTimelineNotifications_value.checkState())
         self.settings.setValue('tweetHistory', self.history_value.value())
         self.settings.sync()
         self.save.emit()
@@ -621,20 +644,20 @@ class KhweeteurPref(QMainWindow):
     def do_verify_pin(self, pincode):
         token = oauth.Token(self.oauth_webview.request_token['oauth_token'][0],
                             self.oauth_webview.request_token['oauth_token_secret'
-                            ][0])
+                                                             ][0])
         token.set_verifier(unicode(pincode.strip()))
 
         oauth_consumer = \
             oauth.Consumer(key=self.oauth_webview.account_type['consumer_key'],
                            secret=self.oauth_webview.account_type['consumer_secret'
-                           ])
+                                                                  ])
         oauth_client = oauth.Client(oauth_consumer)
 
         try:
             oauth_client = oauth.Client(oauth_consumer, token)
             (resp, content) = \
                 oauth_client.request(self.oauth_webview.account_type['access_token_url'
-                                     ], method='POST', body='oauth_verifier=%s'
+                                                                     ], method='POST', body='oauth_verifier=%s'
                                      % str(pincode.strip()))
             access_token = parse_qs(content)
 
@@ -647,22 +670,22 @@ class KhweeteurPref(QMainWindow):
                     name=self.oauth_webview.account_type['name'],
                     base_url=self.oauth_webview.account_type['base_url'],
                     consumer_key=self.oauth_webview.account_type['consumer_key'
-                            ],
+                                                                 ],
                     consumer_secret=self.oauth_webview.account_type['consumer_secret'
-                            ],
+                                                                    ],
                     token_key=access_token['oauth_token'][0],
                     token_secret=access_token['oauth_token_secret'][0],
                     use_for_tweet=self.oauth_webview.use_for_tweet,
-                    )
+                )
                 account.screenname()
                 self.accounts_model.set(account_add(account))
             else:
                 KhweeteurNotification().warn(self.tr('Invalid respond from %s requesting access token: %s'
-                        ) % (self.oauth_webview.account_type['name'],
-                        resp['status']))
+                                                     ) % (self.oauth_webview.account_type['name'],
+                                                          resp['status']))
         except StandardError, err:
             KhweeteurNotification().warn(self.tr('A error occur while requesting temp token : %s'
-                     % (err, )))
+                                                 % (err, )))
             import traceback
             traceback.print_exc()
 
@@ -678,7 +701,8 @@ class KhweeteurPref(QMainWindow):
                                         secret=account_type['consumer_secret'])
         oauth_client = oauth.Client(oauth_consumer)
 
-        # Crappy hack for fixing oauth_callback not yet supported by the oauth2 lib but requested by identi.ca
+        # Crappy hack for fixing oauth_callback not yet supported by the oauth2
+        # lib but requested by identi.ca
 
         body = 'oauth_callback=oob'
 
@@ -689,7 +713,7 @@ class KhweeteurPref(QMainWindow):
 
             if resp['status'] != '200':
                 KhweeteurNotification().warn(self.tr('Unable to add account: Unexpected HTTP response from %s requesting oauth token: %s'
-                        ) % (account_type['name'], resp['status']))
+                                                     ) % (account_type['name'], resp['status']))
                 return
             else:
                 request_token = parse_qs(content)
@@ -697,7 +721,7 @@ class KhweeteurPref(QMainWindow):
             self.oauth_webview = OAuthView(self, account_type, use_for_tweet)
             self.oauth_webview.open(QUrl('%s?oauth_token=%s'
                                     % (account_type['authorization_url'],
-                                    request_token['oauth_token'][0])))
+                                       request_token['oauth_token'][0])))
             self.oauth_webview.request_token = request_token
 
             self.oauth_webview.show()
@@ -714,16 +738,16 @@ class KhweeteurPref(QMainWindow):
         except httplib2.ServerNotFoundError, err:
 
             KhweeteurNotification().warn(self.tr('Server not found : %s :')
-                    % unicode(err))
+                                         % unicode(err))
 
     def delete_account(self, index):
         account = account_lookup_by_uuid(
             self.accounts_model._items[index.row()].uuid)
 
-        if QMessageBox.question(self, 'Delete %s' % (account.name or 'account'),
-                                'Are you sure you want to delete this account ?'
-                                , QMessageBox.Yes | QMessageBox.Close) \
-            == QMessageBox.Yes:
+        if QMessageBox.question(
+            self, 'Delete %s' % (account.name or 'account'),
+            'Are you sure you want to delete this account ?'                                , QMessageBox.Yes | QMessageBox.Close) \
+                == QMessageBox.Yes:
             self.accounts_model.set(account_remove(account))
 
     def closeEvent(self, widget, *args):
@@ -731,7 +755,8 @@ class KhweeteurPref(QMainWindow):
 
         self.savePrefs()
 
-        # Restart the daemon on prefs changes instead of loading data at every loop of daemon.
+        # Restart the daemon on prefs changes instead of loading data at every
+        # loop of daemon.
 
         from subprocess import Popen
         Popen(['/usr/bin/python', os.path.join(os.path.dirname(__file__),
@@ -744,7 +769,8 @@ class KhweeteurPref(QMainWindow):
         self.scrollArea.setWidgetResizable(True)
         self.aWidget = QWidget(self.scrollArea)
         self.aWidget.setMinimumSize(480, 1200)
-        self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.aWidget.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scrollArea.setSizePolicy(QSizePolicy.Expanding,
                                       QSizePolicy.Expanding)
         self.scrollArea.setWidget(self.aWidget)
@@ -759,18 +785,20 @@ class KhweeteurPref(QMainWindow):
 
         self._main_layout = QVBoxLayout(self.aWidget)
         self._umain_layout = QGridLayout()
-        self.aWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.aWidget.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self._umain_layout.addWidget(QLabel(self.tr('Refresh Interval (Minutes) :'
-                                     )), 3, 0)
+                                                    )), 3, 0)
         self.refresh_value = QSpinBox()
         self._umain_layout.addWidget(self.refresh_value, 3, 1)
-        self.refresh_warning = QLabel('<font color=\'red\'>Setting low refresh rate can exceed<br>twitter limit rate</font>')
+        self.refresh_warning = QLabel(
+            '<font color=\'red\'>Setting low refresh rate can exceed<br>twitter limit rate</font>')
 
         self._umain_layout.addWidget(self.refresh_warning, 4, 1)
 
         self._umain_layout.addWidget(QLabel(self.tr('Number of tweet to keep in the view :'
-                                     )), 5, 0)
+                                                    )), 5, 0)
         self.history_value = QSpinBox()
         self._umain_layout.addWidget(self.history_value, 5, 1)
 
@@ -797,7 +825,8 @@ class KhweeteurPref(QMainWindow):
 
         self.useGPSOnDemand_value = QCheckBox(self.tr('Use GPS On Demand'))
         self._umain_layout.addWidget(self.useGPSOnDemand_value, 15, 1)
-        self.usegps_warning = QLabel('<font color=\'red\'>Use gps delay status posting<br>until a gps fix is caught</font>')
+        self.usegps_warning = QLabel(
+            '<font color=\'red\'>Use gps delay status posting<br>until a gps fix is caught</font>')
         self._umain_layout.addWidget(self.usegps_warning, 14, 1)
         self.checkGPS()
 
@@ -807,11 +836,15 @@ class KhweeteurPref(QMainWindow):
         self.showDMNotifications_value = QCheckBox(self.tr('DM Notifications'))
         self._umain_layout.addWidget(self.showDMNotifications_value, 17, 1)
 
-        self.showMentionNotifications_value = QCheckBox(self.tr('Mention Notifications'))
-        self._umain_layout.addWidget(self.showMentionNotifications_value, 18, 1)
+        self.showMentionNotifications_value = QCheckBox(
+            self.tr('Mention Notifications'))
+        self._umain_layout.addWidget(
+            self.showMentionNotifications_value, 18, 1)
 
-        self.showHomeTimelineNotifications_value = QCheckBox(self.tr('Timeline Notifications'))
-        self._umain_layout.addWidget(self.showHomeTimelineNotifications_value, 19, 1)
+        self.showHomeTimelineNotifications_value = QCheckBox(
+            self.tr('Timeline Notifications'))
+        self._umain_layout.addWidget(
+            self.showHomeTimelineNotifications_value, 19, 1)
 
         self._main_layout.addLayout(self._umain_layout)
 

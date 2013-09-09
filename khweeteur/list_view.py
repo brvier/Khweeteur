@@ -20,8 +20,9 @@ from PySide.QtGui import QStyledItemDelegate, QListView, QColor, \
 from PySide.QtCore import Qt, QSize, QSettings
 
 from theme import DEFAULTTHEME, WHITETHEME, \
-                     COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
-                     MINITHEME
+    COOLWHITETHEME, COOLGRAYTHEME, XMASTHEME, \
+    MINITHEME
+
 
 def to_str(s):
     """
@@ -41,6 +42,7 @@ def to_str(s):
     except UnicodeEncodeError:
         logging.exception("Failed to convert '%s' to unicode" % s)
         return unicode(s, errors='replace')
+
 
 class DefaultCustomDelegate(QStyledItemDelegate):
 
@@ -89,7 +91,17 @@ class DefaultCustomDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         '''Custom size calculation of our items'''
-        uid = to_str(index.data(role=IDROLE)) + 'x' + str(option.rect.width()) #Fix Bug #967 (sometime uid have some strange unicode chars ... ?)
+
+        try:
+            uid = to_str(index.data(role=IDROLE)) + \
+                'x' + str(option.rect.width())
+                         # Fix Bug #967 (sometime uid have some strange unicode
+                         # chars ... ?)
+        except OverflowError:
+            uid = str(id(index)) + 'x' + str(option.rect.width())
+                      # Fix Bug #967 (sometime uid have some strange unicode
+                      # chars ... ?)
+
         try:
             return self.memoized_size[uid]
         except:
@@ -100,13 +112,13 @@ class DefaultCustomDelegate(QStyledItemDelegate):
             if not self.fm:
                 self.normFont = QFont(option.font)
                 self.normFont.setPointSizeF(option.font.pointSizeF()
-                        * self.fsize)
+                                            * self.fsize)
                 self.fm = QFontMetrics(self.normFont)
 
             if not self.minifm:
                 self.miniFont = QFont(option.font)
                 self.miniFont.setPointSizeF(option.font.pointSizeF()
-                        * 0.8 * self.fsize)
+                                            * 0.8 * self.fsize)
                 self.minifm = QFontMetrics(self.miniFont)
 
             height = self.fm.boundingRect(
@@ -116,7 +128,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 800,
                 int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap),
                 tweet,
-                ).height()
+            ).height()
 
             reply_text = to_str(index.data(role=REPLYTEXTROLE))
             if reply_text:
@@ -126,9 +138,9 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                     option.rect.width() - 75,
                     800,
                     int(Qt.AlignTop) | int(Qt.AlignLeft)
-                        | int(Qt.TextWordWrap),
+                    | int(Qt.TextWordWrap),
                     reply_text,
-                    ).height() + 5
+                ).height() + 5
 
             height += self.minifm.boundingRect(
                 0,
@@ -137,7 +149,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
                 800,
                 int(Qt.AlignTop) | int(Qt.AlignLeft) | int(Qt.TextWordWrap),
                 'LpqAT',
-                ).height()
+            ).height()
             height += 10  # Spacer
 
             if height < 70:
@@ -150,7 +162,7 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter,
         option,
         index,
-        ):
+    ):
         '''Paint our tweet'''
 
         (x1, y1, x2, y2) = option.rect.getCoords()
@@ -254,9 +266,9 @@ class DefaultCustomDelegate(QStyledItemDelegate):
         painter.setPen(self.separator_color)
         painter.drawLine(x1, y2, x2, y2)
 
-        #Use a little tips to say that's a new tweet
+        # Use a little tips to say that's a new tweet
         if is_new:
-            painter.fillRect(x1,y1,8,y2, self.new_bg_alternate_color)
+            painter.fillRect(x1, y1, 8, y2, self.new_bg_alternate_color)
 
         # restore painter
         painter.restore()
@@ -310,6 +322,7 @@ class CoolWhiteCustomDelegate(DefaultCustomDelegate):
         self.text_color = QColor('#444444')
         self.separator_color = QColor('#c8cdcf')
 
+
 class CoolXmasCustomDelegate(DefaultCustomDelegate):
 
     '''Delegate to do custom draw of the items'''
@@ -326,7 +339,7 @@ class CoolXmasCustomDelegate(DefaultCustomDelegate):
         self.bg_alternate_color = QColor('#0D452D')
         self.text_color = QColor('#fff')
         self.separator_color = QColor('#CB0313')
-        
+
 
 class CoolGrayCustomDelegate(DefaultCustomDelegate):
 
@@ -399,5 +412,3 @@ class KhweetsView(QListView):
         else:
             self.custom_delegate = DefaultCustomDelegate(self)
         self.setItemDelegate(self.custom_delegate)
-
-

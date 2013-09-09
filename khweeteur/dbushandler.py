@@ -22,25 +22,29 @@ try:
     from PySide.QtMaemo5 import *
 except ImportError:
     pass
-    
+
 from PySide.QtCore import Qt, QTimer
 
-def isThisRunning( process_name ):
-  ps = Popen("ps -eaf", shell=True, stdout=PIPE)
-  output = ""
-  try:
-      output = ps.stdout.read()
-  except Exception, e:
-      logging.exception("read(): %s" % str(e))
-  ps.stdout.close()
-  ps.wait()
-  return process_name in output
+
+def isThisRunning(process_name):
+    ps = Popen("ps -eaf", shell=True, stdout=PIPE)
+    output = ""
+    try:
+        output = ps.stdout.read()
+    except Exception, e:
+        logging.exception("read(): %s" % str(e))
+    ps.stdout.close()
+    ps.wait()
+    return process_name in output
+
 
 class KhweeteurDBusHandler(dbus.service.Object):
+
     """
     Class responsible for sending messages to Khweeteur daemon and
     managing callbacks.
     """
+
     def __init__(self, parent):
         bus_name_str = 'net.khertan.khweeteur'
         obj_str = '/net/khertan/khweeteur'
@@ -77,7 +81,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
             logging.error("starting daemon")
             Popen(['/usr/bin/python',
                   os.path.join(os.path.dirname(__file__),
-                  'daemon.py'),
+                               'daemon.py'),
                   'start'])
 
     def retry(self, f, *args, **kwargs):
@@ -100,12 +104,13 @@ class KhweeteurDBusHandler(dbus.service.Object):
             try:
                 obj = bus.get_object('net.khertan.khweeteur.daemon',
                                      '/net/khertan/khweeteur/daemon')
-                self._iface = dbus.Interface(obj, 'net.khertan.khweeteur.daemon')
+                self._iface = dbus.Interface(
+                    obj, 'net.khertan.khweeteur.daemon')
             except DBusException:
                 if hasattr(self, "_iface"):
-                    del self._iface #DBusException are frequent
+                    del self._iface  # DBusException are frequent
                 return None
-                
+
         return self._iface
 
     def require_update(self, optional=True, only_uploads=False, first_try=True):
@@ -136,11 +141,11 @@ class KhweeteurDBusHandler(dbus.service.Object):
             pass
 
         # Run ansynchronously to avoid blocking the user interface.
-        if (self.iface): #Test if we have an iface
+        if (self.iface):  # Test if we have an iface
             self.iface.require_update(
-            optional, only_uploads,
-            reply_handler=success_handler,
-            error_handler=error_handler)
+                optional, only_uploads,
+                reply_handler=success_handler,
+                error_handler=error_handler)
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur')
     def show_now(self):
@@ -155,7 +160,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
 
     def attach_win(self, win):
         self.win = win
-        
+
     def post_tweet(
         self,
         shorten_url=1,
@@ -166,6 +171,6 @@ class KhweeteurDBusHandler(dbus.service.Object):
         base_url='',
         action='',
         tweet_id='0',
-        ):
+    ):
         return post_tweet(shorten_url, serialize, text, latitude, longitude,
                           base_url, action, tweet_id)

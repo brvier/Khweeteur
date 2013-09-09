@@ -29,9 +29,9 @@ class KhweeteurNotification(QObject):
                 self.m_bus = dbus.SystemBus()
                 self.m_notify = \
                     self.m_bus.get_object('org.freedesktop.Notifications',
-                        '/org/freedesktop/Notifications')
+                                          '/org/freedesktop/Notifications')
                 self.iface = dbus.Interface(self.m_notify,
-                        'org.freedesktop.Notifications')
+                                            'org.freedesktop.Notifications')
                 self.m_id = 0
             except:
                 noDBUS = True
@@ -69,7 +69,7 @@ class KhweeteurNotification(QObject):
         category='khweeteur-new-tweets',
         icon='khweeteur',
         count=1,
-        ):
+    ):
         '''Create a notification in the style of email one'''
 
         if not noDBUS:
@@ -84,14 +84,12 @@ class KhweeteurNotification(QObject):
                     {
                         'category': category,
                         'desktop-entry': 'khweeteur',
-                        'dbus-callback-default'
-                            : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
-                            ,
+                        'dbus-callback-default': 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
                         'count': count,
                         'amount': count,
-                        },
+                    },
                     -1,
-                    )
+                )
             except:
                 pass
         else:
@@ -99,5 +97,3 @@ class KhweeteurNotification(QObject):
             if pynotify.init('Khweeteur'):
                 n = pynotify.Notification(title, message)
                 n.show()
-
-
