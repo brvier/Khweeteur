@@ -2111,8 +2111,7 @@ class Api(object):
         term,
         geocode=None,
         since_id=None,
-        per_page=60,
-        page=1,
+        per_page=100,
         lang=None,
         show_user='true',
         query_users=False,
@@ -2130,8 +2129,6 @@ class Api(object):
         [optional]
       per_page:
         number of results to return.  Default is 15 [optional]
-      page:
-        which page of search results to return
       lang:
         language for results.  Default is English [optional]
       show_user:
@@ -2160,8 +2157,7 @@ class Api(object):
         parameters['show_user'] = show_user
         if lang:
             parameters['lang'] = lang
-        parameters['rpp'] = per_page
-        parameters['page'] = page
+        parameters['count'] = per_page
 
         if geocode is not None:
             parameters['geocode'] = ','.join(map(str, geocode))
@@ -2772,7 +2768,7 @@ class Api(object):
         if not self._oauth_consumer:
             raise TwitterError('twitter.Api instance must be authenticated')
 
-        url = '%s/%s/lists/subscriptions.json' % (self.base_url, user)
+        url = '%s/%s/lists/list.json' % (self.base_url)
         parameters = {}
         parameters['cursor'] = cursor
 
@@ -2808,7 +2804,7 @@ class Api(object):
       A twitter.List instance representing the new list
     '''
 
-        url = '%s/%s/lists.json' % (self.base_url, user)
+        url = '%s/lists/create.json' % (self.base_url)
         parameters = {'name': name}
         if mode is not None:
             parameters['mode'] = mode
@@ -2832,7 +2828,7 @@ class Api(object):
       A twitter.List instance representing the removed list.
     '''
 
-        url = '%s/%s/lists/%s.json' % (self.base_url, user, id)
+        url = '%s/lists/%s.json' % (self.base_url, id)
         json = self._FetchUrl(url, post_data={'_method': 'DELETE'})
         data = self._ParseAndCheckForTwitterError(json)
         return List.NewFromJsonDict(data)
@@ -2856,7 +2852,7 @@ class Api(object):
       A twitter.List instance representing the removed list.
     '''
 
-        url = '%s/%s/lists/%s/statuses.json' % (self.base_url, user, id)
+        url = '%s/%s/lists/statuses.json' % (self.base_url, id)
 
         parameters = {}
 
