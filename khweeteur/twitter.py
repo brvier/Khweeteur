@@ -2505,6 +2505,38 @@ class Api(object):
         data = self._ParseAndCheckForTwitterError(json)
         return Status.NewFromJsonDict(data)
 
+    def _encode_multipart_data (self, data, files):
+        boundary = random_string (30)
+
+        def get_content_type (filename):
+            return mimetypes.guess_type (filename)[0] or 'application/octet-stream'
+
+        def encode_field (field_name):
+            return ('--' + boundary,
+                    'Content-Disposition: form-data; name="%s"' % field_name,
+                    '', str (data [field_name]))
+
+        def encode_file (field_name):
+            filename = files [field_name]
+            return ('--' + boundary,
+                    'Content-Disposition: form-data; name="%s"; filename="%s"' % (field_name, filename),
+                    'Content-Type: %s' % get_content_type(filename),
+                    '', open (filename, 'rb').read ())
+
+        lines = []
+        for name in data:
+            lines.extend (encode_field (name))
+        for name in files:
+            lines.extend (encode_file (name))
+        lines.extend (('--%s--' % boundary, ''))
+        body = '\r\n'.join (lines)
+
+        headers = {'content-type': 'multipart/form-data; boundary=' + boundary,
+                'content-length': str (len (body))}
+
+        return body, headers
+
+
     def PostUpdate(
         self,
         status,
@@ -3836,6 +3868,11 @@ class Api(object):
             if post_data and http_method == 'POST':
                 parameters = post_data.copy()
 
+            if (http_method == 'POST') and ('media' in parameters):
+                parameters = self._encode_multipart_data(parameters,
+                                                         [parameters['media'],
+                                                         ])
+ 
             req = oauth.Request.from_consumer_and_token(self._oauth_consumer,
                                                         token=self._oauth_token, http_method=http_method,
                                                         http_url=url, parameters=parameters)
