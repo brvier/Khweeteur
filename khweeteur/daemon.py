@@ -11,14 +11,9 @@ import sys
 import time
 from PySide.QtCore import Slot, Signal, \
     QTimer, QCoreApplication, QThread, Qt
-import atexit
 import os
 import shutil
-from signal import SIGTERM
-import random
-
 import logging
-
 from posttweet import post_tweet
 from retriever import KhweeteurRefreshWorker
 from settings import SUPPORTED_ACCOUNTS, settings_db, \
@@ -57,6 +52,7 @@ from wc import woodchuck
 
 # A hook to catch errors
 
+
 def install_excepthook(version):
     '''Install an excepthook called at each unexcepted error'''
 
@@ -73,12 +69,14 @@ def install_excepthook(version):
         trace_s = ''.join(traceback.format_exception(exctype, value, tb))
         print 'Except hook called : %s' % trace_s
         formatted_text = '%s Version %s\nTrace : %s' % ('Khweeteur',
-                __version__, trace_s)
+                                                        __version__, trace_s)
         logging.error(formatted_text)
 
     sys.excepthook = my_excepthook
 
+
 class KhweeteurDBusHandler(dbus.service.Object):
+
     def __init__(self, app):
         bus_name_str = 'net.khertan.khweeteur.daemon'
         try:
@@ -93,7 +91,6 @@ class KhweeteurDBusHandler(dbus.service.Object):
         dbus.service.Object.__init__(
             self, bus_name, '/net/khertan/khweeteur/daemon')
 
-
         self.app = app
 
         self.m_id = 0
@@ -107,12 +104,14 @@ class KhweeteurDBusHandler(dbus.service.Object):
         message = message.replace('<', '')
         message = message.replace('>', '')
 
+        print message
+
         if message == '':
             import traceback
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             logging.error('Null info message : %s'
                           % repr(traceback.format_exception(exc_type,
-                          exc_value, exc_traceback)))
+                                                            exc_value, exc_traceback)))
 
         try:
             m_bus = dbus.SystemBus()
@@ -127,13 +126,13 @@ class KhweeteurDBusHandler(dbus.service.Object):
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             logging.error('Error info message : %s'
                           % repr(traceback.format_exception(exc_type,
-                          exc_value, exc_traceback)))
+                                                            exc_value, exc_traceback)))
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
                          in_signature='', out_signature='b')
     def isRunning(self):
         return True
-        
+
     @dbus.service.signal(dbus_interface='net.khertan.khweeteur.daemon',
                          signature='')
     def refresh_ended(self):
@@ -149,7 +148,7 @@ class KhweeteurDBusHandler(dbus.service.Object):
             return
 
         settings = settings_db()
-        #.value('showNotifications') == '2':                      
+        #.value('showNotifications') == '2':
 
         if (((ttype == 'Mentions') and
              (settings.value('showMentionNotifications') == '2'))
@@ -161,9 +160,10 @@ class KhweeteurDBusHandler(dbus.service.Object):
             try:
                 m_notify = m_bus.get_object('org.freedesktop.Notifications',
                                             '/org/freedesktop/Notifications')
-                iface = dbus.Interface(m_notify, 'org.freedesktop.Notifications')
+                iface = dbus.Interface(
+                    m_notify, 'org.freedesktop.Notifications')
 
-                if ttype == 'DMs' :
+                if ttype == 'DMs':
                     msg = 'New DMs'
                 elif ttype == 'Mentions':
                     msg = 'New mentions'
@@ -180,14 +180,12 @@ class KhweeteurDBusHandler(dbus.service.Object):
                         {
                             'category': 'khweeteur-new-tweets',
                             'desktop-entry': 'khweeteur',
-                            'dbus-callback-default'
-                                : 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now'
-                                ,
+                            'dbus-callback-default': 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
                             'count': count,
                             'amount': count,
-                            },
+                        },
                         -1,
-                        )
+                    )
                 except Exception:
                     logging.exception("Displaying new-tweets info banner")
             except:
@@ -206,7 +204,9 @@ class KhweeteurDBusHandler(dbus.service.Object):
                           latitude, longitude,
                           base_url, action, tweet_id)
 
+
 class KhweeteurDaemon(QCoreApplication):
+
     def __init__(self):
         self.idle_timer_id = None
         self.am_cleaning = False
@@ -214,7 +214,7 @@ class KhweeteurDaemon(QCoreApplication):
     # Woodchuck callbacks.
     def stream_update(self, account, feed):
         logging.debug("stream update called on %s.%s"
-                     % (account.name, feed))
+                      % (account.name, feed))
         return self.retrieve(account, feed)
 
     def object_transfer(self, account, feed, post):
@@ -234,8 +234,9 @@ class KhweeteurDaemon(QCoreApplication):
 
     # This signal will live in the main thread.
     main_thread_signal = Signal(object)
+
     def run(self):
-        QCoreApplication.__init__(self,sys.argv)
+        QCoreApplication.__init__(self, sys.argv)
         try:
             from PySide import __version_info__ as __pyside_version__
         except:
@@ -270,7 +271,7 @@ class KhweeteurDaemon(QCoreApplication):
         self.threads = {}
         self.idtag = None
 
-        #On demand geoloc
+        # On demand geoloc
         self.geoloc_source = None
         self.geoloc_coordinates = None
 
@@ -289,12 +290,13 @@ class KhweeteurDaemon(QCoreApplication):
             os.makedirs(self.post_path)
 
         self.dbus_handler = KhweeteurDBusHandler(self)
-                
+
         # Configure the mainthread module: it needs a function that
         # runs the passed function in the main thread.  We using a Qt
         # Signal that lives in the main thread to accomplish this.
 
         self.main_thread_id = QThread.currentThreadId()
+
         def run_in_main_thread(func):
             assert QThread.currentThreadId() == self.main_thread_id, \
                 ("Running in %s, not %s"
@@ -320,7 +322,7 @@ class KhweeteurDaemon(QCoreApplication):
             self.utimer = QTimer()
             self.utimer.timeout.connect(self.update)
             self.utimer.start(refresh_interval * 1000)
-                
+
             QTimer.singleShot(200, self.update)
 
             logging.debug('Timer added')
@@ -342,7 +344,7 @@ class KhweeteurDaemon(QCoreApplication):
                     QGeoPositionInfoSource.createDefaultSource(None)
             except:
                 self.geoloc_source = None
-                self.geoloc_coordinates = (0,0)
+                self.geoloc_coordinates = (0, 0)
                 logging.exception(
                     'PySide QtMobility not installed or package broken')
             if self.geoloc_source is not None:
@@ -377,8 +379,8 @@ class KhweeteurDaemon(QCoreApplication):
 
         items = glob.glob(os.path.join(self.post_path, '*'))
 
-        if len(items)>0:
-            if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
+        if len(items) > 0:
+            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand') == '2'):
                 if self.geoloc_source == None:
                     self.geolocStart()
                 if self.geoloc_coordinates == None:
@@ -454,7 +456,7 @@ class KhweeteurDaemon(QCoreApplication):
                 if len(urls) > 0:
                     import bitly
                     a = bitly.Api(login='pythonbitly',
-                            apikey='R_06871db6b7fd31a4242709acaf1b6648')
+                                  apikey='R_06871db6b7fd31a4242709acaf1b6648')
 
                     for url in urls:
                         try:
@@ -463,7 +465,7 @@ class KhweeteurDaemon(QCoreApplication):
                         except:
                             pass
 
-            if (settings.value('useGPS')=='2') and (settings.value('useGPSOnDemand')=='2'):
+            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand') == '2'):
                 post['latitude'], post['longitude'] = \
                     self.geoloc_coordinates
 
@@ -487,20 +489,22 @@ class KhweeteurDaemon(QCoreApplication):
                         api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
-                                    in_reply_to_status_id=int(post['tweet_id'
-                                    ]), latitude=post['latitude'],
-                                    longitude=post['longitude'])
+                                                      in_reply_to_status_id=int(post['tweet_id'
+                                                                                     ]), latitude=post[
+                                                          'latitude'],
+                                                      longitude=post['longitude'])
                         else:
                             api.PostUpdate(text,
-                                    in_reply_to_status_id=int(post['tweet_id'
-                                    ]), latitude=post['latitude'],
-                                    longitude=post['longitude'])
+                                           in_reply_to_status_id=int(post['tweet_id'
+                                                                          ]), latitude=post[
+                                               'latitude'],
+                                           longitude=post['longitude'])
                         logging.debug('Posted reply %s : %s' % (text,
-                                post['tweet_id']))
+                                                                post['tweet_id']))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
                                 self.dbus_handler.info('Khweeteur: Reply posted to '
-                                 + account['name'])
+                                                       + account['name'])
                 elif post['action'] == 'retweet':
 
                     # Retweet
@@ -509,11 +513,11 @@ class KhweeteurDaemon(QCoreApplication):
                         api = account.api
                         api.PostRetweet(tweet_id=int(post['tweet_id']))
                         logging.debug('Posted retweet %s'
-                                % (post['tweet_id'], ))
+                                      % (post['tweet_id'], ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
                                 self.dbus_handler.info('Khweeteur: Retweet posted to '
-                                     + account['name'])
+                                                       + account['name'])
                 elif post['action'] == 'tweet':
 
                     # Else "simple" tweet
@@ -522,24 +526,25 @@ class KhweeteurDaemon(QCoreApplication):
                         api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
-                                    latitude=post['latitude'],
-                                    longitude=post['longitude'])
+                                                      latitude=post[
+                                                          'latitude'],
+                                                      longitude=post['longitude'])
                         else:
                             api.PostUpdate(text,
-                                    latitude=post['latitude'],
-                                    longitude=post['longitude'])
+                                           latitude=post['latitude'],
+                                           longitude=post['longitude'])
                         logging.debug('Posted %s' % (text, ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
                                 self.dbus_handler.info('Khweeteur: Status posted to '
- + account['name'])
+                                                       + account['name'])
                 elif post['action'] == 'delete':
                     if account.uuid == post['base_url']:
                         api = account.api
                         api.DestroyStatus(int(post['tweet_id']))
                         path = os.path.join(os.path.expanduser('~'),
-                                '.khweeteur', 'cache', 'HomeTimeline',
-                                post['tweet_id'])
+                                            '.khweeteur', 'cache', 'HomeTimeline',
+                                            post['tweet_id'])
                         if wc().available():
                             try:
                                 post2 = pickle.load(open(path, 'rb'))
@@ -563,17 +568,17 @@ class KhweeteurDaemon(QCoreApplication):
                         os.remove(path)
 
                         logging.debug('Deleted %s' % (post['tweet_id'],
-                                ))
+                                                      ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
                                 self.dbus_handler.info('Khweeteur: Status deleted on '
- + account['name'])
+                                                       + account['name'])
                 elif post['action'] == 'favorite':
                     if account.uuid == post['base_url']:
                         api = account.api
                         api.CreateFavorite(int(post['tweet_id']))
                         logging.debug('Favorited %s' % (post['tweet_id'
-                                ], ))
+                                                             ], ))
                 elif post['action'] == 'follow':
                     if account.uuid == post['base_url']:
                         api = account.api
@@ -592,28 +597,30 @@ class KhweeteurDaemon(QCoreApplication):
                         api = account.api
                         import twitpic
                         twitpic_client = \
-                            twitpic.TwitPicOAuthClient(consumer_key=api._username,
+                            twitpic.TwitPicOAuthClient(
+                                consumer_key=api._username,
                                 consumer_secret=api._password,
-                                access_token=api._oauth_token.to_string(),
+                                access_token=api._oauth_token.to_string(
+                                ),
                                 service_key='f9b7357e0dc5473df5f141145e4dceb0'
-                                )
+                            )
                         params = {}
                         params['media'] = 'file://' + post['base_url']
                         params['message'] = unicode(post['text'])
                         response = twitpic_client.create('upload',
-                                params)
+                                                         params)
                         if 'url' in response:
                             post_tweet(
                                 post['shorten_url'],
                                 post['serialize'],
                                 unicode(response['url']) + u' : '
-                                    + post['text'],
+                                + post['text'],
                                 post['latitude'],
                                 post['longitude'],
                                 '',
                                 'tweet',
                                 '',
-                                )
+                            )
                         else:
 
                             raise StandardError('No twitpic url')
@@ -631,7 +638,6 @@ class KhweeteurDaemon(QCoreApplication):
                     self.dbus_handler.info(
                         'Khweeteur: Post %s not handled by any accounts!'
                         % (str(post)))
-
 
             note_transfer()
 
@@ -654,13 +660,15 @@ class KhweeteurDaemon(QCoreApplication):
                 os.remove(item)
             else:
                 logging.error('Do_posts : %s' % (err.message, ))
-                note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
-                              deleted=False)
+                if woodchuck is not None:
+                    note_transfer(error_code=
+                                  woodchuck.TransferStatus.FailureOther,
+                                  deleted=False)
 
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                             + err.message)
+                                           + err.message)
 
         except Exception, err:
 
@@ -671,7 +679,7 @@ class KhweeteurDaemon(QCoreApplication):
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
                     self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                             + str(err))
+                                           + str(err))
 
             note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
                           deleted=False)
@@ -769,7 +777,7 @@ class KhweeteurDaemon(QCoreApplication):
                 continue
 
             if (folder.startswith('Search:')
-                and folder not in search_directories):
+                    and folder not in search_directories):
                 logging.debug(
                     "Search %s removed (not in %s).  Removing cached tweets."
                     % (folder, str(searches)))
@@ -809,7 +817,7 @@ class KhweeteurDaemon(QCoreApplication):
                 yield
 
                 try:
-                    with open(os.path.join (path, uid), 'rb') as pkl_file:
+                    with open(os.path.join(path, uid), 'rb') as pkl_file:
                         status = pickle.load(pkl_file)
                 except StandardError, err:
                     logging.exception('Error loading %s: %s' % (uid, str(err)))
@@ -841,7 +849,7 @@ class KhweeteurDaemon(QCoreApplication):
             for status in statuses:
                 yield
 
-                filename = os.path.join (path, filenames[status])
+                filename = os.path.join(path, filenames[status])
                 try:
                     os.remove(filename)
                 except StandardError, err:
@@ -854,7 +862,7 @@ class KhweeteurDaemon(QCoreApplication):
                     if account is not None:
                         try:
                             stream = wc()[stream_id_build(
-                                    account, os.path.basename (path))]
+                                account, os.path.basename(path))]
                             obj = stream[str(status.id)]
 
                             obj.files_deleted(
@@ -884,7 +892,7 @@ class KhweeteurDaemon(QCoreApplication):
             if settings.value('ShowInfos') == '2':
                 showInfos = True
 
-        if len(self.threads)>0:
+        if len(self.threads) > 0:
             for t, job in self.threads.items():
                 # Check whether the threads are really running.  the
                 # finished and terminate signals appear rather
@@ -894,11 +902,11 @@ class KhweeteurDaemon(QCoreApplication):
                 if t.isFinished():
                     self.thread_exited(t)
 
-            if len(self.threads)>0:
+            if len(self.threads) > 0:
                 # Update in progress.
                 logging.info('Update in progress (%s jobs still running: %s)'
-                             % (len (self.threads), str(self.threads.values())))
-                return            
+                             % (len(self.threads), str(self.threads.values())))
+                return
 
         self.clean(settings)
 
@@ -927,13 +935,13 @@ class KhweeteurDaemon(QCoreApplication):
     def thread_exited(self, thread):
         logging.debug("Job %s finished; Jobs still running: %s"
                       % (self.threads[thread],
-                         str ([v for k, v in self.threads.items()
-                               if k != thread])))
+                         str([v for k, v in self.threads.items()
+                              if k != thread])))
         try:
             del self.threads[thread]
         except ValueError, exception:
             logging.debug("Unregistered thread %s called athread_end (%s)!"
-                          % (str(thread), str (exception)))
+                          % (str(thread), str(exception)))
 
         if len(self.threads) == 0:
             self.idle_timer_start()
@@ -978,6 +986,7 @@ class KhweeteurDaemon(QCoreApplication):
 
         return self.thread_exited(self.sender())
 
+
 def main():
     install_excepthook(__version__)
 
@@ -999,7 +1008,7 @@ def main():
     if sys.argv[1] == 'debug':
         detach_process = False
         redirect_output = False
-        sys.argv[1] = 'start' 
+        sys.argv[1] = 'start'
 
     if 'startfromprefs' == sys.argv[1]:
         if settings_db().value('useDaemon') == '2':
