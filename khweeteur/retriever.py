@@ -58,9 +58,6 @@ class KhweeteurRefreshWorker(QThread):
           'RetrieveLists': Retrive lists
           'List:*:*': The first * should be replace with the user and
                       the second with the id
-          'Near:*:*': Fetch tweets near (1km) a the specified
-                      location.  The first start is the the first
-                      geocode and the second * is the second geocode.
         """
         QThread.__init__(self)
         self.account = account
@@ -350,12 +347,6 @@ class KhweeteurRefreshWorker(QThread):
                 statuses = self.account.api.GetListStatuses(
                     user=user, id=id, since_id=since)
 
-            # Near GPS
-            elif self.call.startswith('Near:'):
-                geocode = self.call.split(':', 2)[1:] + ['1km']
-                logging.debug('geocode=(%s)', str(geocode))
-                statuses = self.account.api.GetSearch(
-                    since_id=since, term='', geocode=geocode)
             else:
                 logging.error('Unknown call: %s' % (self.call, ))
 

@@ -334,14 +334,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.clicked.connect(self.show_list)
         self.list_tb_action.append(self.toolbar.addWidget(self.tb_list_button))
 
-        # Near (Default)
-        self.near_button = QToolBadgeButton(self)
-        self.near_button.setText('Nears')
-        self.near_button.setIcon(QIcon.fromTheme('general_web'))
-        self.near_button.setCheckable(True)
-        self.near_button.clicked.connect(self.show_nears)
-        self.list_tb_action.append(self.toolbar.addWidget(self.near_button))
-
         # Fullscreen
 
         self.tb_fullscreen = QAction(QIcon.fromTheme('general_fullsize'),
@@ -617,9 +609,6 @@ class KhweeteurWin(QMainWindow):
         elif msg == 'DMs':
             self.msg_button.setCounter(self.msg_button.getCounter() + count)
             self.msg_button.update()
-        elif msg == 'Nears':
-            self.near_button.setCounter(self.near_button.getCounter() + count)
-            self.near_button.update()
         elif msg.startswith('Search:'):
             self.tb_search_button.setCounter(self.tb_search_button.getCounter()
                                              + count)
@@ -642,7 +631,6 @@ class KhweeteurWin(QMainWindow):
             self.tb_search_button.setChecked(True)
             self.mention_button.setChecked(False)
             self.tb_list_button.setChecked(False)
-            self.near_button.setChecked(False)
             self.do_model_load('Search:' + terms)
             self.delete_search_action.setVisible(True)
             self.setWindowTitle('Khweeteur : ' + terms)
@@ -659,7 +647,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_search_button.setChecked(False)
         self.tb_list_button.setChecked(True)
         self.mention_button.setChecked(False)
-        self.near_button.setChecked(False)
         self.do_model_load('List:' + user + ':' + tid)
         self.delete_search_action.setVisible(True)
         self.setWindowTitle('Khweeteur List : ' + name)
@@ -678,7 +665,6 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(True)
         self.msg_button.setChecked(False)
         self.tb_search_button.setChecked(False)
-        self.near_button.setChecked(False)
         self.tb_list_button.setChecked(False)
         self.mention_button.setChecked(False)
         self.do_model_load('HomeTimeline')
@@ -1142,7 +1128,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_list_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.home_button.setChecked(False)
-        self.near_button.setChecked(False)
         self.do_model_load('Mentions')
         self.setWindowTitle('Khweeteur : Mentions')
         self.delete_search_action.setVisible(False)
@@ -1159,37 +1144,8 @@ class KhweeteurWin(QMainWindow):
         self.home_button.setChecked(False)
         self.tb_search_button.setChecked(False)
         self.mention_button.setChecked(False)
-        self.near_button.setChecked(False)
         self.do_model_load('DMs')
         self.setWindowTitle('Khweeteur : DMs')
-        self.delete_search_action.setVisible(False)
-
-    @Slot()
-    def show_nears(self):
-        settings = QSettings()
-        if settings.value('useGPS') != '2':
-            if ((QMessageBox.question(None,
-                "Khweeteur",
-                'This feature requires the GPS, do you want to activate it now?',
-                                      QMessageBox.Yes | QMessageBox.Close)) == QMessageBox.Yes):
-                    settings.setValue('useGPS', '2')
-                    settings.sync()
-                    self.geolocDoStart()
-                    self.dbus_handler.require_update(only_uploads=True)
-
-        if not self.near_button.isChecked():
-            # Already showing this.  Reset the new messages.
-            self.model.reset_new_message_horizon()
-
-        self.near_button.setCounter(0)
-        self.near_button.setChecked(True)
-        self.msg_button.setChecked(False)
-        self.tb_list_button.setChecked(False)
-        self.home_button.setChecked(False)
-        self.tb_search_button.setChecked(False)
-        self.mention_button.setChecked(False)
-        self.do_model_load('Nears')
-        self.setWindowTitle('Khweeteur: Nearby Tweets')
         self.delete_search_action.setVisible(False)
 
     @Slot()
@@ -1306,51 +1262,7 @@ class KhweeteurWin(QMainWindow):
         if not hasattr(self, 'aboutWin'):
             self.aboutWin = KhweeteurAbout(self)
         self.aboutWin.show()
-
-    def geolocDoStart(self):
-        settings = QSettings()
-        self.geoloc_source = None
-        if settings.contains('useGPS'):
-            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand') != '2'):
-                self.geolocStart()
-            else:
-                self.geolocStop()
-
-    def geolocStart(self):
-        '''Start the GPS with a 50000 refresh_rate'''
-        self.geoloc_coordinates = None
-        if self.geoloc_source is None:
-            try:
-                from QtMobility.Location import QGeoPositionInfoSource
-                self.geoloc_source = \
-                    QGeoPositionInfoSource.createDefaultSource(None)
-            except:
-                self.geoloc_source = None
-                logging.exception(
-                    'PySide QtMobility not installed or package broken')
-            if self.geoloc_source is not None:
-                self.geoloc_source.setUpdateInterval(50000)
-                self.geoloc_source.positionUpdated.connect(self.geolocUpdated)
-                self.geoloc_source.startUpdates()
-
-    def geolocStop(self):
-        '''Stop the GPS'''
-
-        self.geoloc_coordinates = None
-        if self.geoloc_source is not None:
-            self.geoloc_source.stopUpdates()
-            self.geoloc_source = None
-
-    def geolocUpdated(self, update):
-        '''GPS Callback on update'''
-
-        if update.isValid():
-            self.geoloc_coordinates = (update.coordinate().latitude(),
-                                       update.coordinate().longitude())
-        else:
-            print 'GPS Update not valid'
-
-
+    
 # Here is the installation of the hook. Each time a untrapped/unmanaged exception will
 # happen my_excepthook will be called.
 def install_excepthook():

@@ -156,8 +156,6 @@ class Account(object):
         feeds = ['HomeTimeline', 'Mentions', 'DMs', 'RetrieveLists']
 
         settings = settings_db()
-        if settings.value('useGPS') == '2':
-            feeds.append('Near')
 
         nb_searches = settings.beginReadArray('searches')
         for index in range(nb_searches):
@@ -562,19 +560,6 @@ class KhweeteurPref(QMainWindow):
         else:
             self.history_value.setValue(60)
 
-        self.useGPS_value.stateChanged.connect(self.checkGPS)
-        if self.settings.contains('useGPS'):
-            self.useGPS_value.setCheckState(
-                Qt.CheckState(int(self.settings.value('useGPS'))))
-        else:
-            self.useGPS_value.setCheckState(Qt.CheckState(2))
-
-        if self.settings.contains('useGPSOnDemand'):
-            self.useGPSOnDemand_value.setCheckState(
-                Qt.CheckState(int(self.settings.value('useGPSOnDemand'))))
-        else:
-            self.useGPSOnDemand_value.setCheckState(Qt.CheckState(2))
-
         if self.settings.contains('showInfos'):
             self.showInfos_value.setCheckState(
                 Qt.CheckState(int(self.settings.value('showInfos'))))
@@ -606,12 +591,6 @@ class KhweeteurPref(QMainWindow):
         else:
             self.refresh_warning.hide()
 
-    def checkGPS(self):
-        if self.useGPS_value.checkState() == Qt.CheckState(2):
-            self.usegps_warning.show()
-        else:
-            self.usegps_warning.hide()
-
     def savePrefs(self):
         ''' Save the prefs from the GUI to QSettings'''
 
@@ -622,9 +601,6 @@ class KhweeteurPref(QMainWindow):
                                self.useSerialization_value.checkState())
         self.settings.setValue('useBitly', self.useBitly_value.checkState())
         self.settings.setValue('theme', self.theme_value.currentText())
-        self.settings.setValue('useGPS', self.useGPS_value.checkState())
-        self.settings.setValue(
-            'useGPSOnDemand', self.useGPSOnDemand_value.checkState())
         self.settings.setValue('showInfos', self.showInfos_value.checkState())
         self.settings.setValue(
             'showDMNotifications', self.showDMNotifications_value.checkState())
@@ -819,16 +795,6 @@ class KhweeteurPref(QMainWindow):
 
         self.useBitly_value = QCheckBox(self.tr('Use Bit.ly'))
         self._umain_layout.addWidget(self.useBitly_value, 12, 1)
-
-        self.useGPS_value = QCheckBox(self.tr('Use GPS Geopositionning'))
-        self._umain_layout.addWidget(self.useGPS_value, 13, 1)
-
-        self.useGPSOnDemand_value = QCheckBox(self.tr('Use GPS On Demand'))
-        self._umain_layout.addWidget(self.useGPSOnDemand_value, 15, 1)
-        self.usegps_warning = QLabel(
-            '<font color=\'red\'>Use gps delay status posting<br>until a gps fix is caught</font>')
-        self._umain_layout.addWidget(self.usegps_warning, 14, 1)
-        self.checkGPS()
 
         self.showInfos_value = QCheckBox(self.tr('Show errors notifications'))
         self._umain_layout.addWidget(self.showInfos_value, 16, 1)
