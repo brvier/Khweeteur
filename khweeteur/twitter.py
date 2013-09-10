@@ -2581,7 +2581,7 @@ class Api(object):
         data = {'status': status.encode('utf-8')}
         if media is not None:
             print media
-            data['media'] = open(str(media), 'rb').read()
+            data['media'] = media
         if in_reply_to_status_id:
             data['in_reply_to_status_id'] = in_reply_to_status_id
         if latitude is not None:
