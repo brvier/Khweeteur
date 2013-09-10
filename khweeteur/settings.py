@@ -210,7 +210,7 @@ class Account(object):
         except AttributeError:
             pass
 
-        self.api()
+        api = self.api
         return self._me_user
 
     @property

@@ -16,7 +16,7 @@ import shutil
 import logging
 from posttweet import post_tweet
 from retriever import KhweeteurRefreshWorker
-from settings import SUPPORTED_ACCOUNTS, settings_db, \
+from settings import settings_db, \
     accounts, account_lookup_by_uuid
 
 import cPickle as pickle
@@ -111,7 +111,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             logging.error('Null info message : %s'
                           % repr(traceback.format_exception(exc_type,
-                                                            exc_value, exc_traceback)))
+                                                            exc_value,
+                                                            exc_traceback)))
 
         try:
             m_bus = dbus.SystemBus()
@@ -126,7 +127,8 @@ class KhweeteurDBusHandler(dbus.service.Object):
             (exc_type, exc_value, exc_traceback) = sys.exc_info()
             logging.error('Error info message : %s'
                           % repr(traceback.format_exception(exc_type,
-                                                            exc_value, exc_traceback)))
+                                                            exc_value,
+                                                            exc_traceback)))
 
     @dbus.service.method(dbus_interface='net.khertan.khweeteur.daemon',
                          in_signature='', out_signature='b')
@@ -180,7 +182,9 @@ class KhweeteurDBusHandler(dbus.service.Object):
                         {
                             'category': 'khweeteur-new-tweets',
                             'desktop-entry': 'khweeteur',
-                            'dbus-callback-default': 'net.khertan.khweeteur /net/khertan/khweeteur net.khertan.khweeteur show_now',
+                            'dbus-callback-default': 'net.khertan.khweeteur'
+                            ' /net/khertan/khweeteur'
+                            ' net.khertan.khweeteur show_now',
                             'count': count,
                             'amount': count,
                         },
@@ -379,13 +383,6 @@ class KhweeteurDaemon(QCoreApplication):
 
         items = glob.glob(os.path.join(self.post_path, '*'))
 
-        if len(items) > 0:
-            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand') == '2'):
-                if self.geoloc_source == None:
-                    self.geolocStart()
-                if self.geoloc_coordinates == None:
-                    return
-
         for item in items:
             self.do_post(item, settings)
 
@@ -465,18 +462,10 @@ class KhweeteurDaemon(QCoreApplication):
                         except:
                             pass
 
-            if (settings.value('useGPS') == '2') and (settings.value('useGPSOnDemand') == '2'):
-                post['latitude'], post['longitude'] = \
-                    self.geoloc_coordinates
-
             if not post['latitude']:
                 post['latitude'] = None
-            else:
-                post['latitude'] = int(post['latitude'])
             if not post['longitude']:
                 post['longitude'] = None
-            else:
-                post['longitude'] = int(post['longitude'])
 
             # Loop on accounts
             did_something = False
@@ -489,22 +478,19 @@ class KhweeteurDaemon(QCoreApplication):
                         api = account.api
                         if post['serialize'] == 1:
                             api.PostSerializedUpdates(text,
-                                                      in_reply_to_status_id=int(post['tweet_id'
-                                                                                     ]), latitude=post[
-                                                          'latitude'],
-                                                      longitude=post['longitude'])
+                                                      in_reply_to_status_id=
+                                                      int(post['tweet_id']))
                         else:
                             api.PostUpdate(text,
-                                           in_reply_to_status_id=int(post['tweet_id'
-                                                                          ]), latitude=post[
-                                               'latitude'],
-                                           longitude=post['longitude'])
-                        logging.debug('Posted reply %s : %s' % (text,
-                                                                post['tweet_id']))
+                                           in_reply_to_status_id=
+                                           int(post['tweet_id']))
+                        logging.debug('Posted reply %s : %s'
+                                      % (text, post['tweet_id']))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
-                                self.dbus_handler.info('Khweeteur: Reply posted to '
-                                                       + account['name'])
+                                self.dbus_handler.info(
+                                    'Khweeteur: Reply posted to '
+                                    + account['name'])
                 elif post['action'] == 'retweet':
 
                     # Retweet
@@ -516,8 +502,9 @@ class KhweeteurDaemon(QCoreApplication):
                                       % (post['tweet_id'], ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
-                                self.dbus_handler.info('Khweeteur: Retweet posted to '
-                                                       + account['name'])
+                                self.dbus_handler.info(
+                                    'Khweeteur: Retweet posted to '
+                                    + account['name'])
                 elif post['action'] == 'tweet':
 
                     # Else "simple" tweet
@@ -525,25 +512,22 @@ class KhweeteurDaemon(QCoreApplication):
                     if account.uuid == post['base_url']:
                         api = account.api
                         if post['serialize'] == 1:
-                            api.PostSerializedUpdates(text,
-                                                      latitude=post[
-                                                          'latitude'],
-                                                      longitude=post['longitude'])
+                            api.PostSerializedUpdates(text)
                         else:
-                            api.PostUpdate(text,
-                                           latitude=post['latitude'],
-                                           longitude=post['longitude'])
+                            api.PostUpdate(text)
                         logging.debug('Posted %s' % (text, ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
-                                self.dbus_handler.info('Khweeteur: Status posted to '
-                                                       + account['name'])
+                                self.dbus_handler.info(
+                                    'Khweeteur: Status posted to '
+                                    + account['name'])
                 elif post['action'] == 'delete':
                     if account.uuid == post['base_url']:
                         api = account.api
                         api.DestroyStatus(int(post['tweet_id']))
                         path = os.path.join(os.path.expanduser('~'),
-                                            '.khweeteur', 'cache', 'HomeTimeline',
+                                            '.khweeteur', 'cache',
+                                            'HomeTimeline',
                                             post['tweet_id'])
                         if wc().available():
                             try:
@@ -557,12 +541,14 @@ class KhweeteurDaemon(QCoreApplication):
                                 try:
                                     stream = wc()[post2.base_url]
                                     stream[str(post2.id)].files_deleted(
-                                        update=woodchuck.DeletionResponse.Deleted)
+                                        update=
+                                        woodchuck.DeletionResponse.Deleted)
 
                                     del stream[str(post2.id)]
                                 except Exception, e:
                                     logging.exception(
-                                        "Deleting post %s.%s from Woodchuck: %s"
+                                        "Deleting post %s.%s"
+                                        " from Woodchuck: %s"
                                         % (post2.base_url, post2.id, str(e),))
 
                         os.remove(path)
@@ -571,8 +557,9 @@ class KhweeteurDaemon(QCoreApplication):
                                                       ))
                         if settings.contains('ShowInfos'):
                             if settings.value('ShowInfos') == '2':
-                                self.dbus_handler.info('Khweeteur: Status deleted on '
-                                                       + account['name'])
+                                self.dbus_handler.info(
+                                    'Khweeteur: Status deleted on '
+                                    + account['name'])
                 elif post['action'] == 'favorite':
                     if account.uuid == post['base_url']:
                         api = account.api
@@ -592,38 +579,21 @@ class KhweeteurDaemon(QCoreApplication):
                         logging.debug('Unfollow %s (account: %s) -> %s'
                                       % (repr(post), repr(account), friend))
                 elif post['action'] == 'twitpic':
-                    if account['base_url'] \
-                            == SUPPORTED_ACCOUNTS[0]['base_url']:
                         api = account.api
-                        import twitpic
-                        twitpic_client = \
-                            twitpic.TwitPicOAuthClient(
-                                consumer_key=api._username,
-                                consumer_secret=api._password,
-                                access_token=api._oauth_token.to_string(
-                                ),
-                                service_key='f9b7357e0dc5473df5f141145e4dceb0'
-                            )
-                        params = {}
-                        params['media'] = 'file://' + post['base_url']
-                        params['message'] = unicode(post['text'])
-                        response = twitpic_client.create('upload',
-                                                         params)
-                        if 'url' in response:
-                            post_tweet(
-                                post['shorten_url'],
-                                post['serialize'],
-                                unicode(response['url']) + u' : '
-                                + post['text'],
-                                post['latitude'],
-                                post['longitude'],
-                                '',
-                                'tweet',
-                                '',
-                            )
+                        if post['serialize'] == 1:
+                            api.PostSerializedUpdates(
+                                text,
+                                media=post['base_url'])
                         else:
+                            api.PostUpdate(text,
+                                           media=post['base_url'])
+                        logging.debug('Posted %s' % (text, ))
+                        if settings.contains('ShowInfos'):
+                            if settings.value('ShowInfos') == '2':
+                                self.dbus_handler.info(
+                                    'Khweeteur: Status posted to '
+                                    + account['name'])
 
-                            raise StandardError('No twitpic url')
                 else:
                     acted = False
                     logging.error('Processing post %s: unknown action: %s'
@@ -655,7 +625,8 @@ class KhweeteurDaemon(QCoreApplication):
                 os.remove(item)
             elif 'ID' in err.message:
                 logging.error('Do_posts (remove): %s' % (err.message, ))
-                note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
+                note_transfer(error_code=
+                              woodchuck.TransferStatus.FailureOther,
                               deleted=True)
                 os.remove(item)
             else:
@@ -667,8 +638,9 @@ class KhweeteurDaemon(QCoreApplication):
 
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
-                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                                           + err.message)
+                    self.dbus_handler.info(
+                        'Khweeteur: Error occured while posting: '
+                        + err.message)
 
         except Exception, err:
 
@@ -678,8 +650,9 @@ class KhweeteurDaemon(QCoreApplication):
             logging.exception('Do_posts : %s' % str(err))
             if settings.contains('ShowInfos'):
                 if settings.value('ShowInfos') == '2':
-                    self.dbus_handler.info('Khweeteur: Error occured while posting: '
-                                           + str(err))
+                    self.dbus_handler.info(
+                        'Khweeteur: Error occured while posting: '
+                        + str(err))
 
             note_transfer(error_code=woodchuck.TransferStatus.FailureOther,
                           deleted=False)
@@ -705,7 +678,6 @@ class KhweeteurDaemon(QCoreApplication):
             logging.exception('update(): %s', (str(e),))
 
     def retrieve(self, account, thing):
-        api = account.api
         me_user_id = account.me_user
         if not me_user_id:
             logging.debug("Account %s not authenticated. Not fetching '%s'"
@@ -886,11 +858,6 @@ class KhweeteurDaemon(QCoreApplication):
     def retrieve_all(self):
         logging.debug('Start update')
         settings = settings_db()
-
-        showInfos = False
-        if settings.contains('ShowInfos'):
-            if settings.value('ShowInfos') == '2':
-                showInfos = True
 
         if len(self.threads) > 0:
             for t, job in self.threads.items():

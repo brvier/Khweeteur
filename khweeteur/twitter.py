@@ -2511,6 +2511,7 @@ class Api(object):
         in_reply_to_status_id=None,
         latitude=None,
         longitude=None,
+        media=None,
     ):
         '''Post a twitter status message from the authenticated user.
 
@@ -2534,7 +2535,10 @@ class Api(object):
             raise TwitterError('The twitter.Api instance must be authenticated.'
                                )
 
-        url = '%s/statuses/update.json' % self.base_url
+        if media is not None:
+            url = '%s/statuses/update_with_media.json' % self.base_url
+        else:
+            url = '%s/statuses/update.json' % self.base_url
 
     # тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест тест
 
@@ -2543,6 +2547,9 @@ class Api(object):
                                % CHARACTER_LIMIT)
 
         data = {'status': status.encode('utf-8')}
+        if media is not None:
+            print media
+            data['media'] = open(str(media), 'rb').read()
         if in_reply_to_status_id:
             data['in_reply_to_status_id'] = in_reply_to_status_id
         if latitude is not None:
@@ -2555,6 +2562,7 @@ class Api(object):
 #    print data
 
         json = self._FetchUrl(url, post_data=data)
+        print json
         data = self._ParseAndCheckForTwitterError(json)
         return Status.NewFromJsonDict(data)
 
@@ -2565,6 +2573,7 @@ class Api(object):
         in_reply_to_status_id=None,
         latitude=None,
         longitude=None,
+        media=None,
         **kwargs
     ):
         '''Post one or more twitter status messages from the authenticated user.
@@ -2603,12 +2612,14 @@ class Api(object):
         if len(lines) == 1:
             results.append(self.PostUpdate(lines[0],
                            in_reply_to_status_id=in_reply_to_status_id,
-                           longitude=longitude, latitude=latitude, **kwargs))
+                           longitude=longitude, latitude=latitude,
+                           media=media, **kwargs))
         else:
             for line in lines:
                 r = self.PostUpdate(line + ' ' + str(counter) + '/' + str(tot),
                                     in_reply_to_status_id=in_reply_to_status_id,
                                     longitude=longitude, latitude=latitude,
+                                    media=media,
                                     **kwargs)
                 results.append(r)
                 counter = counter + 1

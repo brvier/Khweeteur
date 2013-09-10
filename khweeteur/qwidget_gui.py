@@ -372,8 +372,6 @@ class KhweeteurWin(QMainWindow):
         self.tb_update.triggered.connect(
             lambda: self.dbus_handler.require_update(optional=False))
 
-        self.geolocDoStart()
-
         self.loadSearchMenu()
         self.loadListMenu()
 
@@ -743,10 +741,8 @@ class KhweeteurWin(QMainWindow):
                 0,
                 1,
                 text,
-                ('' if self.geoloc_source == None else self.geoloc_coordinates[
-                 0]),
-                ('' if self.geoloc_source == None else self.geoloc_coordinates[
-                 1]),
+                '',
+                '',
                 filename,
                 'twitpic',
                 '',
@@ -887,10 +883,8 @@ class KhweeteurWin(QMainWindow):
                 1,
                 1,
                 self.tb_text.toPlainText(),
-                ('' if self.geoloc_source == None else self.geoloc_coordinates[
-                 0]),
-                ('' if self.geoloc_source == None else self.geoloc_coordinates[
-                 1]),
+                '',
+                '',
                 base_url,
                 ('tweet' if is_not_reply else 'reply'),
                 ('' if is_not_reply else str(self.tb_text_reply_id)),
@@ -1255,7 +1249,6 @@ class KhweeteurWin(QMainWindow):
     @Slot()
     def refreshPrefs(self):
         self.view.refreshCustomDelegate()
-        self.geolocDoStart()
 
     @Slot()
     def showAbout(self):

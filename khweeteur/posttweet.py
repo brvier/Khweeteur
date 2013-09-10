@@ -95,6 +95,8 @@ def post_tweet(
         }
         pickle.dump(post, fhandle, pickle.HIGHEST_PROTOCOL)
 
+    print post
+
     # Register the post with Woodchuck.
     _wc = wc()
     if _wc is not None:
